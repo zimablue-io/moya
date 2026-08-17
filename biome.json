@@ -44,7 +44,13 @@
 			"style": {
 				"useImportType": "off",
 				"useTemplate": "off",
-				"noNonNullAssertion": "off"
+				"noNonNullAssertion": "off",
+				"noExcessiveLinesPerFile": {
+					"level": "error",
+					"options": {
+						"maxLines": 300
+					}
+				}
 			},
 			"suspicious": {
 				"noExplicitAny": "off",
@@ -84,6 +90,16 @@
 	},
 	"overrides": [
 		{
+			"includes": ["public/**"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noExcessiveLinesPerFile": "off"
+					}
+				}
+			}
+		},
+		{
 			"includes": ["**/*.css"],
 			"linter": {
 				"rules": {
@@ -98,6 +114,9 @@
 			"includes": ["src/components/ui/**"],
 			"linter": {
 				"rules": {
+					"style": {
+						"noExcessiveLinesPerFile": "off"
+					},
 					"a11y": {
 						"useAriaPropsForRole": "off",
 						"useFocusableInteractive": "off",
@@ -119,6 +138,9 @@
 			"includes": ["scripts/**/*.mjs", "scripts/**/*.ts"],
 			"linter": {
 				"rules": {
+					"style": {
+						"noExcessiveLinesPerFile": "off"
+					},
 					"complexity": {
 						"noExcessiveCognitiveComplexity": "off",
 						"noExcessiveLinesPerFunction": "off"
