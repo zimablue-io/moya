@@ -1,4 +1,5 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Play, Square } from "lucide-react";
 import { UserButton } from "@/lib/auth/gates";
 import { authEnabled } from "@/lib/auth/client";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ import { allowMicrophone, mediaPermissionStatus, type MediaAuth } from "@/lib/me
 import { listProviderModels } from "@/lib/llm";
 import { PROVIDER_PRESETS, type ProviderId } from "@/lib/types";
 import { uid } from "@/lib/utils";
+import { VOICE_PREVIEW_TEXT } from "@/lib/voice-preview";
 
 export function SettingsDialog() {
   const dialog = useApp((s) => s.dialog);
@@ -44,7 +46,12 @@ export function SettingsDialog() {
   const [mcpUrl, setMcpUrl] = useState("");
   const [mcpAuth, setMcpAuth] = useState("");
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [previewing, setPreviewing] = useState(false);
+  const previewingRef = useRef(false);
+  const previewGen = useRef(0);
   const preset = PROVIDER_PRESETS[settings.provider.id];
+  const setPresence = useApp((s) => s.setPresence);
+  const voiceMode = useApp((s) => s.voiceMode);
 
   useEffect(() => {
     const load = () => setVoices(speech.listVoices());
@@ -52,6 +59,43 @@ export function SettingsDialog() {
     window.speechSynthesis?.addEventListener("voiceschanged", load);
     return () => window.speechSynthesis?.removeEventListener("voiceschanged", load);
   }, []);
+
+  useEffect(() => {
+    if (dialog === "settings") return;
+    if (!previewingRef.current) return;
+    previewGen.current += 1;
+    speech.stopSpeak();
+    previewingRef.current = false;
+    setPreviewing(false);
+    setPresence({ presence: voiceMode ? "listening" : "idle" });
+  }, [dialog, setPresence, voiceMode]);
+
+  const playVoicePreview = (override?: { voiceURI?: string; rate?: number; pitch?: number }) => {
+    if (!speech.ttsSupported) return;
+    const gen = ++previewGen.current;
+    previewingRef.current = true;
+    setPreviewing(true);
+    setPresence({ presence: "speaking" });
+    speech.previewVoice({
+      voiceURI: override?.voiceURI ?? settings.voiceURI,
+      rate: override?.rate ?? settings.rate,
+      pitch: override?.pitch ?? settings.pitch,
+      onEnd: () => {
+        if (previewGen.current !== gen) return;
+        previewingRef.current = false;
+        setPreviewing(false);
+      },
+    });
+  };
+
+  const stopVoicePreview = () => {
+    if (!previewingRef.current) return;
+    previewGen.current += 1;
+    speech.stopSpeak();
+    previewingRef.current = false;
+    setPreviewing(false);
+    setPresence({ presence: voiceMode ? "listening" : "idle" });
+  };
 
   return (
     <Dialog open={dialog === "settings"} onOpenChange={(o) => openDialog(o ? "settings" : null)}>
@@ -110,11 +154,16 @@ export function SettingsDialog() {
                   onCheckedChange={(v) => patch({ showCaptions: v })}
                 />
               </Row>
-              <Field label="Voice">
+              <div className="grid gap-2">
+                <Label htmlFor="voice-select">Voice</Label>
                 <select
+                  id="voice-select"
                   className="h-11 w-full rounded-md border border-border bg-surface px-3 text-sm"
                   value={settings.voiceURI}
-                  onChange={(e) => patch({ voiceURI: e.target.value })}
+                  onChange={(e) => {
+                    patch({ voiceURI: e.target.value });
+                    playVoicePreview({ voiceURI: e.target.value });
+                  }}
                 >
                   <option value="">System default</option>
                   {settings.voiceURI && !voices.some((v) => v.voiceURI === settings.voiceURI) ? (
@@ -126,7 +175,19 @@ export function SettingsDialog() {
                     </option>
                   ))}
                 </select>
-              </Field>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={!speech.ttsSupported}
+                  aria-pressed={previewing}
+                  aria-label={previewing ? "Stop voice preview" : "Hear this voice"}
+                  onClick={() => (previewing ? stopVoicePreview() : playVoicePreview())}
+                >
+                  {previewing ? <Square className="size-4" /> : <Play className="size-4" />}
+                  {previewing ? "Stop" : "Hear this voice"}
+                </Button>
+                <p className="text-xs text-muted">{VOICE_PREVIEW_TEXT}</p>
+              </div>
               <Field label={`Rate ${settings.rate.toFixed(2)}`}>
                 <Slider
                   min={0.7}
@@ -134,6 +195,7 @@ export function SettingsDialog() {
                   step={0.05}
                   value={[settings.rate]}
                   onValueChange={([v]) => patch({ rate: v ?? 1 })}
+                  onValueCommit={([v]) => playVoicePreview({ rate: v ?? 1 })}
                 />
               </Field>
               <Field label={`Pitch ${settings.pitch.toFixed(2)}`}>
@@ -143,6 +205,7 @@ export function SettingsDialog() {
                   step={0.05}
                   value={[settings.pitch]}
                   onValueChange={([v]) => patch({ pitch: v ?? 1 })}
+                  onValueCommit={([v]) => playVoicePreview({ pitch: v ?? 1 })}
                 />
               </Field>
               <p className="text-xs text-muted">

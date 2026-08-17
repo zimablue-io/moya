@@ -1,5 +1,6 @@
 import { captureDenied, ensureMediaAccess, type MicFix } from "./media-permission";
 import { clamp } from "./utils";
+import { VOICE_PREVIEW_TEXT } from "./voice-preview";
 
 export type SpeechHandlers = {
   onInterim?: (text: string) => void;
@@ -72,6 +73,7 @@ export class SpeechEngine {
   private raf = 0;
   private handlers: SpeechHandlers = {};
   private speaking = false;
+  private speakGen = 0;
   private listenStarted = 0;
   micFix: MicFix = null;
 
@@ -187,12 +189,20 @@ export class SpeechEngine {
     this.detachMic();
   }
 
-  speak(text: string, opts: { voiceURI?: string; rate?: number; pitch?: number }) {
+  previewVoice(opts: { voiceURI?: string; rate?: number; pitch?: number; onEnd?: () => void }) {
+    this.speak(VOICE_PREVIEW_TEXT, opts);
+  }
+
+  speak(
+    text: string,
+    opts: { voiceURI?: string; rate?: number; pitch?: number; onEnd?: () => void },
+  ) {
     if (!this.ttsSupported) {
       this.handlers.onSpeakEnd?.();
       return;
     }
     this.stopSpeak();
+    const gen = ++this.speakGen;
     const u = new SpeechSynthesisUtterance(text);
     u.rate = opts.rate ?? 1;
     u.pitch = opts.pitch ?? 1;
@@ -214,20 +224,21 @@ export class SpeechEngine {
       this.handlers.onLevel?.(local, padBands(bands));
       this.handlers.onSpeakBoundary?.(idx, text);
     };
-    u.onend = () => {
+    const finish = () => {
+      if (this.speakGen !== gen) return;
       this.speaking = false;
+      opts.onEnd?.();
       this.handlers.onSpeakEnd?.();
     };
-    u.onerror = () => {
-      this.speaking = false;
-      this.handlers.onSpeakEnd?.();
-    };
+    u.onend = finish;
+    u.onerror = finish;
     window.speechSynthesis.speak(u);
     this.simulateSpeechIfNoBoundary(env);
   }
 
   stopSpeak() {
     if (!this.ttsSupported) return;
+    this.speakGen += 1;
     this.speaking = false;
     window.speechSynthesis.cancel();
   }
