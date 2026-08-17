@@ -125,8 +125,7 @@ function authPopupPlugin(): Plugin {
 // `0.0.0.0:8080` is the live-preview contract — don't change host/port.
 // Keep `nitro` gated to `build` (the Vercel deploy target): enabled in dev it
 // opens a second dev-server port, which breaks the single-port preview.
-// The dev server starts once `src/router.tsx` and `src/routes/` exist — see
-// AGENTS.md § "First scaffold".
+// The dev server starts once `src/router.tsx` and `src/routes/` exist.
 export default defineConfig(({ command, mode }) => {
   const desktop = mode === "desktop" || Boolean(process.env.TAURI_ENV_PLATFORM);
   return {

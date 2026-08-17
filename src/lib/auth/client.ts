@@ -30,9 +30,10 @@ export const authClient = createAuthClient({
 });
 
 /**
- * True when sign-in UI should be shown. On by default (preview via the baked
- * preview client, deployed apps via the injected per-app client); set
- * `VITE_AUTH_ENABLED=false` to force it off (dev user — see `use-current-user`).
+ * True when sign-in UI should be shown. On for http(s) web origins (preview via
+ * the baked preview client, deployed apps via the injected per-app client).
+ * Off when `VITE_AUTH_ENABLED=false` or the origin is a packaged Tauri webview
+ * (`src/lib/auth/origin.ts`).
  */
 export const authEnabled = import.meta.env.VITE_AUTH_ENABLED !== "false" && authConfig.enabled;
 

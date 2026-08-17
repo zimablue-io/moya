@@ -41,8 +41,13 @@ Build real sign-in; do **NOT** scaffold demo/mock/hardcoded users.
   all of that lives in `src/lib/auth`. Restarting the preview resets the DB.
 - **Deployed**: the deployer injects a per-app client + `DATABASE_URL`, so
   sign-in persists identities in Postgres.
-- **Off**: only when `VITE_AUTH_ENABLED=false` — then a **dev user** is returned
-  (for building non-auth apps without a signed-in visitor).
+- **Packaged desktop** (`tauri://localhost` or `http(s)://tauri.localhost`):
+  sign-in is off. `src/lib/auth/origin.ts` (`resolveAuthClientConfig`) disables
+  Better Auth and supplies an `http(s)` `baseURL` so `createAuthClient` does not
+  throw. The `.app` has no `/api/auth` server. `pnpm desktop` uses
+  `http://127.0.0.1:8080` and keeps sign-in on.
+- **Off**: `VITE_AUTH_ENABLED=false`, or a packaged-desktop origin — then
+  `useCurrentUserState` returns the dev user and no `/get-session` runs.
 
 Everything is **preinstalled and pre-wired in `src/lib/auth/`** — do not
 `npm install` anything or reach for another auth library. `better-auth` is the
@@ -53,6 +58,7 @@ only auth package; do NOT use `@neondatabase/*`, `@stackframe/*`, or `@clerk/*`.
 | File                  | Use it for                                                                                                 |
 | --------------------- | ---------------------------------------------------------------------------------------------------------- |
 | `client.ts`           | Browser client. `signIn(providerId)`, `signOut()`, `authEnabled`, `GROK_PROVIDERS`.                        |
+| `origin.ts`           | `resolveAuthClientConfig(origin)` — packaged Tauri origins are not Better Auth hosts.                      |
 | `server.ts`           | The Better Auth instance (server-only). **Do not edit or rewrite.** Import only from `/api/auth/$`.        |
 | `email-password.ts`   | **Only** place to enable local email/password (`emailAndPasswordEnabled = true`).                          |
 | `popup.server.ts`     | Live-preview popup handler (server-only). Already wired by the Vite plugin — do not create a route for it. |
@@ -78,14 +84,14 @@ injected by the platform — still not something you write into a file.
 Optional process-env knobs (platform / rare overrides only — **do not** put
 these in a file you create):
 
-| Var                                               | Where  | Purpose                                                                                                  |
-| ------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------- |
-| `VITE_AUTH_ENABLED`                               | client | on by default; set `"false"` to turn sign-in OFF (dev user). Only client-visible auth flag               |
-| `BETTER_AUTH_URL`                                 | server | app's own public origin; unset in preview (origin is derived per-request)                                |
-| `BETTER_AUTH_SECRET`                              | server | signs this app's own sessions (process-stable fallback in preview; survives HMR)                         |
-| `GROK_AUTH_ISSUER`                                | server | the shared broker (defaults to `https://auth.grok.me`)                                                   |
-| `GROK_AUTH_CLIENT_ID` / `GROK_AUTH_CLIENT_SECRET` | server | per-app client (falls back to the preview client)                                                        |
-| `DATABASE_URL`                                    | server | when deployed, Better Auth persists here (preview persists to the embedded PGLite — same DB as app data) |
+| Var                                               | Where  | Purpose                                                                                                                |
+| ------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `VITE_AUTH_ENABLED`                               | client | on by default on web; set `"false"` to turn sign-in OFF (dev user). Packaged Tauri origins are also off (`origin.ts`). |
+| `BETTER_AUTH_URL`                                 | server | app's own public origin; unset in preview (origin is derived per-request)                                              |
+| `BETTER_AUTH_SECRET`                              | server | signs this app's own sessions (process-stable fallback in preview; survives HMR)                                       |
+| `GROK_AUTH_ISSUER`                                | server | the shared broker (defaults to `https://auth.grok.me`)                                                                 |
+| `GROK_AUTH_CLIENT_ID` / `GROK_AUTH_CLIENT_SECRET` | server | per-app client (falls back to the preview client)                                                                      |
+| `DATABASE_URL`                                    | server | when deployed, Better Auth persists here (preview persists to the embedded PGLite — same DB as app data)               |
 
 Never expose a non-`VITE_` var to the client. The preview client id/secret live
 server-only in `src/lib/auth/preview.ts`.
@@ -118,9 +124,9 @@ export const Route = createFileRoute("/api/auth/$")({
 ```
 
 **2. Add a sign-in page** — buttons that kick off the broker flow. Import from
-`@/lib/auth/client`. `authEnabled` is true by default (preview + deployed),
-so the buttons show and work in the live preview; the `else` branch only shows
-when auth is explicitly disabled (`VITE_AUTH_ENABLED=false`):
+`@/lib/auth/client`. `authEnabled` is true on http(s) web origins (preview +
+deployed). It is false when `VITE_AUTH_ENABLED=false` or the origin is a
+packaged Tauri webview (`src/lib/auth/origin.ts`):
 
 ```tsx
 // src/routes/login.tsx
@@ -174,9 +180,8 @@ REAL session, so a preview visitor is signed out until they sign in):
   reload bounces signed-in users to sign-in.
 
 **State components** from `@/lib/auth/gates`: `SignedIn`, `SignedOut`,
-`RedirectToSignIn`, `UserButton`. (When auth is disabled via
-`VITE_AUTH_ENABLED=false` they apply dev-user semantics so a non-auth app still
-renders.)
+`RedirectToSignIn`, `UserButton`. When `authEnabled` is false they apply
+dev-user semantics so the assistant still renders.
 
 ```tsx
 import { useCurrentUser, useCurrentUserState } from "@/lib/auth/use-current-user";
@@ -326,11 +331,11 @@ useEffect(() => {
 
 Semantics: signed out → the middleware throws `UnauthorizedError` (message
 `"Unauthorized"`, `status` 401 — match it to send the visitor to sign-in), in the
-live preview too (real auth). Only when auth is disabled
-(`VITE_AUTH_ENABLED=false`) does it resolve the dev user (`"dev-user"`) and never
-throw. Keep `user_id` columns `TEXT` (Better Auth uses text ids; the disabled dev
-user is `'dev-user'`). Never trust a client-supplied user id — only the
-middleware / `requireUserId()` result.
+live preview too (real auth). When `authEnabled` is false
+(`VITE_AUTH_ENABLED=false` or a packaged Tauri origin) it resolves the dev user
+(`"dev-user"`) and never throws. Keep `user_id` columns `TEXT` (Better Auth uses
+text ids; the disabled dev user is `'dev-user'`). Never trust a client-supplied
+user id — only the middleware / `requireUserId()` result.
 
 ## Supported sign-in methods
 
