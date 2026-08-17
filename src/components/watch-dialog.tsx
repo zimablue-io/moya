@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { APP_NAME } from "@/lib/brand"
 import { useApp } from "@/lib/store"
 import { formatWhen, hoursBetween } from "@/lib/utils"
 
@@ -69,7 +70,7 @@ export function WatchDialog() {
 														<h3 className="text-sm font-medium text-fg">{item.title}</h3>
 													</div>
 													<p className="mt-1 text-sm text-muted">{item.body}</p>
-													<p className="mt-2 text-[11px] text-subtle">
+													<p className="type-time mt-2 text-subtle">
 														{item.source} · {formatWhen(item.createdAt)}
 													</p>
 												</div>
@@ -84,7 +85,7 @@ export function WatchDialog() {
 						</TabsContent>
 						<TabsContent value="boards" className="mt-0">
 							{boards.length === 0 ? (
-								<p className="py-10 text-center text-sm text-muted">No boards. Ask Moya to watch a project.</p>
+								<p className="py-10 text-center text-sm text-muted">No boards. Ask {APP_NAME} to watch a project.</p>
 							) : (
 								<ul className="flex flex-col gap-3">
 									{boards.map((b) => (

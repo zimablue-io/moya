@@ -3,10 +3,16 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import { type Artifact, normalizeArtifact } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
+const ARTIFACT_FALLBACK = "This visual could not be shown."
+
+function ArtifactTitle({ children }: { children: ReactNode }) {
+	return <h3 className="type-display text-xl text-fg">{children}</h3>
+}
+
 export function ArtifactView({ artifact }: { artifact: Artifact }) {
 	const safe = normalizeArtifact(artifact)
 	if (!safe) {
-		return <p className="text-sm text-muted">This visual could not be shown.</p>
+		return <p className="text-sm text-muted">{ARTIFACT_FALLBACK}</p>
 	}
 	return (
 		<ArtifactGuard key={`${safe.type}:${safe.title}`}>
@@ -28,7 +34,7 @@ class ArtifactGuard extends Component<{ children: ReactNode }, { error: Error | 
 
 	render() {
 		if (this.state.error) {
-			return <p className="text-sm text-muted">This visual could not be shown.</p>
+			return <p className="text-sm text-muted">{ARTIFACT_FALLBACK}</p>
 		}
 		return this.props.children
 	}
@@ -38,7 +44,7 @@ function ArtifactInner({ artifact }: { artifact: Artifact }) {
 	if (artifact.type === "status") {
 		return (
 			<div>
-				<h3 className="font-display text-xl text-fg">{artifact.title}</h3>
+				<ArtifactTitle>{artifact.title}</ArtifactTitle>
 				<ul className="mt-4 grid gap-2">
 					{(artifact.items ?? []).map((item) => (
 						<li
@@ -69,19 +75,19 @@ function ArtifactInner({ artifact }: { artifact: Artifact }) {
 		const rows = mergeSeries(series)
 		return (
 			<div>
-				<h3 className="font-display text-xl text-fg">{artifact.title}</h3>
+				<ArtifactTitle>{artifact.title}</ArtifactTitle>
 				<div className="mt-4 h-56">
 					<ResponsiveContainer width="100%" height="100%">
 						<LineChart data={rows}>
-							<CartesianGrid stroke="rgba(236,234,228,0.08)" vertical={false} />
-							<XAxis dataKey="x" stroke="#8a8780" fontSize={11} tickLine={false} axisLine={false} />
-							<YAxis stroke="#8a8780" fontSize={11} tickLine={false} axisLine={false} width={32} />
+							<CartesianGrid stroke="color-mix(in oklab, var(--color-fg) 8%, transparent)" vertical={false} />
+							<XAxis dataKey="x" stroke="var(--color-muted)" fontSize={12} tickLine={false} axisLine={false} />
+							<YAxis stroke="var(--color-muted)" fontSize={12} tickLine={false} axisLine={false} width={32} />
 							<Tooltip
 								contentStyle={{
-									background: "#141413",
-									border: "1px solid rgba(236,234,228,0.12)",
+									background: "var(--color-surface)",
+									border: "1px solid var(--color-border)",
 									borderRadius: 8,
-									color: "#eceae4",
+									color: "var(--color-fg)",
 								}}
 							/>
 							{keys.map((k, i) => (
@@ -89,7 +95,7 @@ function ArtifactInner({ artifact }: { artifact: Artifact }) {
 									key={k}
 									type="monotone"
 									dataKey={k}
-									stroke={i === 0 ? "#d4cfc4" : "#8a8780"}
+									stroke={i === 0 ? "var(--color-accent)" : "var(--color-muted)"}
 									strokeWidth={1.6}
 									dot={false}
 								/>
@@ -107,7 +113,7 @@ function ArtifactInner({ artifact }: { artifact: Artifact }) {
 
 	return (
 		<div>
-			<h3 className="font-display text-xl text-fg">{artifact.title}</h3>
+			<ArtifactTitle>{artifact.title}</ArtifactTitle>
 			<p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-fg/90">{artifact.body}</p>
 		</div>
 	)
@@ -142,7 +148,7 @@ function Diagram({ artifact }: { artifact: Extract<Artifact, { type: "diagram" }
 	)
 	return (
 		<div>
-			<h3 className="font-display text-xl text-fg">{artifact.title}</h3>
+			<ArtifactTitle>{artifact.title}</ArtifactTitle>
 			<svg viewBox={`0 0 ${w} ${h}`} className="mt-3 w-full" role="img" aria-label={artifact.title}>
 				{edges.map((e, i) => {
 					const a = pos.get(e.from)
@@ -150,9 +156,21 @@ function Diagram({ artifact }: { artifact: Extract<Artifact, { type: "diagram" }
 					if (!a || !b) return null
 					return (
 						<g key={`${e.from}-${e.to}-${i}`}>
-							<line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="rgba(212,207,196,0.35)" />
+							<line
+								x1={a.x}
+								y1={a.y}
+								x2={b.x}
+								y2={b.y}
+								stroke="color-mix(in oklab, var(--color-accent) 35%, transparent)"
+							/>
 							{e.label ? (
-								<text x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 - 6} textAnchor="middle" fill="#8a8780" fontSize="10">
+								<text
+									x={(a.x + b.x) / 2}
+									y={(a.y + b.y) / 2 - 6}
+									textAnchor="middle"
+									fill="var(--color-muted)"
+									fontSize="12"
+								>
 									{e.label}
 								</text>
 							) : null}
@@ -165,8 +183,15 @@ function Diagram({ artifact }: { artifact: Extract<Artifact, { type: "diagram" }
 					const label = node.label ?? ""
 					return (
 						<g key={node.id}>
-							<circle cx={p.x} cy={p.y} r="22" fill="#1c1c1a" stroke="#d4cfc4" strokeWidth="1" />
-							<text x={p.x} y={p.y + 4} textAnchor="middle" fill="#eceae4" fontSize="10">
+							<circle
+								cx={p.x}
+								cy={p.y}
+								r="22"
+								fill="var(--color-surface-2)"
+								stroke="var(--color-accent)"
+								strokeWidth="1"
+							/>
+							<text x={p.x} y={p.y + 4} textAnchor="middle" fill="var(--color-fg)" fontSize="12">
 								{label.length > 12 ? `${label.slice(0, 11)}…` : label}
 							</text>
 						</g>

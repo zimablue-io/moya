@@ -1,3 +1,4 @@
+import { micBlockedInSettings, speechBlockedInSettings } from "./brand"
 import { deviceNoun, isDesktop, systemSettingsLabel } from "./host"
 
 export type MediaAuthState = "prompt" | "denied" | "restricted" | "granted"
@@ -70,7 +71,7 @@ function blocked(status: MediaAuth): { ok: false; message: string; fix: MicFix }
 		return {
 			ok: false,
 			message: desktop
-				? `Mic is blocked. Allow Moya in ${systemSettingsLabel()}, then tap Voice again.`
+				? micBlockedInSettings(systemSettingsLabel())
 				: "Mic is blocked. Allow the microphone in the address bar, then try again.",
 			fix: desktop ? "settings" : "allow",
 		}
@@ -79,7 +80,7 @@ function blocked(status: MediaAuth): { ok: false; message: string; fix: MicFix }
 		return {
 			ok: false,
 			message: desktop
-				? `Speech recognition is blocked. Allow Moya in ${systemSettingsLabel()}, then tap Voice again.`
+				? speechBlockedInSettings(systemSettingsLabel())
 				: "Speech recognition is blocked. Type if you need to talk.",
 			fix: desktop ? "settings" : null,
 		}

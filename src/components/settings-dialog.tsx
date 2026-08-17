@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
 import { authEnabled } from "@/lib/auth/client"
 import { UserButton } from "@/lib/auth/gates"
+import { APP_NAME, openSettingsToAllow } from "@/lib/brand"
 import { isDesktop, systemSettingsLabel, systemVoiceLabel, thisDeviceLabel } from "@/lib/host"
 import { listProviderModels } from "@/lib/llm"
 import { allowMicrophone, type MediaAuth, mediaPermissionStatus } from "@/lib/media-permission"
@@ -357,8 +358,8 @@ export function SettingsDialog() {
 						</TabsContent>
 						<TabsContent value="data" className="space-y-4">
 							<p className="text-sm text-muted">
-								Transcripts, memory, boards, and keys live in a SQL database on this device. Nothing is stored on a Moya
-								server.
+								Transcripts, memory, boards, and keys live in a SQL database on this device. Nothing is stored on a{" "}
+								{APP_NAME} server.
 							</p>
 							<p className="text-xs text-muted">
 								Export is a private backup of this device, including API keys and MCP headers. Keep the file to
@@ -552,7 +553,7 @@ function MicAccess() {
 				<p className="text-xs text-muted">
 					{isDesktop()
 						? blocked
-							? `Open ${systemSettingsLabel()} to allow Moya.`
+							? openSettingsToAllow(systemSettingsLabel())
 							: `${thisDeviceLabel()} will ask the first time you allow it.`
 						: blocked
 							? "Use the control in the address bar."

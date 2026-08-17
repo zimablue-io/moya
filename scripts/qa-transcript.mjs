@@ -115,11 +115,11 @@ try {
 	assert.equal(hoverBg, "rgb(28, 28, 26)", `day hover fill was ${hoverBg}`)
 
 	await next.click()
-	await dialog.locator("p.font-display").filter({ hasText: "September 2026" }).waitFor()
+	await dialog.locator("p.type-display").filter({ hasText: "September 2026" }).waitFor()
 	const afterMonthBox = await stableBox(dialog)
 	assert.deepEqual(afterMonthBox, listBox, "dialog size shifted after changing month")
 	await prev.click()
-	await dialog.locator("p.font-display").filter({ hasText: "August 2026" }).waitFor()
+	await dialog.locator("p.type-display").filter({ hasText: "August 2026" }).waitFor()
 
 	await today.click()
 	await dialog.getByPlaceholder("Search").waitFor()

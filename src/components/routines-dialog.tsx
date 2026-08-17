@@ -9,6 +9,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { AUTOMATION_PRESETS, type AutomationDraft, formatTrigger } from "@/lib/automations"
+import { APP_NAME } from "@/lib/brand"
 import { useApp } from "@/lib/store"
 import type { AutomationTrigger } from "@/lib/types"
 import { formatWhen } from "@/lib/utils"
@@ -55,7 +56,9 @@ export function RoutinesDialog() {
 			<DialogContent className="grid-rows-[auto_1fr_auto] sm:max-w-2xl">
 				<DialogHeader>
 					<DialogTitle>Routines</DialogTitle>
-					<DialogDescription>Things Moya does without being asked. They run on this device only.</DialogDescription>
+					<DialogDescription>
+						Things {APP_NAME} does without being asked. They run on this device only.
+					</DialogDescription>
 				</DialogHeader>
 				<ScrollArea className="min-h-0 pr-2">
 					{automations.length === 0 && !openForm ? (
@@ -85,10 +88,10 @@ export function RoutinesDialog() {
 											<div className="flex flex-wrap items-center gap-2">
 												<h3 className="text-sm font-medium text-fg">{a.name}</h3>
 												<Badge variant={a.enabled ? "ok" : "default"}>{formatTrigger(a.trigger)}</Badge>
-												{running === a.id ? <span className="text-[11px] text-muted">Running</span> : null}
+												{running === a.id ? <span className="type-chip text-muted">Running</span> : null}
 											</div>
 											<p className="mt-1.5 text-sm leading-relaxed text-fg/80">{a.brief}</p>
-											<p className="mt-2 text-[11px] text-subtle">
+											<p className="type-time mt-2 text-subtle">
 												{a.lastRunAt ? `Last ${formatWhen(a.lastRunAt)}` : "Not run yet"}
 												{a.lastResult ? ` · ${a.lastResult.slice(0, 80)}` : ""}
 											</p>
@@ -124,7 +127,11 @@ export function RoutinesDialog() {
 						}}
 					>
 						<Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" />
-						<Textarea value={brief} onChange={(e) => setBrief(e.target.value)} placeholder="What should Moya do?" />
+						<Textarea
+							value={brief}
+							onChange={(e) => setBrief(e.target.value)}
+							placeholder={`What should ${APP_NAME} do?`}
+						/>
 						<div className="grid gap-3 sm:grid-cols-2">
 							<div className="space-y-1.5">
 								<Label>When</Label>

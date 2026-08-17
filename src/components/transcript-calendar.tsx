@@ -26,10 +26,7 @@ function DayCell({
 			{...props}
 			data-hover={hot ? "true" : "false"}
 			className={cn(className, hot && !modifiers.selected && "bg-surface-2")}
-			style={{
-				...props.style,
-				...(hot && !modifiers.selected ? { background: "#1c1c1a" } : {}),
-			}}
+			style={props.style}
 			onPointerEnter={(e) => {
 				props.onPointerEnter?.(e)
 				setHot(true)
@@ -41,12 +38,7 @@ function DayCell({
 		>
 			<span className="tabular-nums">{day.date.getDate()}</span>
 			{count > 0 ? (
-				<span
-					className={cn(
-						"text-[10px] font-medium tracking-wide tabular-nums",
-						modifiers.selected ? "text-accent-fg" : "text-muted",
-					)}
-				>
+				<span className={cn("type-time", modifiers.selected ? "text-accent-fg" : "text-muted")}>
 					{count} {count === 1 ? "turn" : "turns"}
 				</span>
 			) : null}
@@ -87,12 +79,12 @@ export function TranscriptCalendar({
 				nav: "flex h-10 shrink-0 items-center gap-2",
 				month_grid: "flex min-h-0 w-full flex-1 flex-col",
 				weekdays: "flex shrink-0",
-				weekday: "flex-1 py-1 text-center text-[11px] font-medium text-muted",
+				weekday: "type-chip flex-1 py-1 text-center text-muted",
 				weeks: "flex min-h-0 flex-1 flex-col gap-1",
 				week: "flex min-h-0 flex-1 gap-1",
 				day: "min-h-0 min-w-0 flex-1 p-0",
 				day_button: cn(
-					"flex size-full min-h-0 flex-col items-start gap-0.5 rounded-lg p-1.5 text-left text-xs font-medium text-fg",
+					"type-chip flex size-full min-h-0 flex-col items-start gap-0.5 rounded-lg p-1.5 text-left text-fg",
 					"hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 				),
 				selected: "[&>button]:bg-accent [&>button]:text-accent-fg [&>button]:hover:bg-accent",
@@ -120,9 +112,7 @@ export function TranscriptCalendar({
 						>
 							<ChevronLeft className="size-4" />
 						</button>
-						<p className="min-w-0 flex-1 text-center font-display text-xl font-normal tracking-tight text-fg">
-							{monthLabel(month)}
-						</p>
+						<p className="type-display min-w-0 flex-1 text-center text-xl text-fg">{monthLabel(month)}</p>
 						<button
 							type="button"
 							className={calendarNavBtn}

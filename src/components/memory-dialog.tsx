@@ -2,10 +2,12 @@ import { Pin, Plus, Trash2 } from "lucide-react"
 import { useMemo, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { chipToggleClass } from "@/components/ui/chip-toggle"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Textarea } from "@/components/ui/textarea"
+import { APP_NAME } from "@/lib/brand"
 import { useApp } from "@/lib/store"
 import { MEMORY_KINDS, type MemoryKind } from "@/lib/types"
 import { cn, formatWhen } from "@/lib/utils"
@@ -42,22 +44,14 @@ export function MemoryDialog() {
 				<DialogHeader>
 					<DialogTitle>Memory</DialogTitle>
 					<DialogDescription>
-						What Moya keeps. Local to this device. Pinned stays in every conversation.
+						What {APP_NAME} keeps. Local to this device. Pinned stays in every conversation.
 					</DialogDescription>
 				</DialogHeader>
 				<div className="flex flex-col gap-3">
 					<Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" />
 					<div className="flex flex-wrap gap-1">
 						{FILTERS.map((f) => (
-							<button
-								key={f.id}
-								type="button"
-								onClick={() => setKind(f.id)}
-								className={cn(
-									"h-9 rounded-full px-3 text-xs font-medium tracking-wide uppercase transition-colors",
-									kind === f.id ? "bg-accent text-accent-fg" : "bg-surface-2 text-muted hover:text-fg",
-								)}
-							>
+							<button key={f.id} type="button" onClick={() => setKind(f.id)} className={chipToggleClass(kind === f.id)}>
 								{f.label}
 							</button>
 						))}
@@ -76,10 +70,8 @@ export function MemoryDialog() {
 										<div className="min-w-0 flex-1">
 											<div className="flex flex-wrap items-center gap-2">
 												<Badge>{m.kind}</Badge>
-												{m.pinned ? (
-													<span className="text-[11px] tracking-wide text-muted uppercase">Pinned</span>
-												) : null}
-												{m.weight > 1 ? <span className="text-[11px] text-subtle">×{m.weight}</span> : null}
+												{m.pinned ? <span className="type-chip text-muted">Pinned</span> : null}
+												{m.weight > 1 ? <span className="type-time text-subtle">×{m.weight}</span> : null}
 											</div>
 											{editing === m.id ? (
 												<Textarea
@@ -104,7 +96,7 @@ export function MemoryDialog() {
 													{m.text}
 												</button>
 											)}
-											<p className="mt-2 text-[11px] text-subtle">{formatWhen(m.lastUsedAt)}</p>
+											<p className="type-time mt-2 text-subtle">{formatWhen(m.lastUsedAt)}</p>
 										</div>
 										<div className="flex shrink-0">
 											<Button

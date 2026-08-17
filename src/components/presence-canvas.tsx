@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react"
+import { APP_NAME } from "@/lib/brand"
 import type { Emotion, PresenceState } from "@/lib/types"
 
 const RGB: Record<Emotion, string> = {
@@ -131,7 +132,7 @@ export function PresenceCanvas({
 		<canvas
 			ref={ref}
 			className="absolute inset-0 size-full touch-none"
-			aria-label="Moya"
+			aria-label={APP_NAME}
 			onPointerDown={(e) => {
 				hold.current = { t: Date.now(), x: e.clientX, y: e.clientY }
 				;(e.currentTarget as HTMLCanvasElement).setPointerCapture(e.pointerId)

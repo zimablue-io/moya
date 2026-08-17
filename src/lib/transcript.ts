@@ -1,3 +1,6 @@
+import { APP_NAME } from "./brand.ts"
+import { DAY_FORMAT, formatClock, formatDay } from "./utils.ts"
+
 export type HeatLevel = 0 | 1 | 2 | 3
 
 export type DayStamp = { createdAt: string }
@@ -37,11 +40,7 @@ export function dateFromLocalDayKey(key: string): Date {
 }
 
 export function formatLocalDayKey(key: string): string {
-	return dateFromLocalDayKey(key).toLocaleDateString(undefined, {
-		weekday: "short",
-		month: "short",
-		day: "numeric",
-	})
+	return dateFromLocalDayKey(key).toLocaleDateString(undefined, DAY_FORMAT)
 }
 
 export function activityByDay(messages: DayStamp[]): Map<string, number> {
@@ -104,18 +103,15 @@ export function transcriptStats(messages: TranscriptTurn[]): TranscriptStats {
 export function formatSpan(startedAt: string, endedAt: string): string {
 	const a = new Date(startedAt)
 	const b = new Date(endedAt)
-	const clock = (d: Date) => d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
 	if (localDayKey(startedAt) === localDayKey(endedAt)) {
-		return `${clock(a)} – ${clock(b)}`
+		return `${formatClock(a)} – ${formatClock(b)}`
 	}
-	const day = (iso: string) =>
-		new Date(iso).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })
-	return `${day(startedAt)} – ${day(endedAt)}`
+	return `${formatDay(startedAt)} – ${formatDay(endedAt)}`
 }
 
 export function formatTranscriptStats(stats: TranscriptStats): string {
 	const noun = stats.turns === 1 ? "turn" : "turns"
-	const parts = [`${stats.turns} ${noun}`, `You ${stats.you}`, `Moya ${stats.moya}`]
+	const parts = [`${stats.turns} ${noun}`, `You ${stats.you}`, `${APP_NAME} ${stats.moya}`]
 	if (stats.startedAt && stats.endedAt && stats.turns > 1) {
 		parts.push(formatSpan(stats.startedAt, stats.endedAt))
 	}

@@ -1,3 +1,4 @@
+import { micBlockedInSettings } from "./brand"
 import { systemSettingsLabel } from "./host"
 import { captureDenied, ensureMediaAccess, type MicFix } from "./media-permission"
 import { clamp } from "./utils"
@@ -54,7 +55,7 @@ export function envelopeFromText(text: string): number[] {
 function friendlySpeechError(code: string): string | null {
 	if (code === "aborted" || code === "no-speech") return null
 	if (code === "not-allowed" || code === "service-not-allowed") {
-		return `Mic is blocked. Allow Moya in ${systemSettingsLabel()}, then tap Voice again.`
+		return micBlockedInSettings(systemSettingsLabel())
 	}
 	if (code === "network" || code === "service-not-connected") {
 		return "Speech service is offline. Type instead."
@@ -177,7 +178,7 @@ export class SpeechEngine {
 			this.fatalRec = true
 			this.recDesired = false
 			this.micFix = "settings"
-			this.handlers.onError?.(`Mic is blocked. Allow Moya in ${systemSettingsLabel()}, then tap Voice again.`)
+			this.handlers.onError?.(micBlockedInSettings(systemSettingsLabel()))
 		}
 	}
 

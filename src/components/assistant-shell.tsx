@@ -8,6 +8,7 @@ import { PresenceCanvas } from "@/components/presence-canvas"
 import { RoutinesDialog } from "@/components/routines-dialog"
 import { SettingsDialog } from "@/components/settings-dialog"
 import { WatchDialog } from "@/components/watch-dialog"
+import { displayName } from "@/lib/brand"
 import { systemSettingsLabel } from "@/lib/host"
 import { allowMicrophone } from "@/lib/media-permission"
 import { speech } from "@/lib/speech"
@@ -245,12 +246,12 @@ export function AssistantShell() {
 
 	return (
 		<main className="relative isolate min-h-dvh overflow-hidden bg-bg text-fg">
-			<div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(212,207,196,0.05),transparent_55%)]" />
+			<div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,color-mix(in_oklab,var(--color-accent)_5%,transparent),transparent_55%)]" />
 
 			<header className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-start justify-between px-4 pt-[max(1rem,env(safe-area-inset-top))] sm:px-6">
 				<div>
-					<p className="font-display text-2xl tracking-tight text-fg">{settings.agentName || "Moya"}</p>
-					<p className="text-[11px] tracking-[0.18em] text-subtle uppercase tabular-nums">{clock}</p>
+					<p className="type-display text-2xl text-fg">{displayName(settings.agentName)}</p>
+					<p className="type-clock mt-1 text-muted">{clock}</p>
 				</div>
 				<button
 					type="button"
@@ -296,7 +297,7 @@ export function AssistantShell() {
 			/>
 
 			<div className="pointer-events-none absolute inset-x-0 top-[58%] z-10 flex flex-col items-center px-6 text-center sm:top-[54%]">
-				<p className="text-[11px] tracking-[0.22em] text-muted uppercase">{status}</p>
+				<p className="type-kicker text-muted">{status}</p>
 				{shown ? (
 					<p className="mt-3 max-w-md text-sm leading-relaxed text-fg/80">{shown}</p>
 				) : !ready ? (
@@ -411,7 +412,7 @@ export function AssistantShell() {
 							)}
 						>
 							<span className="min-w-0">
-								<span className="block font-display text-2xl tracking-tight text-fg">{tool.label}</span>
+								<span className="block type-display text-2xl text-fg">{tool.label}</span>
 								<span className="block text-xs text-muted">{tool.hint}</span>
 							</span>
 							<span className="relative grid size-14 shrink-0 place-items-center rounded-full border border-border bg-surface text-fg transition-colors group-hover:border-border-strong group-hover:bg-surface-2">
@@ -450,7 +451,7 @@ function ModeBtn({
 			type="button"
 			onClick={onClick}
 			className={cn(
-				"flex h-11 items-center gap-2 rounded-full border px-4 text-xs font-medium tracking-wide uppercase transition-colors",
+				"type-chip flex h-11 items-center gap-2 rounded-full border px-4 transition-colors",
 				active ? "border-accent bg-accent text-accent-fg" : "border-border bg-surface text-muted hover:text-fg",
 			)}
 		>

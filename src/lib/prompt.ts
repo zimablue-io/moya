@@ -1,9 +1,10 @@
 import { describeRoutines } from "./automations"
+import { displayName } from "./brand"
 import { executeBuiltin, type World } from "./tools"
 import type { Snapshot } from "./types"
 
 export function buildSystemPrompt(snap: Snapshot, extra = ""): string {
-	const name = snap.settings.agentName || "Moya"
+	const name = displayName(snap.settings.agentName)
 	const user = snap.settings.userName || "the human"
 	const brief = snap.settings.brief.trim()
 	const memories = snap.memories

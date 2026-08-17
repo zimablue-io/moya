@@ -3,9 +3,11 @@ import { ArtifactView } from "@/components/artifact-view"
 import { TranscriptCalendar } from "@/components/transcript-calendar"
 import { TranscriptMinimap } from "@/components/transcript-minimap"
 import { Button } from "@/components/ui/button"
+import { chipToggleClass } from "@/components/ui/chip-toggle"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { speakerLabel } from "@/lib/brand"
 import { useApp } from "@/lib/store"
 import {
 	activityByDay,
@@ -29,6 +31,7 @@ export function HistoryDialog() {
 	const openDialog = useApp((s) => s.openDialog)
 	const messages = useApp((s) => s.messages)
 	const send = useApp((s) => s.send)
+	const agentName = useApp((s) => s.settings.agentName)
 	const [q, setQ] = useState("")
 	const [dayKey, setDayKey] = useState<string | null>(null)
 	const [mode, setMode] = useState<ViewMode>("list")
@@ -83,22 +86,14 @@ export function HistoryDialog() {
 					</div>
 					<div className="flex shrink-0 gap-1">
 						{VIEWS.map((v) => (
-							<button
-								key={v.id}
-								type="button"
-								onClick={() => setMode(v.id)}
-								className={cn(
-									"h-9 rounded-full px-3 text-xs font-medium tracking-wide uppercase transition-colors",
-									mode === v.id ? "bg-accent text-accent-fg" : "bg-surface-2 text-muted hover:bg-surface hover:text-fg",
-								)}
-							>
+							<button key={v.id} type="button" onClick={() => setMode(v.id)} className={chipToggleClass(mode === v.id)}>
 								{v.label}
 							</button>
 						))}
 					</div>
 				</div>
 				<div className="flex h-5 items-center justify-between gap-2">
-					<p className="truncate text-xs text-muted tabular-nums">
+					<p className="type-time truncate text-muted">
 						{mode === "list" ? (visible.length > 0 ? stats : empty) : "Days with activity are highlighted."}
 					</p>
 					{mode === "list" && dayKey ? (
@@ -141,10 +136,8 @@ export function HistoryDialog() {
 											className="flex flex-col gap-1 rounded-lg px-1 py-0.5 transition-colors hover:bg-surface-2"
 										>
 											<div className="flex items-baseline justify-between gap-3">
-												<span className="text-[11px] font-medium tracking-wide text-muted uppercase">
-													{m.role === "user" ? "You" : "Moya"}
-												</span>
-												<span className="text-[11px] text-subtle tabular-nums">{formatWhen(m.createdAt)}</span>
+												<span className="type-chip text-muted">{speakerLabel(m.role, agentName)}</span>
+												<span className="type-time text-subtle">{formatWhen(m.createdAt)}</span>
 											</div>
 											<p className={cn("text-sm leading-relaxed", m.role === "user" ? "text-fg" : "text-fg/85")}>
 												{m.content}

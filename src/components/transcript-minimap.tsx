@@ -1,5 +1,7 @@
 import { ChevronDown, ChevronUp } from "lucide-react"
-import { useEffect, useMemo, useState, type MouseEvent, type RefObject } from "react"
+import { type MouseEvent, type RefObject, useEffect, useMemo, useState } from "react"
+import { speakerLabel } from "@/lib/brand"
+import { useApp } from "@/lib/store"
 import { previewSnippet, tickIndexAtY, tickY, visibleTickIndices } from "@/lib/transcript"
 import { cn, formatWhen } from "@/lib/utils"
 
@@ -19,6 +21,7 @@ export function TranscriptMinimap({
 	viewportRef: RefObject<HTMLDivElement | null>
 	itemRefs: RefObject<Map<string, HTMLElement>>
 }) {
+	const agentName = useApp((s) => s.settings.agentName)
 	const [trackH, setTrackH] = useState(0)
 	const [hover, setHover] = useState<{ index: number; y: number } | null>(null)
 	const [scroll, setScroll] = useState({ top: 0, height: 1, scrollHeight: 1 })
@@ -138,10 +141,8 @@ export function TranscriptMinimap({
 					style={{ top: Math.min(Math.max(hover.y + 28, 36), (trackH || 0) + 28) }}
 				>
 					<div className="flex items-baseline justify-between gap-2">
-						<span className="text-[11px] font-medium tracking-wide text-muted uppercase">
-							{hovered.role === "user" ? "You" : "Moya"}
-						</span>
-						<span className="text-[11px] text-subtle tabular-nums">{formatWhen(hovered.createdAt)}</span>
+						<span className="type-chip text-muted">{speakerLabel(hovered.role, agentName)}</span>
+						<span className="type-time text-subtle">{formatWhen(hovered.createdAt)}</span>
 					</div>
 					<p className="mt-1 text-sm leading-relaxed text-fg">{previewSnippet(hovered.content)}</p>
 				</div>

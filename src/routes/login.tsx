@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router"
 import { Button } from "@/components/ui/button"
 import { authEnabled, GROK_PROVIDERS, signIn } from "@/lib/auth/client"
+import { APP_NAME } from "@/lib/brand"
 
 export const Route = createFileRoute("/login")({ component: Login })
 
@@ -9,7 +10,7 @@ function Login() {
 		<main className="grid min-h-dvh place-items-center bg-bg px-6 text-fg">
 			<div className="w-full max-w-sm space-y-6">
 				<div>
-					<p className="font-display text-4xl tracking-tight">Moya</p>
+					<p className="type-display text-4xl">{APP_NAME}</p>
 					<p className="mt-2 text-sm text-muted">
 						One assistant. Sign in is optional — memory stays on this device either way.
 					</p>

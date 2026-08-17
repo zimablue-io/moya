@@ -13,21 +13,19 @@ export function nowIso(): string {
 	return new Date().toISOString()
 }
 
+export const CLOCK_FORMAT = { hour: "2-digit", minute: "2-digit" } as const
+export const DAY_FORMAT = { weekday: "short", month: "short", day: "numeric" } as const
+
 export function formatClock(d = new Date()): string {
-	return d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
+	return d.toLocaleTimeString(undefined, CLOCK_FORMAT)
 }
 
 export function formatDay(iso: string): string {
-	return new Date(iso).toLocaleDateString(undefined, {
-		weekday: "short",
-		month: "short",
-		day: "numeric",
-	})
+	return new Date(iso).toLocaleDateString(undefined, DAY_FORMAT)
 }
 
 export function formatWhen(iso: string): string {
-	const d = new Date(iso)
-	return `${formatDay(iso)} ${d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })}`
+	return `${formatDay(iso)} ${formatClock(new Date(iso))}`
 }
 
 export function clamp(n: number, min: number, max: number): number {

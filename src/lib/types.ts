@@ -1,3 +1,5 @@
+import { APP_NAME } from "./brand.ts"
+
 export type Emotion = "calm" | "focused" | "alert" | "warm" | "concerned"
 export type PresenceState = "idle" | "listening" | "thinking" | "speaking"
 export type Role = "user" | "assistant" | "system" | "tool"
@@ -184,7 +186,7 @@ export interface Snapshot {
 }
 
 export const DEFAULT_SETTINGS: Settings = {
-	agentName: "Moya",
+	agentName: APP_NAME,
 	userName: "",
 	brief: "",
 	autoSpeak: true,
@@ -236,13 +238,13 @@ export const PROVIDER_PRESETS: Record<ProviderId, { label: string; model: string
 		label: "Ollama (local)",
 		model: "qwen3:8b",
 		baseUrl: "http://127.0.0.1:11434/v1",
-		hint: "You run Ollama. Moya does not start it.",
+		hint: `You run Ollama. ${APP_NAME} does not start it.`,
 	},
 	llamacpp: {
 		label: "llama.cpp (local)",
 		model: "",
 		baseUrl: "http://127.0.0.1:8080/v1",
-		hint: "You run llama-server. Moya does not start it. URL must end in /v1.",
+		hint: `You run llama-server. ${APP_NAME} does not start it. URL must end in /v1.`,
 	},
 	custom: {
 		label: "Custom OpenAI-compatible",
@@ -276,7 +278,7 @@ export const VOICE_PRESETS: Record<
 		model: "local",
 		baseUrl: "http://127.0.0.1:8765/v1",
 		voice: "",
-		hint: "You start speech-to-speech. Moya does not.",
+		hint: `You start speech-to-speech. ${APP_NAME} does not.`,
 	},
 	xai: {
 		label: "Grok",
