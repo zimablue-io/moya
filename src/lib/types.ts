@@ -403,3 +403,210 @@ export function normalizeSettings(raw: unknown): Settings {
 		voiceBackend,
 	}
 }
+
+export function normalizeArtifact(raw: unknown): Artifact | null {
+	if (!raw || typeof raw !== "object") return null
+	const a = raw as Record<string, unknown>
+	const type = String(a.type ?? "")
+	const title = asString(a.title, "Untitled")
+	if (type === "status") {
+		return { type: "status", title, items: parseStatusItems(a.items) }
+	}
+	if (type === "chart") {
+		return { type: "chart", title, series: parseChartSeries(a.series) }
+	}
+	if (type === "diagram") {
+		const nested = asRecord(a.graph) ?? asRecord(a.data) ?? {}
+		const nodes = parseNodes(a.nodes ?? nested.nodes ?? a.elements)
+		const edges = parseEdges(a.edges ?? a.connections ?? a.links ?? nested.edges ?? nested.connections ?? nested.links)
+		return { type: "diagram", title, nodes, edges }
+	}
+	if (type === "brief" || type === "note") {
+		return { type, title, body: asString(a.body) }
+	}
+	return null
+}
+
+export function normalizeArtifacts(raw: unknown): Artifact[] | undefined {
+	if (raw == null) return undefined
+	const list = Array.isArray(raw) ? raw : [raw]
+	const artifacts = list.map(normalizeArtifact).filter((a): a is Artifact => a != null)
+	return artifacts.length ? artifacts : undefined
+}
+
+const BOARD_STATES = new Set<string>(["watching", "running", "blocked", "idle", "done"])
+const ROLES = new Set<string>(["user", "assistant", "system", "tool"])
+
+export function normalizeSnapshot(raw: unknown): Snapshot {
+	const s = asRecord(raw) ?? {}
+	return {
+		version: 1,
+		settings: normalizeSettings(s.settings),
+		messages: asArray(s.messages)
+			.map(normalizeMessage)
+			.filter((m): m is Message => m != null),
+		memories: asArray(s.memories) as Memory[],
+		inbox: asArray(s.inbox) as InboxItem[],
+		boards: asArray(s.boards)
+			.map(normalizeBoard)
+			.filter((b): b is Board => b != null),
+		timeLogs: asArray(s.timeLogs) as TimeLog[],
+		insights: asArray(s.insights) as Insight[],
+		mcpServers: asArray(s.mcpServers)
+			.map(normalizeMcpServer)
+			.filter((m): m is McpServer => m != null),
+		automations: asArray(s.automations) as Automation[],
+	}
+}
+
+function normalizeMessage(raw: unknown): Message | null {
+	const m = asRecord(raw)
+	if (!m) return null
+	const role = String(m.role ?? "")
+	if (!ROLES.has(role)) return null
+	return {
+		id: asString(m.id, "msg"),
+		role: role as Message["role"],
+		content: asString(m.content),
+		createdAt: asString(m.createdAt),
+		emotion: typeof m.emotion === "string" ? (m.emotion as Message["emotion"]) : undefined,
+		artifacts: normalizeArtifacts(m.artifacts),
+		toolName: m.toolName ? asString(m.toolName) : undefined,
+		hidden: Boolean(m.hidden),
+	}
+}
+
+function normalizeBoard(raw: unknown): Board | null {
+	const b = asRecord(raw)
+	if (!b) return null
+	return {
+		id: asString(b.id) || asString(b.name, "board"),
+		name: asString(b.name, "Board"),
+		summary: asString(b.summary),
+		updatedAt: asString(b.updatedAt),
+		items: asArray(b.items).flatMap((it, i) => {
+			const o = asRecord(it)
+			if (!o) return []
+			const state = String(o.state ?? "")
+			return [
+				{
+					id: asString(o.id, `bi${i}`),
+					label: asString(o.label, "Item"),
+					state: (BOARD_STATES.has(state) ? state : "watching") as BoardItemState,
+					note: asString(o.note),
+					needsInput: Boolean(o.needsInput),
+				},
+			]
+		}),
+	}
+}
+
+function normalizeMcpServer(raw: unknown): McpServer | null {
+	const s = asRecord(raw)
+	if (!s) return null
+	const id = asString(s.id) || asString(s.name, "mcp")
+	return {
+		id,
+		name: asString(s.name, "Server"),
+		url: asString(s.url),
+		authHeader: asString(s.authHeader),
+		enabled: Boolean(s.enabled),
+		sessionId: s.sessionId ? asString(s.sessionId) : undefined,
+		tools: asArray(s.tools).flatMap((t) => {
+			const o = asRecord(t)
+			if (!o) return []
+			const name = asString(o.name)
+			if (!name) return []
+			return [
+				{
+					name,
+					description: asString(o.description),
+					inputSchema: asRecord(o.inputSchema) ?? undefined,
+					serverId: asString(o.serverId, id),
+				},
+			]
+		}),
+		lastError: s.lastError ? asString(s.lastError) : undefined,
+		lastOkAt: s.lastOkAt ? asString(s.lastOkAt) : undefined,
+	}
+}
+
+function asArray(raw: unknown): unknown[] {
+	return Array.isArray(raw) ? raw : []
+}
+
+function asRecord(raw: unknown): Record<string, unknown> | null {
+	return raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Record<string, unknown>) : null
+}
+
+function asString(raw: unknown, fallback = ""): string {
+	if (typeof raw === "string") return raw
+	if (typeof raw === "number" || typeof raw === "boolean") return String(raw)
+	return fallback
+}
+
+function parseStatusItems(raw: unknown): ArtifactStatusItem[] {
+	if (!Array.isArray(raw)) return []
+	return raw.flatMap((item) => {
+		const o = asRecord(item)
+		if (!o) return []
+		const label = asString(o.label)
+		const value = asString(o.value)
+		if (!label && !value) return []
+		const tone = o.tone
+		const itemOut: ArtifactStatusItem = { label: label || "Item", value }
+		if (tone === "ok" || tone === "warn" || tone === "alert" || tone === "neutral") itemOut.tone = tone
+		return [itemOut]
+	})
+}
+
+function parseChartSeries(raw: unknown): { name: string; points: ArtifactChartPoint[] }[] {
+	if (!Array.isArray(raw)) return []
+	return raw.flatMap((series) => {
+		const o = asRecord(series)
+		if (!o) return []
+		const points = Array.isArray(o.points)
+			? o.points.flatMap((p) => {
+					const pt = asRecord(p)
+					if (!pt) return []
+					const y = Number(pt.y)
+					if (!Number.isFinite(y)) return []
+					return [{ x: asString(pt.x), y }]
+				})
+			: []
+		return [{ name: asString(o.name, "Series"), points }]
+	})
+}
+
+function parseNodes(raw: unknown): ArtifactNode[] {
+	if (Array.isArray(raw)) {
+		return raw.map((node, i) => {
+			if (typeof node === "string") return { id: node, label: node }
+			const o = asRecord(node) ?? {}
+			const id = asString(o.id ?? o.key ?? o.name, `n${i}`)
+			return { id, label: asString(o.label ?? o.name ?? o.title ?? o.text, id) }
+		})
+	}
+	const o = asRecord(raw)
+	if (!o) return []
+	return Object.entries(o).map(([id, value]) => {
+		const nested = asRecord(value)
+		if (nested) {
+			return { id: asString(nested.id, id), label: asString(nested.label ?? nested.name ?? nested.title, id) }
+		}
+		return { id, label: asString(value, id) }
+	})
+}
+
+function parseEdges(raw: unknown): ArtifactEdge[] {
+	if (!Array.isArray(raw)) return []
+	return raw.flatMap((edge) => {
+		const o = asRecord(edge)
+		if (!o) return []
+		const from = asString(o.from ?? o.source ?? o.src ?? o.start)
+		const to = asString(o.to ?? o.target ?? o.dst ?? o.end)
+		if (!from || !to) return []
+		const label = o.label == null ? undefined : asString(o.label)
+		return label ? [{ from, to, label }] : [{ from, to }]
+	})
+}

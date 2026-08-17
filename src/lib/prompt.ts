@@ -22,7 +22,7 @@ export function buildSystemPrompt(snap: Snapshot, extra = ""): string {
 	const boards = snap.boards
 		.slice(0, 6)
 		.map((b) => {
-			const items = b.items
+			const items = (b.items ?? [])
 				.map((it) => `  · ${it.label} [${it.state}]${it.needsInput ? " NEEDS YOU" : ""} ${it.note}`)
 				.join("\n")
 			return `- ${b.name}: ${b.summary}\n${items}`
@@ -43,7 +43,7 @@ export function buildSystemPrompt(snap: Snapshot, extra = ""): string {
 		`When something should be true later, write a memory. When something should happen later without being asked, write a routine.`,
 		`You do not pretend to be inside their other machines. Their projects expose capability through MCP tools. If a tool is missing, say so — that is a gap in that project, not something you invent.`,
 		`When they bounce ideas, think with them. Be direct. No cheerleading. No emoji.`,
-		`When you need to show something, call show_visual with a status, chart, diagram, brief, or note.`,
+		`When you need to show something, call show_visual with a status, chart, diagram, brief, or note. A diagram must include nodes [{id, label}] and edges [{from, to}].`,
 		`Start the first spoken sentence as if continuing a working relationship, not introducing a product.`,
 		brief ? `Standing brief from ${user}: ${brief}` : null,
 		memories ? `Memories:\n${memories}` : "No durable memories yet.",

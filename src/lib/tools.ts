@@ -1,15 +1,16 @@
-import type {
-	Artifact,
-	Automation,
-	AutomationTrigger,
-	Board,
-	BoardItemState,
-	InboxItem,
-	InboxSeverity,
-	Memory,
-	MemoryKind,
-	Snapshot,
-	TimeLog,
+import {
+	type Artifact,
+	type Automation,
+	type AutomationTrigger,
+	type Board,
+	type BoardItemState,
+	type InboxItem,
+	type InboxSeverity,
+	type Memory,
+	type MemoryKind,
+	normalizeArtifact,
+	type Snapshot,
+	type TimeLog,
 } from "./types"
 import { nowIso, uid } from "./utils"
 
@@ -120,7 +121,67 @@ export const BUILTIN_TOOLS = [
 		description: "Show a visual: status grid, chart, diagram, or written brief. Use when words are not enough.",
 		inputSchema: {
 			type: "object",
-			properties: { artifact: { type: "object" } },
+			properties: {
+				artifact: {
+					type: "object",
+					properties: {
+						type: { type: "string", enum: ["status", "chart", "diagram", "brief", "note"] },
+						title: { type: "string" },
+						items: {
+							type: "array",
+							items: {
+								type: "object",
+								properties: {
+									label: { type: "string" },
+									value: { type: "string" },
+									tone: { type: "string", enum: ["ok", "warn", "alert", "neutral"] },
+								},
+								required: ["label", "value"],
+							},
+						},
+						series: {
+							type: "array",
+							items: {
+								type: "object",
+								properties: {
+									name: { type: "string" },
+									points: {
+										type: "array",
+										items: {
+											type: "object",
+											properties: { x: { type: "string" }, y: { type: "number" } },
+											required: ["x", "y"],
+										},
+									},
+								},
+								required: ["name", "points"],
+							},
+						},
+						nodes: {
+							type: "array",
+							items: {
+								type: "object",
+								properties: { id: { type: "string" }, label: { type: "string" } },
+								required: ["id", "label"],
+							},
+						},
+						edges: {
+							type: "array",
+							items: {
+								type: "object",
+								properties: {
+									from: { type: "string" },
+									to: { type: "string" },
+									label: { type: "string" },
+								},
+								required: ["from", "to"],
+							},
+						},
+						body: { type: "string" },
+					},
+					required: ["type", "title"],
+				},
+			},
 			required: ["artifact"],
 		},
 	},
@@ -292,13 +353,13 @@ export function executeBuiltin(name: string, raw: string, world: World): ToolRes
 	}
 
 	if (name === "show_visual") {
-		const artifact = args.artifact as Artifact | undefined
-		if (!artifact || !artifact.type) return { id: "", name, content: "No artifact provided." }
+		const artifact = normalizeArtifact(args.artifact ?? (args.type ? args : undefined))
+		if (!artifact) return { id: "", name, content: "No artifact provided." }
 		world.opened = artifact
 		return {
 			id: "",
 			name,
-			content: `Showing ${artifact.type}: ${"title" in artifact ? artifact.title : ""}`,
+			content: `Showing ${artifact.type}: ${artifact.title}`,
 			artifact,
 		}
 	}
