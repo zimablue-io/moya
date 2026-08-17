@@ -11,6 +11,7 @@ import { WatchDialog } from "@/components/watch-dialog"
 import { displayName } from "@/lib/brand"
 import { systemSettingsLabel } from "@/lib/host"
 import { allowMicrophone } from "@/lib/media-permission"
+import { displayVoiceCaption } from "@/lib/realtime-protocol"
 import { speech } from "@/lib/speech"
 import { pendingInboxCount, useApp } from "@/lib/store"
 import { type DialogId } from "@/lib/types"
@@ -37,7 +38,6 @@ export function AssistantShell() {
 	const emotion = useApp((s) => s.emotion)
 	const level = useApp((s) => s.level)
 	const bands = useApp((s) => s.bands)
-	const caption = useApp((s) => s.caption)
 	const interim = useApp((s) => s.interim)
 	const voiceMode = useApp((s) => s.voiceMode)
 	const composerOpen = useApp((s) => s.composerOpen)
@@ -102,11 +102,7 @@ export function AssistantShell() {
 					setDraft((prev) => `${prev.replace(/\s+$/, "")} ${text}`.trim())
 					return
 				}
-				if (useApp.getState().voiceMode) {
-					speech.stopListen()
-					void send(text)
-					return
-				}
+				if (useApp.getState().voiceMode) return
 				if (holding.current) {
 					holdBits.current = `${holdBits.current} ${text}`.trim()
 				}
@@ -114,14 +110,8 @@ export function AssistantShell() {
 			onLevel: (lv, bd) => useApp.getState().setPresence({ level: lv, bands: bd }),
 			onSpeakEnd: () => {
 				const s = useApp.getState()
-				if (s.voiceMode) {
-					s.setPresence({ presence: "listening" })
-					if (s.settings.voiceBackend.id === "browser") {
-						void speech.startListen({ continuous: true })
-					}
-				} else {
-					s.setPresence({ presence: "idle" })
-				}
+				if (s.voiceMode) s.setPresence({ presence: "listening" })
+				else s.setPresence({ presence: "idle" })
 			},
 			onListenEnd: () => {
 				const s = useApp.getState()
@@ -135,7 +125,7 @@ export function AssistantShell() {
 			},
 		})
 		return () => speech.dispose()
-	}, [send])
+	}, [])
 
 	const enterVoice = useCallback(() => {
 		setNoteListen(false)
@@ -199,7 +189,7 @@ export function AssistantShell() {
 			if (typing) return
 			if (e.key === "v" || e.key === "V") {
 				e.preventDefault()
-				if (voiceMode) exitVoice()
+				if (voiceMode && !error) exitVoice()
 				else enterVoice()
 			}
 			if (e.key === "t" || e.key === "T" || e.key === "/") {
@@ -223,7 +213,7 @@ export function AssistantShell() {
 			window.removeEventListener("keydown", onKey)
 			window.removeEventListener("keyup", onUp)
 		}
-	}, [composerOpen, enterVoice, exitVoice, openDialog, setComposerOpen, startHold, endHold, voiceMode])
+	}, [composerOpen, enterVoice, error, exitVoice, openDialog, setComposerOpen, startHold, endHold, voiceMode])
 
 	const status =
 		presence === "listening"
@@ -240,9 +230,7 @@ export function AssistantShell() {
 						? "Voice"
 						: "Idle"
 
-	const messages = useApp((s) => s.messages)
-	const lastSpeak = [...messages].reverse().find((m) => m.role === "assistant")?.content ?? ""
-	const shown = settings.showCaptions ? interim || caption || (presence === "speaking" ? lastSpeak : "") : ""
+	const shown = displayVoiceCaption({ showCaptions: settings.showCaptions, liveLine: interim })
 
 	return (
 		<main className="relative isolate min-h-dvh overflow-hidden bg-bg text-fg">
@@ -291,7 +279,7 @@ export function AssistantShell() {
 				onHoldStart={startHold}
 				onHoldEnd={endHold}
 				onTap={() => {
-					if (voiceMode) exitVoice()
+					if (voiceMode && !error) exitVoice()
 					else enterVoice()
 				}}
 			/>
@@ -345,7 +333,7 @@ export function AssistantShell() {
 							active={voiceMode}
 							label="Voice"
 							onClick={() => {
-								if (voiceMode) exitVoice()
+								if (voiceMode && !error) exitVoice()
 								else enterVoice()
 							}}
 						>

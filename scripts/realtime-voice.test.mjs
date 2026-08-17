@@ -10,10 +10,13 @@ import {
 } from "../src/lib/pcm.ts"
 import { ScheduledAudioQueue } from "../src/lib/realtime-playback.ts"
 import {
+	applyLiveCaption,
 	applyTranscriptBit,
 	audioDeltaFromEvent,
 	buildSessionUpdate,
 	buildTruncateEvent,
+	displayVoiceCaption,
+	EMPTY_LIVE_CAPTION,
 	functionCallFromEvent,
 	isBenignInterruptError,
 	itemIdFromEvent,
@@ -23,6 +26,8 @@ import {
 	resolveVoiceApiKey,
 	responseIdFromEvent,
 	shouldAcceptOutputAudio,
+	shouldHonorSpeechStart,
+	shouldSendInputAudio,
 	transcriptFromEvent,
 	websocketProtocols,
 } from "../src/lib/realtime-protocol.ts"
@@ -130,10 +135,11 @@ test("tool calls come from function_call_arguments.done", () => {
 	)
 })
 
-test("session.update is Realtime GA shaped", () => {
+test("local session.update is GA shaped and does not set a cloud transcription model", () => {
 	const event = buildSessionUpdate({
+		backend: "s2s",
 		instructions: "You are Moya.",
-		voice: "eve",
+		voice: "jean",
 		tools: [
 			{
 				type: "function",
@@ -147,9 +153,37 @@ test("session.update is Realtime GA shaped", () => {
 	assert.equal(event.type, "session.update")
 	assert.equal(session.type, "realtime")
 	assert.equal(session.audio.input.format.rate, 24_000)
-	assert.equal(session.audio.output.voice, "eve")
+	assert.equal(session.audio.output.voice, "jean")
 	assert.equal(session.tools[0].name, "memory_write")
-	assert.equal(session.turn_detection.interrupt_response, true)
+	assert.equal(session.audio.input.turn_detection.interrupt_response, true)
+	assert.equal(session.audio.input.turn_detection.create_response, true)
+	assert.equal(session.audio.input.transcription, undefined)
+})
+
+test("Grok session.update opts into grok-transcribe and a hearable VAD", () => {
+	const session = buildSessionUpdate({
+		backend: "xai",
+		instructions: "You are Moya.",
+		voice: "eve",
+		tools: [],
+	}).session
+	assert.equal(session.audio.input.transcription.model, "grok-transcribe")
+	assert.equal(session.turn_detection.type, "server_vad")
+	assert.ok(session.turn_detection.threshold <= 0.6)
+	assert.ok(session.turn_detection.threshold >= 0.45)
+	assert.equal(session.reasoning.effort, "none")
+})
+
+test("OpenAI session.update opts into live transcription and semantic VAD", () => {
+	const session = buildSessionUpdate({
+		backend: "openai",
+		instructions: "You are Moya.",
+		voice: "marin",
+		tools: [],
+	}).session
+	assert.equal(session.audio.input.transcription.model, "gpt-4o-mini-transcribe")
+	assert.equal(session.audio.input.turn_detection.type, "semantic_vad")
+	assert.equal(session.audio.input.turn_detection.create_response, true)
 	assert.equal(session.audio.input.turn_detection.interrupt_response, true)
 })
 
@@ -379,6 +413,54 @@ test("audio and response ids come from GA and nested event shapes", () => {
 	assert.equal(itemIdFromEvent({ item: { id: "item_b" } }), "item_b")
 	assert.equal(responseIdFromEvent({ response_id: "resp_a" }), "resp_a")
 	assert.equal(responseIdFromEvent({ response: { id: "resp_b" } }), "resp_b")
+})
+
+test("live captions key by item_id and never resurrect a stale assistant line", () => {
+	let live = EMPTY_LIVE_CAPTION
+	live = applyLiveCaption(live, {
+		role: "user",
+		text: "hello",
+		mode: "delta",
+		itemId: "item_u1",
+	})
+	live = applyLiveCaption(live, { role: "user", text: " there", mode: "delta", itemId: "item_u1" })
+	assert.equal(live.text, "hello there")
+	live = applyLiveCaption(live, {
+		role: "user",
+		text: "hello there friend",
+		mode: "final",
+		itemId: "item_u1",
+	})
+	assert.equal(live.text, "hello there friend")
+
+	live = applyLiveCaption(live, { role: "assistant", text: "On", mode: "delta", itemId: "item_a1" })
+	live = applyLiveCaption(live, { role: "assistant", text: " it.", mode: "delta", itemId: "item_a1" })
+	assert.equal(live.text, "On it.")
+
+	live = applyLiveCaption(live, { role: "user", text: "next", mode: "delta", itemId: "item_u2" })
+	assert.equal(live.text, "next")
+	assert.equal(displayVoiceCaption({ showCaptions: true, liveLine: live.text }), "next")
+	assert.equal(displayVoiceCaption({ showCaptions: true, liveLine: "" }), "")
+	assert.equal(displayVoiceCaption({ showCaptions: false, liveLine: "next" }), "")
+})
+
+test("input transcription events carry the item id", () => {
+	assert.equal(
+		transcriptFromEvent({
+			type: "conversation.item.input_audio_transcription.delta",
+			item_id: "item_u1",
+			delta: "hel",
+		})?.itemId,
+		"item_u1",
+	)
+})
+
+test("playback echo is not sent as mic and does not count as barge-in", () => {
+	assert.equal(shouldSendInputAudio({ playing: false, micRms: 0.01 }), true)
+	assert.equal(shouldSendInputAudio({ playing: true, micRms: 0.01 }), false)
+	assert.equal(shouldSendInputAudio({ playing: true, micRms: 0.12 }), true)
+	assert.equal(shouldHonorSpeechStart({ playing: true, micRms: 0.01 }), false)
+	assert.equal(shouldHonorSpeechStart({ playing: false, micRms: 0.01 }), true)
 })
 
 test("cancel-with-nothing-active errors stay silent", () => {

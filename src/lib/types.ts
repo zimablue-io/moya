@@ -9,7 +9,7 @@ export type MemoryKind = "fact" | "preference" | "decision" | "project" | "insig
 
 export type ProviderId = "xai" | "openai" | "groq" | "openrouter" | "ollama" | "llamacpp" | "custom"
 
-export type VoiceBackendId = "browser" | "s2s" | "xai" | "openai" | "custom"
+export type VoiceBackendId = "s2s" | "xai" | "openai" | "custom"
 
 export type DialogId = "history" | "watch" | "settings" | "artifact" | "memory" | "routines" | null
 
@@ -201,9 +201,9 @@ export const DEFAULT_SETTINGS: Settings = {
 		apiKey: "",
 	},
 	voiceBackend: {
-		id: "browser",
-		model: "",
-		baseUrl: "",
+		id: "s2s",
+		model: "local",
+		baseUrl: "http://127.0.0.1:8765/v1",
 		apiKey: "",
 		voice: "",
 	},
@@ -266,13 +266,6 @@ export const VOICE_PRESETS: Record<
 	VoiceBackendId,
 	{ label: string; model: string; baseUrl: string; voice: string; hint: string }
 > = {
-	browser: {
-		label: "System",
-		model: "",
-		baseUrl: "",
-		voice: "",
-		hint: "Voices already on this device.",
-	},
 	s2s: {
 		label: "Local",
 		model: "local",
@@ -315,7 +308,6 @@ export const POCKET_TTS_VOICES: { id: string; label: string }[] = [
 ]
 
 export const REALTIME_VOICES: Record<VoiceBackendId, { id: string; label: string }[]> = {
-	browser: [],
 	s2s: POCKET_TTS_VOICES,
 	xai: [
 		{ id: "eve", label: "Eve" },
@@ -339,7 +331,7 @@ export const REALTIME_VOICES: Record<VoiceBackendId, { id: string; label: string
 	custom: [],
 }
 
-export const VOICE_CHOICES: VoiceBackendId[] = ["browser", "s2s", "xai", "openai"]
+export const VOICE_CHOICES: VoiceBackendId[] = ["s2s", "xai", "openai"]
 
 const PROVIDER_IDS = new Set<string>(Object.keys(PROVIDER_PRESETS))
 const VOICE_BACKEND_IDS = new Set<string>(Object.keys(VOICE_PRESETS))
@@ -360,10 +352,6 @@ export function isVoiceBackendId(value: string): value is VoiceBackendId {
 	return VOICE_BACKEND_IDS.has(value)
 }
 
-export function usesRealtimeVoice(id: VoiceBackendId): boolean {
-	return id !== "browser"
-}
-
 export function normalizeSettings(raw: unknown): Settings {
 	const s = (raw ?? {}) as Partial<Settings> & { engine?: { port?: number } }
 	const rawEngine = s.engine ?? {}
@@ -381,13 +369,15 @@ export function normalizeSettings(raw: unknown): Settings {
 	}
 
 	const rawVoice = (s.voiceBackend ?? {}) as Partial<VoiceConfig>
-	const rawVoiceId = rawVoice.id === "custom" ? "s2s" : (rawVoice.id ?? "")
+	const storedId = String(rawVoice.id ?? "")
+	const rawVoiceId = storedId === "custom" || storedId === "browser" ? "s2s" : storedId
 	const voiceId = isVoiceBackendId(rawVoiceId) ? rawVoiceId : DEFAULT_SETTINGS.voiceBackend.id
 	const voicePreset = VOICE_PRESETS[voiceId]
+	const keepStoredUrl = storedId === "s2s" || storedId === "custom" || storedId === "xai" || storedId === "openai"
 	const voiceBackend: VoiceConfig = {
 		id: voiceId,
 		model: rawVoice.model?.trim() || voicePreset.model,
-		baseUrl: rawVoice.baseUrl?.trim() || voicePreset.baseUrl,
+		baseUrl: (keepStoredUrl && rawVoice.baseUrl?.trim()) || voicePreset.baseUrl,
 		apiKey: rawVoice.apiKey ?? DEFAULT_SETTINGS.voiceBackend.apiKey,
 		voice: rawVoice.voice?.trim() || voicePreset.voice,
 	}

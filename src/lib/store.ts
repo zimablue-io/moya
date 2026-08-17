@@ -31,7 +31,6 @@ import {
 	type ProviderId,
 	type Settings,
 	type Snapshot,
-	usesRealtimeVoice,
 	VOICE_PRESETS,
 	type VoiceBackendId,
 } from "./types"
@@ -631,8 +630,8 @@ async function runTool(name: string, args: string, world: World): Promise<{ cont
 	return { content: result.content, artifact: result.artifact }
 }
 
-function skipBrowserSpeak(s: { voiceMode: boolean; settings: Settings }) {
-	return s.voiceMode && usesRealtimeVoice(s.settings.voiceBackend.id)
+function skipBrowserSpeak(s: { voiceMode: boolean }) {
+	return s.voiceMode
 }
 
 export function pendingInboxCount(inbox: { resolvedAt: string | null }[]) {

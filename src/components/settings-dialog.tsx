@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { authEnabled } from "@/lib/auth/client"
 import { UserButton } from "@/lib/auth/gates"
 import { APP_NAME, openSettingsToAllow } from "@/lib/brand"
-import { isDesktop, systemSettingsLabel, systemVoiceLabel, thisDeviceLabel } from "@/lib/host"
+import { isDesktop, systemSettingsLabel, thisDeviceLabel } from "@/lib/host"
 import { listProviderModels } from "@/lib/llm"
 import { allowMicrophone, type MediaAuth, mediaPermissionStatus } from "@/lib/media-permission"
 import { speech } from "@/lib/speech"
@@ -164,86 +164,86 @@ export function SettingsDialog() {
 								>
 									{VOICE_CHOICES.map((id) => (
 										<option key={id} value={id}>
-											{id === "browser" ? systemVoiceLabel() : VOICE_PRESETS[id].label}
+											{VOICE_PRESETS[id].label}
 										</option>
 									))}
 								</select>
 							</Field>
-							{settings.voiceBackend.id === "browser" ? (
-								<>
-									<Field label="Speaker">
-										<MacVoicePicker
-											voices={voices}
-											value={settings.voiceURI}
-											previewing={previewing}
-											onVoice={(voiceURI) => {
-												patch({ voiceURI })
-												playVoicePreview({ voiceURI })
-											}}
-											onPreview={() => playVoicePreview()}
-											onStop={stopVoicePreview}
-										/>
-									</Field>
-									<Field label={`Rate ${settings.rate.toFixed(2)}`}>
-										<Slider
-											min={0.7}
-											max={1.3}
-											step={0.05}
-											value={[settings.rate]}
-											onValueChange={([v]) => patch({ rate: v ?? 1 })}
-											onValueCommit={([v]) => playVoicePreview({ rate: v ?? 1 })}
-										/>
-									</Field>
-									<Field label={`Pitch ${settings.pitch.toFixed(2)}`}>
-										<Slider
-											min={0.7}
-											max={1.3}
-											step={0.05}
-											value={[settings.pitch]}
-											onValueChange={([v]) => patch({ pitch: v ?? 1 })}
-											onValueCommit={([v]) => playVoicePreview({ pitch: v ?? 1 })}
-										/>
-									</Field>
-								</>
-							) : (
-								<>
-									<SpokenVoice
-										id={settings.voiceBackend.id}
-										baseUrl={settings.voiceBackend.baseUrl}
-										apiKey={resolveVoiceApiKey(settings.voiceBackend, settings.provider)}
-										value={settings.voiceBackend.voice}
-										onChange={(v) => setVoiceBackendField("voice", v)}
-										onCommit={() => {
-											if (useApp.getState().voiceMode) void restartVoiceIfNeeded()
-										}}
+							<SpokenVoice
+								id={settings.voiceBackend.id}
+								baseUrl={settings.voiceBackend.baseUrl}
+								apiKey={resolveVoiceApiKey(settings.voiceBackend, settings.provider)}
+								value={settings.voiceBackend.voice}
+								onChange={(v) => setVoiceBackendField("voice", v)}
+								onCommit={() => {
+									if (useApp.getState().voiceMode) void restartVoiceIfNeeded()
+								}}
+							/>
+							{voiceBackendNeedsKey(settings.voiceBackend.id) ? (
+								<Field label="API key">
+									<Input
+										type="password"
+										autoComplete="off"
+										value={settings.voiceBackend.apiKey}
+										onChange={(e) => setVoiceBackendField("apiKey", e.target.value)}
+										placeholder={settings.provider.id === settings.voiceBackend.id ? "Same as Model" : "Required"}
 									/>
-									{voiceBackendNeedsKey(settings.voiceBackend.id) ? (
-										<Field label="API key">
+								</Field>
+							) : null}
+							{settings.voiceBackend.id === "s2s" ? (
+								<details className="rounded-xl bg-surface-2 px-3 py-2">
+									<summary className="cursor-pointer text-xs text-muted">Connection</summary>
+									<div className="mt-3 grid gap-3">
+										<Field label="URL">
 											<Input
-												type="password"
-												autoComplete="off"
-												value={settings.voiceBackend.apiKey}
-												onChange={(e) => setVoiceBackendField("apiKey", e.target.value)}
-												placeholder={settings.provider.id === settings.voiceBackend.id ? "Same as Model" : "Required"}
+												value={settings.voiceBackend.baseUrl}
+												onChange={(e) => setVoiceBackendField("baseUrl", e.target.value)}
+												placeholder="http://127.0.0.1:8765/v1"
 											/>
 										</Field>
-									) : null}
-									{settings.voiceBackend.id === "s2s" ? (
-										<details className="rounded-xl bg-surface-2 px-3 py-2">
-											<summary className="cursor-pointer text-xs text-muted">Connection</summary>
-											<div className="mt-3 grid gap-3">
-												<Field label="URL">
-													<Input
-														value={settings.voiceBackend.baseUrl}
-														onChange={(e) => setVoiceBackendField("baseUrl", e.target.value)}
-														placeholder="http://127.0.0.1:8765/v1"
-													/>
-												</Field>
-											</div>
-										</details>
-									) : null}
-								</>
-							)}
+									</div>
+								</details>
+							) : null}
+							{settings.autoSpeak ? (
+								<details className="rounded-xl bg-surface-2 px-3 py-2">
+									<summary className="cursor-pointer text-xs text-muted">Typed replies</summary>
+									<div className="mt-3 grid gap-3">
+										<Field label="Speaker">
+											<MacVoicePicker
+												voices={voices}
+												value={settings.voiceURI}
+												previewing={previewing}
+												onVoice={(voiceURI) => {
+													patch({ voiceURI })
+													playVoicePreview({ voiceURI })
+												}}
+												onPreview={() => playVoicePreview()}
+												onStop={stopVoicePreview}
+											/>
+										</Field>
+										<Field label={`Rate ${settings.rate.toFixed(2)}`}>
+											<Slider
+												min={0.7}
+												max={1.3}
+												step={0.05}
+												value={[settings.rate]}
+												onValueChange={([v]) => patch({ rate: v ?? 1 })}
+												onValueCommit={([v]) => playVoicePreview({ rate: v ?? 1 })}
+											/>
+										</Field>
+										<Field label={`Pitch ${settings.pitch.toFixed(2)}`}>
+											<Slider
+												min={0.7}
+												max={1.3}
+												step={0.05}
+												value={[settings.pitch]}
+												onValueChange={([v]) => patch({ pitch: v ?? 1 })}
+												onValueCommit={([v]) => playVoicePreview({ pitch: v ?? 1 })}
+											/>
+										</Field>
+									</div>
+								</details>
+							) : null}
 						</TabsContent>
 						<TabsContent value="model" className="space-y-4">
 							<Field label="Provider">
@@ -598,7 +598,6 @@ function SpokenVoice({
 	useEffect(() => {
 		let cancelled = false
 		setSpeakers(speakersFor(id))
-		if (id === "browser") return
 		void listRealtimeSpeakers({ id, baseUrl, apiKey }, { fallback: speakersFor(id) }).then((list) => {
 			if (!cancelled && list.length) setSpeakers(list)
 		})

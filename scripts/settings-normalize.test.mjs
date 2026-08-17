@@ -7,8 +7,17 @@ test("defaults when given empty input", () => {
 	const settings = normalizeSettings({})
 	assert.equal(settings.provider.id, "xai")
 	assert.equal(settings.provider.baseUrl, PROVIDER_PRESETS.xai.baseUrl)
-	assert.equal(settings.voiceBackend.id, "browser")
+	assert.equal(settings.voiceBackend.id, "s2s")
+	assert.equal(settings.voiceBackend.baseUrl, "http://127.0.0.1:8765/v1")
 	assert.equal("engine" in settings, false)
+})
+
+test("stored System voice migrates to Local speech-to-speech", () => {
+	const settings = normalizeSettings({
+		voiceBackend: { id: "browser", model: "", baseUrl: "", apiKey: "", voice: "" },
+	})
+	assert.equal(settings.voiceBackend.id, "s2s")
+	assert.equal(settings.voiceBackend.baseUrl, "http://127.0.0.1:8765/v1")
 })
 
 test("llama.cpp defaults to llama-server's own port", () => {
@@ -102,19 +111,20 @@ test("Custom voice settings that pointed at local s2s become Local", () => {
 	assert.equal(settings.voiceBackend.baseUrl, "http://127.0.0.1:8765/v1")
 })
 
-test("the Voice tab only offers System, Local, Grok, and OpenAI", () => {
-	assert.deepEqual(VOICE_CHOICES, ["browser", "s2s", "xai", "openai"])
+test("the Voice tab only offers Local, Grok, and OpenAI", () => {
+	assert.deepEqual(VOICE_CHOICES, ["s2s", "xai", "openai"])
 	assert.deepEqual(
 		VOICE_CHOICES.map((id) => VOICE_PRESETS[id].label),
-		["System", "Local", "Grok", "OpenAI"],
+		["Local", "Grok", "OpenAI"],
 	)
 })
 
-test("an unknown voice backend becomes System", () => {
+test("an unknown voice backend becomes Local", () => {
 	const settings = normalizeSettings({
 		voiceBackend: { id: "moshi", baseUrl: "http://127.0.0.1:8998" },
 	})
-	assert.equal(settings.voiceBackend.id, "browser")
+	assert.equal(settings.voiceBackend.id, "s2s")
+	assert.equal(settings.voiceBackend.baseUrl, "http://127.0.0.1:8765/v1")
 })
 
 test("voice preset copy stays short enough for a tooltip", () => {

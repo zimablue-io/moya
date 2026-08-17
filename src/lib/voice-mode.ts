@@ -1,9 +1,14 @@
 import { buildSystemPrompt } from "./prompt"
+import { type RealtimeLoopAction, reduceVoiceUi } from "./realtime-loop"
 import { realtimeSession } from "./realtime-session"
 import { speech } from "./speech"
 import { useApp } from "./store"
-import { usesRealtimeVoice } from "./types"
 import { resolveVoiceApiKey, toRealtimeTools } from "./voice-backend"
+
+function applyVoiceAction(action: RealtimeLoopAction) {
+	const s = useApp.getState()
+	s.setPresence(reduceVoiceUi({ presence: s.presence, interim: s.interim, error: s.error }, action))
+}
 
 export function voiceRealtimeActive() {
 	return realtimeSession.active
@@ -16,11 +21,6 @@ export async function enterVoiceMode() {
 	const store = useApp.getState()
 	store.setVoiceMode(true)
 	store.setPresence({ presence: "listening", caption: "", interim: "", error: null })
-
-	if (!usesRealtimeVoice(store.settings.voiceBackend.id)) {
-		void speech.startListen({ continuous: true })
-		return
-	}
 	await startRealtime()
 }
 
@@ -39,11 +39,7 @@ export async function restartVoiceIfNeeded() {
 	realtimeSession.stop()
 	speech.stopListen()
 	speech.stopSpeak()
-	if (!usesRealtimeVoice(store.settings.voiceBackend.id)) {
-		store.setPresence({ presence: "listening", caption: "", interim: "", error: null })
-		void speech.startListen({ continuous: true })
-		return
-	}
+	store.setPresence({ presence: "listening", caption: "", interim: "", error: null })
 	await startRealtime()
 }
 
@@ -66,33 +62,18 @@ async function startRealtime() {
 
 	realtimeSession.configure({
 		onLevel: (level, bands) => useApp.getState().setPresence({ level, bands }),
-		onInterim: (role, text) => {
-			const s = useApp.getState()
-			if (role === "user") s.setPresence({ interim: text, presence: "listening" })
-			else s.setPresence({ caption: text, presence: "speaking" })
-		},
+		onInterim: (role, text) => applyVoiceAction({ type: "interim", role, text }),
 		onFinal: (role, text) => {
-			const s = useApp.getState()
-			if (role === "user") {
-				s.commitVoiceUser(text)
-				s.setPresence({ interim: "", presence: "thinking" })
-			} else {
-				s.setPresence({ caption: text, presence: "speaking" })
-			}
+			if (role === "user") useApp.getState().commitVoiceUser(text)
+			applyVoiceAction({ type: "final", role, text })
 		},
-		onSpeechStart: () => {
-			useApp.getState().setPresence({ presence: "listening", interim: "", error: null })
-		},
-		onSpeechStop: () => {
-			useApp.getState().setPresence({ presence: "thinking", interim: "" })
-		},
-		onResponseStart: () => {
-			useApp.getState().setPresence({ presence: "speaking" })
-		},
+		onSpeechStart: () => applyVoiceAction({ type: "speech_start" }),
+		onSpeechStop: () => applyVoiceAction({ type: "speech_stop" }),
+		onResponseStart: () => applyVoiceAction({ type: "response_start" }),
 		onResponseDone: (assistantText) => {
 			const s = useApp.getState()
 			if (assistantText) s.commitVoiceAssistant(assistantText)
-			if (s.voiceMode) s.setPresence({ presence: "listening", interim: "" })
+			if (s.voiceMode) applyVoiceAction({ type: "response_done", text: assistantText })
 		},
 		onFunctionCall: async (call) => {
 			const result = await useApp.getState().executeVoiceTool(call.name, call.arguments)
@@ -100,11 +81,13 @@ async function startRealtime() {
 		},
 		onError: (message) => {
 			const s = useApp.getState()
-			s.setPresence({ error: message, presence: s.voiceMode ? "listening" : "idle" })
+			s.setVoiceMode(false)
+			s.setPresence({ error: message, presence: "idle" })
 		},
 		onClose: () => {
 			const s = useApp.getState()
 			if (!s.voiceMode) return
+			s.setVoiceMode(false)
 			if (s.presence === "listening" || s.presence === "thinking" || s.presence === "speaking") {
 				s.setPresence({ presence: "idle" })
 			}

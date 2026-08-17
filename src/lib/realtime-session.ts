@@ -1,26 +1,19 @@
 import { captureDenied, ensureMicrophoneAccess } from "./media-permission"
 import { base64ToPcm16, capturePcm16Base64, pcm16ToFloat, rmsLevel } from "./pcm"
+import { applyRealtimeEvent, bargeIn, type RealtimeLoopAction, type RealtimeLoopState } from "./realtime-loop"
 import { ScheduledAudioQueue } from "./realtime-playback"
 import type { VoiceBackendId } from "./types"
 import { clamp } from "./utils"
 import {
-	applyTranscriptBit,
-	audioDeltaFromEvent,
 	buildSessionUpdate,
-	buildTruncateEvent,
-	errorFromEvent,
+	EMPTY_LIVE_CAPTION,
 	type FunctionCallCue,
 	functionCallFromEvent,
-	isBenignInterruptError,
-	itemIdFromEvent,
-	planBargeIn,
 	REALTIME_SAMPLE_RATE,
 	type RealtimeTool,
 	realtimeHttpBase,
 	realtimeSocketUrl,
-	responseIdFromEvent,
-	shouldAcceptOutputAudio,
-	transcriptFromEvent,
+	shouldSendInputAudio,
 	voiceBackendNeedsKey,
 	websocketProtocols,
 } from "./voice-backend"
@@ -57,8 +50,9 @@ export class RealtimeSession {
 	private processor: ScriptProcessorNode | null = null
 	private raf = 0
 	private handlers: RealtimeHandlers = {}
-	private userBits = ""
-	private assistantBits = ""
+	private userCaption = EMPTY_LIVE_CAPTION
+	private assistantCaption = EMPTY_LIVE_CAPTION
+	private lastMicRms = 0
 	private sampleRate = REALTIME_SAMPLE_RATE
 	private seenCalls = new Set<string>()
 	private output = new ScheduledAudioQueue()
@@ -112,6 +106,7 @@ export class RealtimeSession {
 			ws.send(
 				JSON.stringify(
 					buildSessionUpdate({
+						backend: opts.id,
 						instructions: opts.instructions,
 						voice: opts.voice,
 						tools: opts.tools,
@@ -160,14 +155,17 @@ export class RealtimeSession {
 	}
 
 	cancelResponse() {
-		this.interruptPlayback()
+		const { state, actions } = bargeIn(this.loopSnapshot())
+		this.applyLoop(state)
+		this.dispatchActions(actions)
 	}
 
 	stop() {
 		this.gen += 1
 		this.seenCalls.clear()
-		this.userBits = ""
-		this.assistantBits = ""
+		this.userCaption = EMPTY_LIVE_CAPTION
+		this.assistantCaption = EMPTY_LIVE_CAPTION
+		this.lastMicRms = 0
 		this.resetPlaybackState()
 		try {
 			this.ws?.close()
@@ -179,116 +177,60 @@ export class RealtimeSession {
 	}
 
 	private async onEvent(event: Record<string, unknown>) {
-		const type = String(event.type ?? "")
-		const err = errorFromEvent(event)
-		if (err) {
-			if (!isBenignInterruptError(err)) this.handlers.onError?.(err)
-			return
-		}
-
-		if (type === "input_audio_buffer.speech_started") {
-			this.interruptPlayback()
-			this.userBits = ""
-			this.assistantBits = ""
-			this.handlers.onSpeechStart?.()
-		}
-		if (type === "input_audio_buffer.speech_stopped") {
-			this.handlers.onSpeechStop?.()
-		}
-		if (type === "response.created") {
-			this.assistantBits = ""
-			this.responseActive = true
-			this.currentResponseId = responseIdFromEvent(event)
-			this.currentItemId = null
-			this.ignoreUntilNewResponse = false
-			this.handlers.onResponseStart?.()
-		}
-		const itemId = itemIdFromEvent(event)
-		if (itemId && this.responseActive) this.currentItemId = itemId
-
-		const audio = audioDeltaFromEvent(event)
-		if (audio) {
-			const eventResponseId = responseIdFromEvent(event)
-			if (
-				shouldAcceptOutputAudio({
-					ignoreUntilNewResponse: this.ignoreUntilNewResponse,
-					currentResponseId: this.currentResponseId,
-					cancelledResponseId: this.cancelledResponseId,
-					eventResponseId,
-				})
-			) {
-				this.playDelta(audio)
-			}
-		}
-
-		const cue = transcriptFromEvent(event)
-		if (cue) {
-			if (cue.role === "user") {
-				this.userBits = applyTranscriptBit(this.userBits, cue.text, cue.mode)
-				const text = this.userBits.trim()
-				if (cue.mode === "final") {
-					if (text) this.handlers.onFinal?.("user", text)
-					this.userBits = ""
-				} else if (text) {
-					this.handlers.onInterim?.("user", text)
-				}
-			} else if (
-				shouldAcceptOutputAudio({
-					ignoreUntilNewResponse: this.ignoreUntilNewResponse,
-					currentResponseId: this.currentResponseId,
-					cancelledResponseId: this.cancelledResponseId,
-					eventResponseId: responseIdFromEvent(event),
-				})
-			) {
-				this.assistantBits = applyTranscriptBit(this.assistantBits, cue.text, cue.mode)
-				const text = this.assistantBits.trim()
-				if (cue.mode === "final") {
-					if (text) this.handlers.onFinal?.("assistant", text)
-				} else if (text) {
-					this.handlers.onInterim?.("assistant", text)
-				}
-			}
-		}
-
+		const { state, actions } = applyRealtimeEvent(this.loopSnapshot(), event)
+		this.applyLoop(state)
+		this.dispatchActions(actions)
 		const call = functionCallFromEvent(event)
 		if (call && !this.seenCalls.has(call.callId)) {
 			this.seenCalls.add(call.callId)
 			const output = (await this.handlers.onFunctionCall?.(call)) ?? ""
 			this.sendFunctionOutput(call.callId, output)
 		}
-
-		if (type === "response.done" || type === "response.cancelled") {
-			this.responseActive = false
-			const stale =
-				this.ignoreUntilNewResponse ||
-				(Boolean(this.cancelledResponseId) && responseIdFromEvent(event) === this.cancelledResponseId)
-			if (type === "response.done" && !stale) {
-				const spoken = this.assistantBits.trim()
-				this.handlers.onResponseDone?.(spoken)
-			}
-		}
 	}
 
-	private interruptPlayback() {
-		const plan = planBargeIn({
-			responseActive: this.responseActive,
-			playing: this.output.playing || this.output.liveCount > 0,
-			itemId: this.currentItemId,
+	private loopSnapshot(): RealtimeLoopState {
+		return {
+			userCaption: this.userCaption,
+			assistantCaption: this.assistantCaption,
+			lastMicRms: this.lastMicRms,
+			outputPlaying: this.output.playing || this.output.liveCount > 0,
 			queuedMs: this.output.queuedMs,
 			playStartedAt: this.output.playStartedAt,
 			now: this.audioCtx?.currentTime ?? 0,
-		})
-		if (plan.ignoreUntilNewResponse) {
-			this.ignoreUntilNewResponse = true
-			this.cancelledResponseId = this.currentResponseId
+			responseActive: this.responseActive,
+			currentResponseId: this.currentResponseId,
+			currentItemId: this.currentItemId,
+			cancelledResponseId: this.cancelledResponseId,
+			ignoreUntilNewResponse: this.ignoreUntilNewResponse,
 		}
-		if (plan.flushPlayback) this.output.flush()
-		if (plan.cancelResponse) this.responseActive = false
-		if (plan.truncate) this.currentItemId = null
-		const ws = this.ws
-		if (!ws || ws.readyState !== WebSocket.OPEN) return
-		if (plan.cancelResponse) ws.send(JSON.stringify({ type: "response.cancel" }))
-		if (plan.truncate) ws.send(JSON.stringify(buildTruncateEvent(plan.truncate.itemId, plan.truncate.audioEndMs)))
+	}
+
+	private applyLoop(state: RealtimeLoopState) {
+		this.userCaption = state.userCaption
+		this.assistantCaption = state.assistantCaption
+		this.responseActive = state.responseActive
+		this.currentResponseId = state.currentResponseId
+		this.currentItemId = state.currentItemId
+		this.cancelledResponseId = state.cancelledResponseId
+		this.ignoreUntilNewResponse = state.ignoreUntilNewResponse
+	}
+
+	private dispatchActions(actions: RealtimeLoopAction[]) {
+		for (const action of actions) {
+			if (action.type === "error") this.handlers.onError?.(action.message)
+			else if (action.type === "speech_start") this.handlers.onSpeechStart?.()
+			else if (action.type === "speech_stop") this.handlers.onSpeechStop?.()
+			else if (action.type === "response_start") this.handlers.onResponseStart?.()
+			else if (action.type === "response_done") this.handlers.onResponseDone?.(action.text)
+			else if (action.type === "interim") this.handlers.onInterim?.(action.role, action.text)
+			else if (action.type === "final") this.handlers.onFinal?.(action.role, action.text)
+			else if (action.type === "play") this.playDelta(action.audio)
+			else if (action.type === "flush") this.output.flush()
+			else if (action.type === "send") {
+				const ws = this.ws
+				if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(action.event))
+			}
+		}
 	}
 
 	private resetPlaybackState() {
@@ -355,6 +297,16 @@ export class RealtimeSession {
 				const ws = this.ws
 				if (!ws || ws.readyState !== WebSocket.OPEN) return
 				const input = ev.inputBuffer.getChannelData(0)
+				const micRms = rmsLevel(input)
+				this.lastMicRms = micRms
+				if (
+					!shouldSendInputAudio({
+						playing: this.output.playing || this.output.liveCount > 0,
+						micRms,
+					})
+				) {
+					return
+				}
 				const audio = capturePcm16Base64(input, this.audioCtx?.sampleRate ?? 48_000, this.sampleRate)
 				if (!audio) return
 				ws.send(JSON.stringify({ type: "input_audio_buffer.append", audio }))

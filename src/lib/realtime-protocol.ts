@@ -11,7 +11,18 @@ export type TranscriptCue = {
 	role: "user" | "assistant"
 	text: string
 	mode: "delta" | "replace" | "final"
+	itemId?: string | null
 }
+
+export type LiveCaption = {
+	itemId: string | null
+	role: "user" | "assistant" | null
+	text: string
+}
+
+export const EMPTY_LIVE_CAPTION: LiveCaption = { itemId: null, role: null, text: "" }
+
+export const BARGE_IN_RMS = 0.045
 
 export type FunctionCallCue = {
 	callId: string
@@ -54,24 +65,47 @@ export function buildSessionUpdate(opts: {
 	voice: string
 	tools: RealtimeTool[]
 	sampleRate?: number
+	backend?: "s2s" | "xai" | "openai" | "custom"
 }): Record<string, unknown> {
 	const rate = opts.sampleRate ?? REALTIME_SAMPLE_RATE
-	const vad = {
-		type: "server_vad",
-		silence_duration_ms: 400,
-		interrupt_response: true,
-	}
+	const backend = opts.backend ?? "s2s"
+	const grok = backend === "xai"
+	const openai = backend === "openai"
+	const vad = openai
+		? {
+				type: "semantic_vad",
+				eagerness: "medium",
+				create_response: true,
+				interrupt_response: true,
+			}
+		: grok
+			? {
+					type: "server_vad",
+					threshold: 0.55,
+					silence_duration_ms: 600,
+					prefix_padding_ms: 333,
+					create_response: true,
+					interrupt_response: true,
+				}
+			: {
+					type: "server_vad",
+					silence_duration_ms: 500,
+					create_response: true,
+					interrupt_response: true,
+				}
+	const transcription = grok ? { model: "grok-transcribe" } : openai ? { model: "gpt-4o-mini-transcribe" } : undefined
 	return {
 		type: "session.update",
 		session: {
 			type: "realtime",
 			instructions: opts.instructions,
 			...(opts.voice ? { voice: opts.voice } : {}),
-			turn_detection: vad,
+			...(grok ? { turn_detection: vad, reasoning: { effort: "none" } } : {}),
 			audio: {
 				input: {
 					format: { type: "audio/pcm", rate },
 					turn_detection: vad,
+					...(transcription ? { transcription } : {}),
 				},
 				output: {
 					format: { type: "audio/pcm", rate },
@@ -81,6 +115,32 @@ export function buildSessionUpdate(opts: {
 			tools: opts.tools,
 		},
 	}
+}
+
+export function displayVoiceCaption(opts: { showCaptions: boolean; liveLine: string }): string {
+	if (!opts.showCaptions) return ""
+	return opts.liveLine.trim()
+}
+
+export function applyLiveCaption(prev: LiveCaption, cue: TranscriptCue): LiveCaption {
+	const nextId = cue.itemId ?? prev.itemId
+	const newItem = Boolean(cue.itemId && prev.itemId && cue.itemId !== prev.itemId)
+	const newRole = Boolean(prev.role && cue.role !== prev.role)
+	const base = newItem || newRole ? "" : prev.text
+	return {
+		itemId: nextId,
+		role: cue.role,
+		text: applyTranscriptBit(base, cue.text, cue.mode),
+	}
+}
+
+export function shouldSendInputAudio(opts: { playing: boolean; micRms: number }): boolean {
+	if (!opts.playing) return true
+	return opts.micRms >= BARGE_IN_RMS
+}
+
+export function shouldHonorSpeechStart(opts: { playing: boolean; micRms: number }): boolean {
+	return shouldSendInputAudio(opts)
 }
 
 export function audioDeltaFromEvent(event: Record<string, unknown>): string | null {
@@ -212,20 +272,22 @@ function transcriptWords(text: string): string[] {
 export function transcriptFromEvent(event: Record<string, unknown>): TranscriptCue | null {
 	const type = String(event.type ?? "")
 	const text = pickTranscript(event)
+	const itemId = itemIdFromEvent(event)
+	const withId = <T extends TranscriptCue>(cue: T): T => (itemId ? { ...cue, itemId } : cue)
 	if (type === "conversation.item.input_audio_transcription.delta") {
-		return text ? { role: "user", text, mode: "delta" } : null
+		return text ? withId({ role: "user", text, mode: "delta" }) : null
 	}
 	if (type === "conversation.item.input_audio_transcription.updated") {
-		return { role: "user", text, mode: "replace" }
+		return withId({ role: "user", text, mode: "replace" })
 	}
 	if (type === "conversation.item.input_audio_transcription.completed") {
-		return { role: "user", text, mode: "final" }
+		return withId({ role: "user", text, mode: "final" })
 	}
 	if (type === "response.output_audio_transcript.delta" || type === "response.audio_transcript.delta") {
-		return text ? { role: "assistant", text, mode: "delta" } : null
+		return text ? withId({ role: "assistant", text, mode: "delta" }) : null
 	}
 	if (type === "response.output_audio_transcript.done" || type === "response.audio_transcript.done") {
-		return { role: "assistant", text, mode: "final" }
+		return withId({ role: "assistant", text, mode: "final" })
 	}
 	return null
 }
