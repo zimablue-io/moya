@@ -1,0 +1,36 @@
+import { chromium } from "playwright";
+
+const browser = await chromium.launch({ headless: true });
+const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+const errors = [];
+page.on("pageerror", (e) => errors.push(String(e)));
+page.on("console", (m) => {
+  if (m.type() === "error") errors.push(m.text());
+});
+await page.goto("http://127.0.0.1:8080/", { waitUntil: "networkidle" });
+await page.waitForTimeout(400);
+await page.getByRole("button", { name: "Memory" }).click();
+await page.waitForTimeout(250);
+await page.getByPlaceholder("Keep something").fill("Prefers quiet mornings for deep work.");
+await page.getByRole("button", { name: "Keep" }).click();
+await page.waitForTimeout(200);
+await page.screenshot({ path: "/workspace/screenshots/moya-memory.png" });
+await page.keyboard.press("Escape");
+await page.waitForTimeout(200);
+await page.getByRole("button", { name: "Routines" }).click();
+await page.waitForTimeout(250);
+await page.screenshot({ path: "/workspace/screenshots/moya-routines-empty.png" });
+await page.getByRole("button", { name: "Add" }).first().click();
+await page.waitForTimeout(250);
+await page.screenshot({ path: "/workspace/screenshots/moya-routines.png" });
+await page.getByRole("button", { name: "New routine" }).click();
+await page.waitForTimeout(200);
+await page.screenshot({ path: "/workspace/screenshots/moya-routines-form.png" });
+const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
+await mobile.goto("http://127.0.0.1:8080/", { waitUntil: "networkidle" });
+await mobile.waitForTimeout(400);
+await mobile.getByRole("button", { name: "Memory" }).click();
+await mobile.waitForTimeout(250);
+await mobile.screenshot({ path: "/workspace/screenshots/moya-memory-mobile.png" });
+console.log(JSON.stringify({ errors }, null, 2));
+await browser.close();
