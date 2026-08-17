@@ -1,3 +1,4 @@
+import { captureDenied, ensureMediaAccess, type MicFix } from "./media-permission";
 import { clamp } from "./utils";
 
 export type SpeechHandlers = {
@@ -51,7 +52,7 @@ export function envelopeFromText(text: string): number[] {
 function friendlySpeechError(code: string): string | null {
   if (code === "aborted" || code === "no-speech") return null;
   if (code === "not-allowed" || code === "service-not-allowed") {
-    return "Mic is blocked. Type if you need to talk.";
+    return "Mic is blocked. Allow Moya in System Settings, then tap Voice again.";
   }
   if (code === "network" || code === "service-not-connected") {
     return "Speech service is offline. Type instead.";
@@ -72,6 +73,7 @@ export class SpeechEngine {
   private handlers: SpeechHandlers = {};
   private speaking = false;
   private listenStarted = 0;
+  micFix: MicFix = null;
 
   configure(handlers: SpeechHandlers) {
     this.handlers = handlers;
@@ -97,11 +99,34 @@ export class SpeechEngine {
     this.fatalRec = false;
     this.listenStarted = performance.now();
     this.loopLevels();
-    await this.attachMic();
+
+    const access = await ensureMediaAccess();
+    if (!access.ok) {
+      this.micFix = access.fix;
+      this.recDesired = false;
+      this.alive = false;
+      this.handlers.onError?.(access.message);
+      return;
+    }
+    this.micFix = null;
+    try {
+      await this.attachMic();
+    } catch {
+      const fail = captureDenied();
+      this.micFix = fail.fix;
+      this.recDesired = false;
+      this.alive = false;
+      this.handlers.onError?.(fail.message);
+      return;
+    }
 
     const Ctor = getRecognizerCtor();
     if (!Ctor) {
-      this.handlers.onError?.("Mic is blocked. Type if you need to talk.");
+      this.micFix = null;
+      this.recDesired = false;
+      this.alive = false;
+      this.detachMic();
+      this.handlers.onError?.("This window cannot transcribe speech. Type instead.");
       return;
     }
 
@@ -125,6 +150,7 @@ export class SpeechEngine {
       if (err === "not-allowed" || err === "service-not-allowed" || err === "audio-capture") {
         this.fatalRec = true;
         this.recDesired = false;
+        this.micFix = err === "audio-capture" ? null : "settings";
       }
       const friendly = friendlySpeechError(err);
       if (friendly) this.handlers.onError?.(friendly);
@@ -147,7 +173,10 @@ export class SpeechEngine {
     } catch {
       this.fatalRec = true;
       this.recDesired = false;
-      this.handlers.onError?.("Mic is blocked. Type if you need to talk.");
+      this.micFix = "settings";
+      this.handlers.onError?.(
+        "Mic is blocked. Allow Moya in System Settings, then tap Voice again.",
+      );
     }
   }
 
@@ -232,6 +261,9 @@ export class SpeechEngine {
 
   private async attachMic() {
     if (this.micStream) return;
+    if (!navigator.mediaDevices?.getUserMedia) {
+      throw new Error("no-media-devices");
+    }
     try {
       this.micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const Ctx =
@@ -243,9 +275,13 @@ export class SpeechEngine {
       this.analyser = this.audioCtx.createAnalyser();
       this.analyser.fftSize = 64;
       src.connect(this.analyser);
-    } catch {
+    } catch (err) {
+      this.micStream?.getTracks().forEach((t) => t.stop());
       this.micStream = null;
+      void this.audioCtx?.close();
+      this.audioCtx = null;
       this.analyser = null;
+      throw err;
     }
   }
 
