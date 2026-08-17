@@ -1,14 +1,14 @@
-import { authClient, authEnabled } from "./client";
+import { authClient, authEnabled } from "./client"
 
 /** Normalized user shape used across the app, auth on or off. */
 export type AppUser = {
-  id: string;
-  displayName: string | null;
-  primaryEmail: string | null;
-  profileImageUrl: string | null;
-  /** True when this is the sandbox/dev fallback (auth not configured). */
-  isDevFallback: boolean;
-};
+	id: string
+	displayName: string | null
+	primaryEmail: string | null
+	profileImageUrl: string | null
+	/** True when this is the sandbox/dev fallback (auth not configured). */
+	isDevFallback: boolean
+}
 
 /**
  * Stable fallback user, used ONLY when auth is explicitly disabled
@@ -18,20 +18,20 @@ export type AppUser = {
  * rows written in that mode belong to one consistent owner.
  */
 export const DEV_USER: AppUser = {
-  id: "dev-user",
-  displayName: "Dev User",
-  primaryEmail: "dev@example.com",
-  profileImageUrl: null,
-  isDevFallback: true,
-};
+	id: "dev-user",
+	displayName: "Dev User",
+	primaryEmail: "dev@example.com",
+	profileImageUrl: null,
+	isDevFallback: true,
+}
 
 /** `useCurrentUserState()` result: the user plus the session-loading flag. */
 export type CurrentUserState = {
-  /** The user — `null` BOTH while the session loads and when signed out. */
-  user: AppUser | null;
-  /** True while the session is still resolving — don't treat `user: null` as signed out yet. */
-  isPending: boolean;
-};
+	/** The user — `null` BOTH while the session loads and when signed out. */
+	user: AppUser | null
+	/** True while the session is still resolving — don't treat `user: null` as signed out yet. */
+	isPending: boolean
+}
 
 /**
  * Current user + loading state. Same behavior in live preview and when deployed:
@@ -51,26 +51,31 @@ export type CurrentUserState = {
  *   if (isPending) return null;              // still resolving — don't redirect yet
  *   if (!user) return <RedirectToSignIn />;  // definitely signed out
  *
- * `authEnabled` is a module-level constant fixed at load, so the guarded hook
- * call keeps a stable hook order across every render of a given component.
+ * `authEnabled` is a module-level constant fixed at load. The hook identity is
+ * chosen once so React always sees the same hook order.
  */
-export function useCurrentUserState(): CurrentUserState {
-  if (!authEnabled) return { user: DEV_USER, isPending: false };
-  const { data, isPending } = authClient.useSession();
-  const user = data?.user;
-  return {
-    user: user
-      ? {
-          id: user.id,
-          displayName: user.name ?? null,
-          primaryEmail: user.email ?? null,
-          profileImageUrl: user.image ?? null,
-          isDevFallback: false,
-        }
-      : null,
-    isPending,
-  };
+function useDevCurrentUser(): CurrentUserState {
+	return { user: DEV_USER, isPending: false }
 }
+
+function useAuthedCurrentUser(): CurrentUserState {
+	const { data, isPending } = authClient.useSession()
+	const user = data?.user
+	return {
+		user: user
+			? {
+					id: user.id,
+					displayName: user.name ?? null,
+					primaryEmail: user.email ?? null,
+					profileImageUrl: user.image ?? null,
+					isDevFallback: false,
+				}
+			: null,
+		isPending,
+	}
+}
+
+export const useCurrentUserState: () => CurrentUserState = authEnabled ? useAuthedCurrentUser : useDevCurrentUser
 
 /**
  * Convenience view of `useCurrentUserState().user` for display (e.g.
@@ -78,5 +83,5 @@ export function useCurrentUserState(): CurrentUserState {
  * for redirects/guards use `useCurrentUserState()` and check `isPending`.
  */
 export function useCurrentUser(): AppUser | null {
-  return useCurrentUserState().user;
+	return useCurrentUserState().user
 }

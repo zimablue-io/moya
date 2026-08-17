@@ -1,5 +1,5 @@
-import { getRequest } from "@tanstack/react-start/server";
-import { auth, authConfigured } from "./server";
+import { getRequest } from "@tanstack/react-start/server"
+import { auth, authConfigured } from "./server"
 
 /**
  * Server-side session resolution (server-only).
@@ -12,21 +12,21 @@ import { auth, authConfigured } from "./server";
  */
 
 /** True when a real database is configured server-side. */
-const databaseConfigured = Boolean(process.env.DATABASE_URL?.trim());
+const databaseConfigured = Boolean(process.env.DATABASE_URL?.trim())
 
 /** Re-export so callers can branch on it without importing `server.ts`. */
-export { authConfigured };
+export { authConfigured }
 
 if (databaseConfigured && !authConfigured) {
-  console.error(
-    "[auth] DATABASE_URL is set but auth is disabled (VITE_AUTH_ENABLED=false) " +
-      "— requireUserId() will reject every request (fail closed) rather than " +
-      "share one dev user on a real database.",
-  );
+	console.error(
+		"[auth] DATABASE_URL is set but auth is disabled (VITE_AUTH_ENABLED=false) " +
+			"— requireUserId() will reject every request (fail closed) rather than " +
+			"share one dev user on a real database.",
+	)
 }
 
 /** Dev fallback user id, used only when auth is disabled (VITE_AUTH_ENABLED=false). */
-export const DEV_USER_ID = "dev-user";
+export const DEV_USER_ID = "dev-user"
 
 /**
  * Thrown by `requireUserId` when the caller has no valid session. Carries
@@ -34,14 +34,14 @@ export const DEV_USER_ID = "dev-user";
  * `err.message === "Unauthorized"` client-side to send the visitor to sign-in.
  */
 export class UnauthorizedError extends Error {
-  readonly status = 401;
-  constructor() {
-    super("Unauthorized");
-    this.name = "UnauthorizedError";
-  }
+	readonly status = 401
+	constructor() {
+		super("Unauthorized")
+		this.name = "UnauthorizedError"
+	}
 }
 
-export type VerifiedUser = { id: string; email: string | null };
+export type VerifiedUser = { id: string; email: string | null }
 
 /**
  * Resolve the signed-in user from the current request, or `null` when auth isn't
@@ -54,17 +54,17 @@ export type VerifiedUser = { id: string; email: string | null };
  * plugin resolves it). When deployed no token is passed and the cookie is used.
  */
 export async function getSessionUser(bearerToken?: string): Promise<VerifiedUser | null> {
-  if (!authConfigured) return null;
-  const request = getRequest();
-  if (!request) return null;
-  let headers = request.headers;
-  if (bearerToken) {
-    headers = new Headers(request.headers);
-    headers.set("Authorization", `Bearer ${bearerToken}`);
-  }
-  const session = await auth.api.getSession({ headers });
-  if (!session?.user) return null;
-  return { id: session.user.id, email: session.user.email ?? null };
+	if (!authConfigured) return null
+	const request = getRequest()
+	if (!request) return null
+	let headers = request.headers
+	if (bearerToken) {
+		headers = new Headers(request.headers)
+		headers.set("Authorization", `Bearer ${bearerToken}`)
+	}
+	const session = await auth.api.getSession({ headers })
+	if (!session?.user) return null
+	return { id: session.user.id, email: session.user.email ?? null }
 }
 
 /**
@@ -79,16 +79,16 @@ export async function getSessionUser(bearerToken?: string): Promise<VerifiedUser
  * - Auth disabled + no database -> the shared dev user id.
  */
 export async function requireUserId(bearerToken?: string): Promise<string> {
-  if (!authConfigured) {
-    if (databaseConfigured) {
-      throw new Error(
-        "Auth is disabled (VITE_AUTH_ENABLED=false) but DATABASE_URL is set — " +
-          "refusing to fall back to the shared dev user against a real database.",
-      );
-    }
-    return DEV_USER_ID;
-  }
-  const user = await getSessionUser(bearerToken);
-  if (!user) throw new UnauthorizedError();
-  return user.id;
+	if (!authConfigured) {
+		if (databaseConfigured) {
+			throw new Error(
+				"Auth is disabled (VITE_AUTH_ENABLED=false) but DATABASE_URL is set — " +
+					"refusing to fall back to the shared dev user against a real database.",
+			)
+		}
+		return DEV_USER_ID
+	}
+	const user = await getSessionUser(bearerToken)
+	if (!user) throw new UnauthorizedError()
+	return user.id
 }

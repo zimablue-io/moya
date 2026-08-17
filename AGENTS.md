@@ -58,7 +58,7 @@ Better Auth at `/api/auth/*` federates to the Grok broker (Google, X only). Do *
 
 ## Quality
 
-- Format: `pnpm format` (Prettier). Lint: `pnpm lint` (ESLint; `src-tauri/target` is ignored). Tests: `pnpm test`.
+- Format: `pnpm format` (Biome). Lint: `pnpm lint` (Biome). Tests: `pnpm test`.
 - After code changes: format, lint, then tests before claiming done.
 - Desktop/runtime claims require booting `Moya.app` or `pnpm desktop`, not path-exists.
 - One path per behavior. No dual auth, no “old origin still works” aliases.

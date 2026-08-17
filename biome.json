@@ -1,0 +1,134 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.5.6/schema.json",
+	"vcs": {
+		"enabled": true,
+		"clientKind": "git",
+		"useIgnoreFile": true
+	},
+	"files": {
+		"ignoreUnknown": false,
+		"includes": [
+			"**/*.js",
+			"**/*.mjs",
+			"**/*.cjs",
+			"**/*.ts",
+			"**/*.tsx",
+			"**/*.css",
+			"**/*.md",
+			"**/*.json",
+			"!**/node_modules",
+			"!**/dist",
+			"!**/.output",
+			"!**/.nitro",
+			"!**/.vercel",
+			"!**/.tanstack",
+			"!**/src-tauri/target",
+			"!**/src-tauri/gen",
+			"!**/src/routeTree.gen.ts",
+			"!pnpm-lock.yaml"
+		]
+	},
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "tab"
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"preset": "recommended",
+			"correctness": {
+				"noUnusedImports": "error",
+				"noUnusedVariables": "error",
+				"useExhaustiveDependencies": "warn"
+			},
+			"style": {
+				"useImportType": "off",
+				"useTemplate": "off",
+				"noNonNullAssertion": "off"
+			},
+			"suspicious": {
+				"noExplicitAny": "off",
+				"noArrayIndexKey": "off",
+				"useIterableCallbackReturn": "off"
+			},
+			"complexity": {
+				"noImportantStyles": "off",
+				"noUselessFragments": "off",
+				"useOptionalChain": "off"
+			},
+			"a11y": {
+				"noLabelWithoutControl": "off"
+			}
+		}
+	},
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "double",
+			"lineWidth": 120,
+			"indentWidth": 2,
+			"semicolons": "asNeeded"
+		}
+	},
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	},
+	"assist": {
+		"enabled": true,
+		"actions": {
+			"source": {
+				"organizeImports": "on"
+			}
+		}
+	},
+	"overrides": [
+		{
+			"includes": ["**/*.css"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noUnknownAtRules": "off",
+						"noDuplicateProperties": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": ["src/components/ui/**"],
+			"linter": {
+				"rules": {
+					"a11y": {
+						"useAriaPropsForRole": "off",
+						"useFocusableInteractive": "off",
+						"useKeyWithClickEvents": "off",
+						"noLabelWithoutControl": "off",
+						"useSemanticElements": "off"
+					},
+					"correctness": {
+						"noNestedComponentDefinitions": "off"
+					},
+					"suspicious": {
+						"noArrayIndexKey": "off",
+						"noDocumentCookie": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": ["scripts/**/*.mjs", "scripts/**/*.ts"],
+			"linter": {
+				"rules": {
+					"complexity": {
+						"noExcessiveCognitiveComplexity": "off",
+						"noExcessiveLinesPerFunction": "off"
+					},
+					"suspicious": {
+						"noAssignInExpressions": "off",
+						"noTemplateCurlyInString": "off"
+					}
+				}
+			}
+		}
+	]
+}

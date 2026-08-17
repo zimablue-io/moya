@@ -3,21 +3,21 @@
  * (and later receive registered routes). Noops when the app is not embedded.
  */
 
-import { useEffect } from "react";
-import { useRouter } from "@tanstack/react-router";
-import { collectRoutePathsFromTree, installPreviewHostBridge } from "@/lib/preview-host-bridge";
+import { useRouter } from "@tanstack/react-router"
+import { useEffect } from "react"
+import { collectRoutePathsFromTree, installPreviewHostBridge } from "@/lib/preview-host-bridge"
 
 export function PreviewHostBridge() {
-  const router = useRouter();
+	const router = useRouter()
 
-  useEffect(() => {
-    return installPreviewHostBridge({
-      navigate: (path) => {
-        router.history.push(path);
-      },
-      getRoutePaths: () => collectRoutePathsFromTree(router.routeTree),
-    });
-  }, [router]);
+	useEffect(() => {
+		return installPreviewHostBridge({
+			navigate: (path) => {
+				router.history.push(path)
+			},
+			getRoutePaths: () => collectRoutePathsFromTree(router.routeTree),
+		})
+	}, [router])
 
-  return null;
+	return null
 }
