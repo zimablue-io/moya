@@ -5,7 +5,7 @@ One local-first personal assistant. Memory, routines, and models stay on this ma
 ## What it does
 
 - Voice- and text-first chat with a presence UI
-- On-device memory, transcript, routines, and inbox
+- On-device memory, transcript (list + calendar), routines, and inbox
 - OpenAI-compatible providers (xAI, OpenAI, Groq, OpenRouter, Ollama, llama.cpp). You run local servers; Moya connects to them.
 - Optional Google / X sign-in on the **web** preview and `pnpm desktop` (Vite on port 5173)
 
@@ -62,4 +62,4 @@ React 19, TanStack Start, Tailwind v4, Better Auth, PGLite (or Neon when `DATABA
 
 ## Tests
 
-`pnpm test` runs `scripts/**/*.test.mjs` (brand assets, PWA injector, desktop bundle contracts, packaged-origin auth).
+`pnpm test` runs `scripts/**/*.test.mjs` (brand assets, PWA injector, desktop bundle contracts, packaged-origin auth, transcript day/stats).
