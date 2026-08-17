@@ -67,7 +67,7 @@ export function buildSessionUpdate(opts: {
 			type: "realtime",
 			instructions: opts.instructions,
 			...(opts.voice ? { voice: opts.voice } : {}),
-			turn_detection: { type: "server_vad", silence_duration_ms: 400 },
+			turn_detection: vad,
 			audio: {
 				input: {
 					format: { type: "audio/pcm", rate },
@@ -89,6 +89,99 @@ export function audioDeltaFromEvent(event: Record<string, unknown>): string | nu
 	if (typeof event.delta === "string" && event.delta) return event.delta
 	if (typeof event.audio === "string" && event.audio) return event.audio
 	return null
+}
+
+export type BargeInPlan = {
+	flushPlayback: boolean
+	cancelResponse: boolean
+	truncate: { itemId: string; audioEndMs: number } | null
+	ignoreUntilNewResponse: boolean
+}
+
+export function playedAudioMs(opts: { queuedMs: number; playStartedAt: number | null; now: number }): number {
+	if (opts.playStartedAt == null) return 0
+	const elapsedMs = Math.max(0, (opts.now - opts.playStartedAt) * 1000)
+	return Math.min(Math.round(elapsedMs), Math.max(0, Math.round(opts.queuedMs)))
+}
+
+export function planBargeIn(state: {
+	responseActive: boolean
+	playing: boolean
+	itemId: string | null
+	queuedMs: number
+	playStartedAt: number | null
+	now: number
+}): BargeInPlan {
+	const hadOutput = state.responseActive || state.playing || Boolean(state.itemId)
+	if (!hadOutput) {
+		return { flushPlayback: false, cancelResponse: false, truncate: null, ignoreUntilNewResponse: false }
+	}
+	return {
+		flushPlayback: true,
+		cancelResponse: state.responseActive,
+		truncate: state.itemId
+			? {
+					itemId: state.itemId,
+					audioEndMs: playedAudioMs({
+						queuedMs: state.queuedMs,
+						playStartedAt: state.playStartedAt,
+						now: state.now,
+					}),
+				}
+			: null,
+		ignoreUntilNewResponse: true,
+	}
+}
+
+export function buildTruncateEvent(itemId: string, audioEndMs: number): Record<string, unknown> {
+	return {
+		type: "conversation.item.truncate",
+		item_id: itemId,
+		content_index: 0,
+		audio_end_ms: Math.max(0, Math.round(audioEndMs)),
+	}
+}
+
+export function shouldAcceptOutputAudio(opts: {
+	ignoreUntilNewResponse: boolean
+	currentResponseId: string | null
+	cancelledResponseId: string | null
+	eventResponseId: string | null
+}): boolean {
+	if (opts.ignoreUntilNewResponse) return false
+	if (opts.eventResponseId && opts.cancelledResponseId && opts.eventResponseId === opts.cancelledResponseId) {
+		return false
+	}
+	if (opts.eventResponseId && opts.currentResponseId && opts.eventResponseId !== opts.currentResponseId) {
+		return false
+	}
+	return true
+}
+
+export function itemIdFromEvent(event: Record<string, unknown>): string | null {
+	if (typeof event.item_id === "string" && event.item_id) return event.item_id
+	const item = event.item
+	if (item && typeof item === "object") {
+		const id = (item as { id?: unknown }).id
+		if (typeof id === "string" && id) return id
+	}
+	return null
+}
+
+export function responseIdFromEvent(event: Record<string, unknown>): string | null {
+	if (typeof event.response_id === "string" && event.response_id) return event.response_id
+	const response = event.response
+	if (response && typeof response === "object") {
+		const id = (response as { id?: unknown }).id
+		if (typeof id === "string" && id) return id
+	}
+	return null
+}
+
+export function isBenignInterruptError(message: string): boolean {
+	return /no (in-progress|active) response|cannot cancel|unknown.*truncat|invalid.*truncat|conversation\.item\.truncate/i.test(
+		message,
+	)
 }
 
 export function applyTranscriptBit(prev: string, incoming: string, mode: TranscriptCue["mode"]): string {

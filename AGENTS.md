@@ -8,6 +8,7 @@ This is **Moya**, a local-first personal assistant (web + Tauri desktop). Produc
 - Memory, transcript, routines, inbox, and settings persist locally (`src/lib/persist.ts`).
 - Chat completion is a client `fetch` to the configured provider (`src/lib/llm.ts`). Desktop uses the same function.
 - Voice mode talks to Settings → Voice backend. `browser` is Web Speech. Anything else is OpenAI Realtime over WebSocket (`src/lib/realtime-session.ts`). Moya does not start speech-to-speech or llama-server.
+- Realtime barge-in must stop local playback immediately, ignore leftover audio from the cancelled reply, wait for the user to finish, then play the new reply. Resetting the play cursor is not enough — `ScheduledAudioQueue.flush()` has to `stop()` every queued source.
 - The packaged `.app` has no Node server. Do not add `createServerFn` paths that the `.app` must call.
 
 ## Commands
@@ -62,6 +63,7 @@ Better Auth at `/api/auth/*` federates to the Grok broker (Google, X only). Do *
 - After code changes: format, lint, then tests before claiming done.
 - Desktop/runtime claims require booting `Moya.app` or `pnpm desktop`, not path-exists.
 - One path per behavior. No dual auth, no “old origin still works” aliases.
+- Voice protocol JSON tests are not enough to claim barge-in works. `scripts/realtime-voice.test.mjs` must cover flush-stops-queued-sources and dropping stale output audio (`src/lib/realtime-playback.ts`).
 
 ## Skills in this repo
 

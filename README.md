@@ -62,4 +62,4 @@ React 19, TanStack Start, Tailwind v4, Better Auth, PGLite (or Neon when `DATABA
 
 ## Tests
 
-`pnpm test` runs `scripts/**/*.test.mjs` (brand assets, PWA injector, desktop bundle contracts, packaged-origin auth, transcript day/stats).
+`pnpm test` runs `scripts/**/*.test.mjs` (brand assets, PWA injector, desktop bundle contracts, packaged-origin auth, transcript day/stats, realtime barge-in playback).
