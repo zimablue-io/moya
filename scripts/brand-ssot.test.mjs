@@ -3,7 +3,7 @@ import { readdirSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { test } from "node:test"
 import { fileURLToPath } from "node:url"
-import { APP_NAME, COLOR, FONT, FONT_HREF, TAGLINE } from "../src/lib/brand.ts"
+import { APP_NAME, COLOR, FONT, TAGLINE } from "../src/lib/brand.ts"
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..")
 
@@ -28,16 +28,19 @@ test("styles.css tokens match brand.ts", () => {
 	}
 	assert.match(css, new RegExp(`--font-sans:\\s*"${FONT.sans}"`))
 	assert.match(css, new RegExp(`--font-display:\\s*"${FONT.display}"`))
+	assert.match(css, /@import "@fontsource\/source-sans-3\/400\.css"/)
+	assert.match(css, /@import "@fontsource\/source-serif-4\/400\.css"/)
 	assert.doesNotMatch(css, /--font-mono/)
+	assert.doesNotMatch(css, /fonts\.googleapis\.com/)
 	assert.equal(Object.keys(FONT).length, 2)
 })
 
 test("root head and native chrome read brand.ts", () => {
 	const rootTsx = read("src/routes/__root.tsx")
-	assert.match(rootTsx, /FONT_HREF/)
 	assert.match(rootTsx, /APP_NAME/)
 	assert.match(rootTsx, /TAGLINE/)
 	assert.match(rootTsx, /COLOR\.bg/)
+	assert.doesNotMatch(rootTsx, /FONT_HREF/)
 	assert.doesNotMatch(rootTsx, /fonts\.googleapis\.com/)
 	assert.doesNotMatch(rootTsx, /#0b0b0a/)
 
@@ -49,10 +52,6 @@ test("root head and native chrome read brand.ts", () => {
 	assert.match(tauri, new RegExp(`"productName":\\s*"${APP_NAME}"`))
 	assert.match(tauri, new RegExp(`"backgroundColor":\\s*"${COLOR.bg}"`))
 	assert.equal(TAGLINE.length > 0, true)
-	assert.equal(FONT_HREF.includes(FONT.sans.replaceAll(" ", "+")), true)
-	assert.equal(FONT_HREF.includes(FONT.display.replaceAll(" ", "+")), true)
-	assert.equal((FONT_HREF.match(/family=/g) ?? []).length, 2)
-	assert.doesNotMatch(FONT_HREF, /Code\+Pro|Plex|IBM/)
 })
 
 test("src has one name, palette, and type-role source", () => {

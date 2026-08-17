@@ -1,7 +1,7 @@
 import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router"
 import { PreviewHostBridge } from "@/components/preview-host-bridge"
 import { AuthProvider } from "@/lib/auth/provider"
-import { APP_NAME, COLOR, FONT_HREF, TAGLINE } from "@/lib/brand"
+import { APP_NAME, COLOR, TAGLINE } from "@/lib/brand"
 import appCss from "../styles.css?url"
 
 const host = import.meta.env.VITE_PUBLIC_HOSTNAME
@@ -30,10 +30,6 @@ export const Route = createRootRoute({
 		links: [
 			{ rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
 			{ rel: "stylesheet", href: appCss },
-			{
-				rel: "stylesheet",
-				href: FONT_HREF,
-			},
 			{ rel: "manifest", href: "/__grok/manifest.webmanifest" },
 			{ rel: "apple-touch-icon", href: "/__grok/icon-180.png" },
 		],
