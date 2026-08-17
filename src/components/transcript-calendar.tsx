@@ -28,7 +28,7 @@ function DayCell({
 			className={cn(className, hot && !modifiers.selected && "bg-surface-2")}
 			style={{
 				...props.style,
-				...(hot && !modifiers.selected ? { backgroundColor: "var(--color-surface-2)" } : {}),
+				...(hot && !modifiers.selected ? { background: "#1c1c1a" } : {}),
 			}}
 			onPointerEnter={(e) => {
 				props.onPointerEnter?.(e)
@@ -93,7 +93,7 @@ export function TranscriptCalendar({
 				day: "min-h-0 min-w-0 flex-1 p-0",
 				day_button: cn(
 					"flex size-full min-h-0 flex-col items-start gap-0.5 rounded-lg p-1.5 text-left text-xs font-medium text-fg",
-					"transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+					"hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
 				),
 				selected: "[&>button]:bg-accent [&>button]:text-accent-fg [&>button]:hover:bg-accent",
 				today: "[&>button]:ring-1 [&>button]:ring-border-strong",
