@@ -2,6 +2,8 @@ import assert from "node:assert/strict"
 import { test } from "node:test"
 import { applyRealtimeEvent, EMPTY_REALTIME_LOOP, reduceVoiceUi } from "../src/lib/realtime-loop.ts"
 import { displayVoiceCaption, realtimeSocketUrl } from "../src/lib/realtime-protocol.ts"
+import { normalizeSettings } from "../src/lib/types.ts"
+import { sessionOutputVoice, sessionUpdateFromSettings } from "../src/lib/voice-contract.ts"
 import {
 	SIDECAR_ASSISTANT,
 	SIDECAR_USER,
@@ -103,7 +105,7 @@ test("OpenAI incremental deltas append on the same item", () => {
 	assert.equal(ui.interim, "Hello")
 })
 
-test("speaker echo while playing does not cancel the reply", () => {
+test("speech_started while playing always flushes and cancels so barge-in can stop the agent", () => {
 	const { sent, actions } = drive([{ type: "input_audio_buffer.speech_started" }], {
 		outputPlaying: true,
 		lastMicRms: 0.01,
@@ -114,11 +116,8 @@ test("speaker echo while playing does not cancel the reply", () => {
 		playStartedAt: 1,
 		now: 1.4,
 	})
-	assert.deepEqual(sent, [])
-	assert.equal(
-		actions.some((action) => action.type === "flush"),
-		false,
-	)
+	assert.ok(actions.some((action) => action.type === "flush"))
+	assert.ok(sent.some((event) => event.type === "response.cancel"))
 	assert.ok(actions.some((action) => action.type === "speech_start"))
 })
 
@@ -158,7 +157,7 @@ test("mock sidecar WebSocket plays a full local turn the client can caption", as
 		ws.addEventListener("message", (ev) => {
 			if (typeof ev.data === "string") events.push(JSON.parse(ev.data))
 		})
-		ws.send(JSON.stringify({ type: "session.update", session: { type: "realtime" } }))
+		ws.send(JSON.stringify(sessionUpdateFromSettings(normalizeSettings({}))))
 		const deadline = Date.now() + 4000
 		while (!events.some((event) => event.type === "response.done") && Date.now() < deadline) {
 			await new Promise((resolve) => setTimeout(resolve, 40))
@@ -168,6 +167,8 @@ test("mock sidecar WebSocket plays a full local turn the client can caption", as
 		await sidecar.close()
 	}
 
+	const opened = sidecar.received.find((event) => event.type === "session.update")
+	assert.equal(sessionOutputVoice(opened), "af_heart")
 	assert.ok(events.some((event) => event.type === "conversation.item.input_audio_transcription.completed"))
 	assert.ok(events.some((event) => event.type === "response.done"))
 	const { ui, shown, actions } = drive(events)

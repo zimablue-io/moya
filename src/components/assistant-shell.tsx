@@ -16,6 +16,7 @@ import { speech } from "@/lib/speech"
 import { pendingInboxCount, useApp } from "@/lib/store"
 import { type DialogId } from "@/lib/types"
 import { cn, formatClock } from "@/lib/utils"
+import { browserSpeechFinalSink, shouldExitVoiceForComposer, shouldStartHoldListen } from "@/lib/voice-contract"
 import { enterVoiceMode, exitVoiceMode, restartVoiceIfNeeded } from "@/lib/voice-mode"
 
 const TOOLS: {
@@ -98,11 +99,15 @@ export function AssistantShell() {
 				}
 			},
 			onFinal: (text) => {
-				if (noteListenRef.current) {
+				const sink = browserSpeechFinalSink({
+					voiceMode: useApp.getState().voiceMode,
+					noteListen: noteListenRef.current,
+				})
+				if (sink === "note") {
 					setDraft((prev) => `${prev.replace(/\s+$/, "")} ${text}`.trim())
 					return
 				}
-				if (useApp.getState().voiceMode) return
+				if (sink === "ignore") return
 				if (holding.current) {
 					holdBits.current = `${holdBits.current} ${text}`.trim()
 				}
@@ -138,7 +143,7 @@ export function AssistantShell() {
 	}, [])
 
 	const startHold = useCallback(() => {
-		if (voiceMode || presence === "thinking" || noteListen) return
+		if (!shouldStartHoldListen({ voiceMode, presence, noteListen })) return
 		holding.current = true
 		holdBits.current = ""
 		speech.stopSpeak()
@@ -164,12 +169,13 @@ export function AssistantShell() {
 			setPresence({ presence: "idle" })
 			return
 		}
+		if (shouldExitVoiceForComposer(useApp.getState().voiceMode)) exitVoice()
 		setNoteListen(true)
 		setComposerOpen(true)
 		setMicFix(null)
 		setPresence({ presence: "listening", error: null })
 		void speech.startListen({ continuous: true })
-	}, [noteListen, setComposerOpen, setPresence])
+	}, [exitVoice, noteListen, setComposerOpen, setPresence])
 
 	useEffect(() => {
 		const onKey = (e: KeyboardEvent) => {
@@ -194,6 +200,7 @@ export function AssistantShell() {
 			}
 			if (e.key === "t" || e.key === "T" || e.key === "/") {
 				e.preventDefault()
+				if (shouldExitVoiceForComposer(voiceMode)) exitVoice()
 				setComposerOpen(true)
 			}
 			if (e.key === " " && !composerOpen && !voiceMode) {

@@ -94,12 +94,13 @@ export function buildSessionUpdate(opts: {
 					interrupt_response: true,
 				}
 	const transcription = grok ? { model: "grok-transcribe" } : openai ? { model: "gpt-4o-mini-transcribe" } : undefined
+	const voice = opts.voice.trim() || (backend === "s2s" ? "af_heart" : "")
 	return {
 		type: "session.update",
 		session: {
 			type: "realtime",
 			instructions: opts.instructions,
-			...(opts.voice ? { voice: opts.voice } : {}),
+			...(voice ? { voice } : {}),
 			...(grok ? { turn_detection: vad, reasoning: { effort: "none" } } : {}),
 			audio: {
 				input: {
@@ -109,7 +110,7 @@ export function buildSessionUpdate(opts: {
 				},
 				output: {
 					format: { type: "audio/pcm", rate },
-					...(opts.voice ? { voice: opts.voice } : {}),
+					...(voice ? { voice } : {}),
 				},
 			},
 			tools: opts.tools,
@@ -134,9 +135,8 @@ export function applyLiveCaption(prev: LiveCaption, cue: TranscriptCue): LiveCap
 	}
 }
 
-export function shouldSendInputAudio(opts: { playing: boolean; micRms: number }): boolean {
-	if (!opts.playing) return true
-	return opts.micRms >= BARGE_IN_RMS
+export function shouldSendInputAudio(_opts: { playing: boolean; micRms: number }): boolean {
+	return true
 }
 
 export function shouldHonorSpeechStart(opts: { playing: boolean; micRms: number }): boolean {

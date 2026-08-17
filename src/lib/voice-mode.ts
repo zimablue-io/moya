@@ -4,6 +4,7 @@ import { realtimeSession } from "./realtime-session"
 import { speech } from "./speech"
 import { useApp } from "./store"
 import { resolveVoiceApiKey, toRealtimeTools } from "./voice-backend"
+import { realtimeConnectFromSettings, voiceUiAfterConnectError, voiceUiAfterUnexpectedClose } from "./voice-contract"
 
 function applyVoiceAction(action: RealtimeLoopAction) {
 	const s = useApp.getState()
@@ -81,25 +82,26 @@ async function startRealtime() {
 		},
 		onError: (message) => {
 			const s = useApp.getState()
-			s.setVoiceMode(false)
-			s.setPresence({ error: message, presence: "idle" })
+			const next = voiceUiAfterConnectError(message)
+			s.setVoiceMode(next.voiceMode)
+			s.setPresence({ error: next.error, presence: next.presence })
 		},
 		onClose: () => {
 			const s = useApp.getState()
-			if (!s.voiceMode) return
-			s.setVoiceMode(false)
-			if (s.presence === "listening" || s.presence === "thinking" || s.presence === "speaking") {
-				s.setPresence({ presence: "idle" })
-			}
+			const next = voiceUiAfterUnexpectedClose({
+				voiceMode: s.voiceMode,
+				presence: s.presence,
+				error: s.error,
+			})
+			if (next.voiceMode === s.voiceMode && next.presence === s.presence) return
+			s.setVoiceMode(next.voiceMode)
+			s.setPresence({ presence: next.presence })
 		},
 	})
 
 	await realtimeSession.start({
-		id: settings.voiceBackend.id,
-		baseUrl: settings.voiceBackend.baseUrl,
-		model: settings.voiceBackend.model,
+		...realtimeConnectFromSettings(settings),
 		apiKey: resolveVoiceApiKey(settings.voiceBackend, settings.provider),
-		voice: settings.voiceBackend.voice,
 		instructions,
 		tools,
 	})

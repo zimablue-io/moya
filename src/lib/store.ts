@@ -35,6 +35,7 @@ import {
 	type VoiceBackendId,
 } from "./types"
 import { nowIso, uid } from "./utils"
+import { shouldSpeakTypedReply } from "./voice-contract"
 
 type Live = {
 	ready: boolean
@@ -409,7 +410,10 @@ export const useApp = create<AppStore>((set, get) => ({
 			artifacts: world.opened ? [world.opened] : undefined,
 		}
 
-		const speakBrowser = get().settings.autoSpeak && !skipBrowserSpeak(get())
+		const speakBrowser = shouldSpeakTypedReply({
+			autoSpeak: get().settings.autoSpeak,
+			voiceMode: get().voiceMode,
+		})
 		set({
 			messages: [...get().messages, reply],
 			...applyWorld(world),
@@ -556,7 +560,7 @@ export const useApp = create<AppStore>((set, get) => ({
 		const addedAuto = world.snapshot.inbox.filter((i) => !i.resolvedAt && !beforeInbox.some((x) => x.id === i.id))
 		if (addedAuto[0]) void notify(addedAuto[0].title, addedAuto[0].body)
 
-		if (speak && keep && get().settings.autoSpeak && !skipBrowserSpeak(get())) {
+		if (speak && keep && shouldSpeakTypedReply({ autoSpeak: get().settings.autoSpeak, voiceMode: get().voiceMode })) {
 			speech.speak(result, {
 				voiceURI: get().settings.voiceURI,
 				rate: get().settings.rate,
@@ -628,10 +632,6 @@ async function runTool(name: string, args: string, world: World): Promise<{ cont
 	}
 	const result = executeBuiltin(name, args, world)
 	return { content: result.content, artifact: result.artifact }
-}
-
-function skipBrowserSpeak(s: { voiceMode: boolean }) {
-	return s.voiceMode
 }
 
 export function pendingInboxCount(inbox: { resolvedAt: string | null }[]) {

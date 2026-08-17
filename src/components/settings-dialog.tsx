@@ -29,6 +29,7 @@ import {
 import { uid } from "@/lib/utils"
 import { resolveVoiceApiKey, voiceBackendNeedsKey } from "@/lib/voice-backend"
 import { listRealtimeSpeakers, type SpeakerOption } from "@/lib/voice-catalog"
+import { VOICE_SETTINGS_COPY } from "@/lib/voice-contract"
 import { restartVoiceIfNeeded } from "@/lib/voice-mode"
 
 export function SettingsDialog() {
@@ -208,7 +209,7 @@ export function SettingsDialog() {
 								<details className="rounded-xl bg-surface-2 px-3 py-2">
 									<summary className="cursor-pointer text-xs text-muted">Typed replies</summary>
 									<div className="mt-3 grid gap-3">
-										<Field label="Speaker">
+										<Field label={VOICE_SETTINGS_COPY.typedSpeaker} tip={VOICE_SETTINGS_COPY.typedTip}>
 											<MacVoicePicker
 												voices={voices}
 												value={settings.voiceURI}
@@ -606,32 +607,26 @@ function SpokenVoice({
 		}
 	}, [id, baseUrl, apiKey])
 
-	const allowEmpty = id === "s2s" || id === "custom"
 	const named = speakers
-	if (!named.length && !allowEmpty) {
+	if (!named.length) {
 		return (
-			<Field label="Speaker">
+			<Field label={VOICE_SETTINGS_COPY.conversationSpeaker}>
 				<Input
 					value={value}
 					onChange={(e) => onChange(e.target.value)}
 					onBlur={() => onCommit?.()}
-					placeholder="Sidecar default"
+					placeholder="af_heart"
 				/>
 			</Field>
 		)
 	}
 	const known = named.some((v) => v.id === value)
-	const selected = known ? value : value ? "__other__" : allowEmpty ? "" : (named[0]?.id ?? "")
+	const selected = known ? value : value ? "__other__" : (named[0]?.id ?? "")
+	const groups = speakerGroups(named)
 	return (
 		<Field
-			label="Speaker"
-			tip={
-				id === "s2s"
-					? "From the sidecar if it lists voices, otherwise Pocket presets. Pocket applies the voice at launch."
-					: id === "xai"
-						? "Live list from xAI."
-						: undefined
-			}
+			label={VOICE_SETTINGS_COPY.conversationSpeaker}
+			tip={id === "s2s" ? VOICE_SETTINGS_COPY.conversationTipLocal : id === "xai" ? "Live list from xAI." : undefined}
 		>
 			<select
 				className="h-11 w-full rounded-md border border-border bg-surface px-3 text-sm"
@@ -642,16 +637,43 @@ function SpokenVoice({
 					onCommit?.()
 				}}
 			>
-				{allowEmpty ? <option value="">Sidecar default</option> : null}
-				{named.map((v) => (
-					<option key={v.id} value={v.id}>
-						{v.label}
-					</option>
-				))}
+				{groups.map((group) =>
+					group.name ? (
+						<optgroup key={group.name} label={group.name}>
+							{group.items.map((v) => (
+								<option key={v.id} value={v.id}>
+									{v.label}
+								</option>
+							))}
+						</optgroup>
+					) : (
+						group.items.map((v) => (
+							<option key={v.id} value={v.id}>
+								{v.label}
+							</option>
+						))
+					),
+				)}
 				{!known && value ? <option value="__other__">{value}</option> : null}
 			</select>
 		</Field>
 	)
+}
+
+function speakerGroups(speakers: SpeakerOption[]): { name: string; items: SpeakerOption[] }[] {
+	const groups: { name: string; items: SpeakerOption[] }[] = []
+	const index = new Map<string, SpeakerOption[]>()
+	for (const speaker of speakers) {
+		const name = speaker.group ?? ""
+		let items = index.get(name)
+		if (!items) {
+			items = []
+			index.set(name, items)
+			groups.push({ name, items })
+		}
+		items.push(speaker)
+	}
+	return groups
 }
 
 function MacVoicePicker({

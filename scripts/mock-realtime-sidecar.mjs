@@ -60,6 +60,7 @@ export function sidecarConversationEvents() {
 
 export function startMockRealtimeSidecar(port = 0) {
 	const sockets = new Set()
+	const inbound = []
 	const server = http.createServer((_req, res) => {
 		res.writeHead(200, { "Content-Type": "text/plain" })
 		res.end("ok")
@@ -117,6 +118,7 @@ export function startMockRealtimeSidecar(port = 0) {
 				} catch {
 					continue
 				}
+				inbound.push(event)
 				if (event?.type === "session.update") playTurn()
 			}
 		})
@@ -131,6 +133,7 @@ export function startMockRealtimeSidecar(port = 0) {
 			resolve({
 				port: bound,
 				url: `http://127.0.0.1:${bound}/v1`,
+				received: inbound,
 				close: () => {
 					for (const socket of sockets) socket.destroy()
 					return new Promise((done) => server.close(() => done()))

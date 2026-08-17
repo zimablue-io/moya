@@ -1,4 +1,4 @@
-export type SpeakerOption = { id: string; label: string }
+export type SpeakerOption = { id: string; label: string; group?: string }
 
 export const POCKET_VOICE_TREE_URL =
 	"https://huggingface.co/api/models/kyutai/pocket-tts-without-voice-cloning/tree/main/embeddings"
@@ -52,8 +52,7 @@ export async function listRealtimeSpeakers(
 	if (voice.id === "s2s" || voice.id === "custom") {
 		const sidecar = parseVoiceList(await fetchJson(get, `${httpBase(voice.baseUrl)}/voices`))
 		if (sidecar.length) return sidecar
-		const tree = parsePocketVoiceTree(await fetchJson(get, POCKET_VOICE_TREE_URL))
-		return tree.length ? tree : fallback
+		return fallback
 	}
 	return fallback
 }

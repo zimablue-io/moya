@@ -205,7 +205,7 @@ export const DEFAULT_SETTINGS: Settings = {
 		model: "local",
 		baseUrl: "http://127.0.0.1:8765/v1",
 		apiKey: "",
-		voice: "",
+		voice: "af_heart",
 	},
 }
 
@@ -270,7 +270,7 @@ export const VOICE_PRESETS: Record<
 		label: "Local",
 		model: "local",
 		baseUrl: "http://127.0.0.1:8765/v1",
-		voice: "",
+		voice: "af_heart",
 		hint: `You start speech-to-speech. ${APP_NAME} does not.`,
 	},
 	xai: {
@@ -296,19 +296,33 @@ export const VOICE_PRESETS: Record<
 	},
 }
 
-export const POCKET_TTS_VOICES: { id: string; label: string }[] = [
-	{ id: "alba", label: "Alba" },
-	{ id: "marius", label: "Marius" },
-	{ id: "javert", label: "Javert" },
-	{ id: "jean", label: "Jean" },
-	{ id: "fantine", label: "Fantine" },
-	{ id: "cosette", label: "Cosette" },
-	{ id: "eponine", label: "Eponine" },
-	{ id: "azelma", label: "Azelma" },
+export const POCKET_TTS_VOICES: { id: string; label: string; group?: string }[] = [
+	{ id: "alba", label: "Alba", group: "Pocket" },
+	{ id: "marius", label: "Marius", group: "Pocket" },
+	{ id: "javert", label: "Javert", group: "Pocket" },
+	{ id: "jean", label: "Jean", group: "Pocket" },
+	{ id: "fantine", label: "Fantine", group: "Pocket" },
+	{ id: "cosette", label: "Cosette", group: "Pocket" },
+	{ id: "eponine", label: "Eponine", group: "Pocket" },
+	{ id: "azelma", label: "Azelma", group: "Pocket" },
 ]
 
-export const REALTIME_VOICES: Record<VoiceBackendId, { id: string; label: string }[]> = {
-	s2s: POCKET_TTS_VOICES,
+export const KOKORO_TTS_VOICES: { id: string; label: string; group?: string }[] = [
+	{ id: "af_heart", label: "Heart · American woman", group: "Kokoro" },
+	{ id: "af_bella", label: "Bella · American woman", group: "Kokoro" },
+	{ id: "af_nicole", label: "Nicole · American woman", group: "Kokoro" },
+	{ id: "af_sky", label: "Sky · American woman", group: "Kokoro" },
+	{ id: "af_sarah", label: "Sarah · American woman", group: "Kokoro" },
+	{ id: "am_michael", label: "Michael · American man", group: "Kokoro" },
+	{ id: "am_adam", label: "Adam · American man", group: "Kokoro" },
+	{ id: "bf_emma", label: "Emma · British woman", group: "Kokoro" },
+	{ id: "bf_alice", label: "Alice · British woman", group: "Kokoro" },
+	{ id: "bm_fable", label: "Fable · British man", group: "Kokoro" },
+	{ id: "bm_george", label: "George · British man", group: "Kokoro" },
+]
+
+export const REALTIME_VOICES: Record<VoiceBackendId, { id: string; label: string; group?: string }[]> = {
+	s2s: [...KOKORO_TTS_VOICES, ...POCKET_TTS_VOICES],
 	xai: [
 		{ id: "eve", label: "Eve" },
 		{ id: "ara", label: "Ara" },

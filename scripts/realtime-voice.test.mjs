@@ -31,7 +31,7 @@ import {
 	transcriptFromEvent,
 	websocketProtocols,
 } from "../src/lib/realtime-protocol.ts"
-import { POCKET_TTS_VOICES, speakersFor } from "../src/lib/types.ts"
+import { KOKORO_TTS_VOICES, POCKET_TTS_VOICES, speakersFor } from "../src/lib/types.ts"
 import { listRealtimeSpeakers, parsePocketVoiceTree, parseTtsVoices } from "../src/lib/voice-catalog.ts"
 
 test("http voice URLs become websocket realtime URLs", () => {
@@ -74,12 +74,19 @@ test("xAI browser sockets use the client-secret subprotocol", () => {
 	assert.equal(websocketProtocols("s2s", ""), undefined)
 })
 
-test("local realtime falls back to Pocket presets", () => {
+test("local realtime lists Kokoro speakers first, then Pocket", () => {
+	const ids = speakersFor("s2s").map((v) => v.id)
+	assert.ok(ids.includes("af_heart"))
+	assert.ok(ids.includes("bm_fable"))
+	assert.ok(ids.includes("jean"))
 	assert.deepEqual(
-		speakersFor("s2s").map((v) => v.id),
+		ids.slice(0, KOKORO_TTS_VOICES.length),
+		KOKORO_TTS_VOICES.map((v) => v.id),
+	)
+	assert.deepEqual(
+		ids.slice(KOKORO_TTS_VOICES.length),
 		POCKET_TTS_VOICES.map((v) => v.id),
 	)
-	assert.ok(speakersFor("s2s").some((v) => v.id === "jean"))
 	assert.deepEqual(speakersFor("custom"), [])
 	assert.deepEqual(
 		speakersFor("xai").map((v) => v.id),
@@ -279,7 +286,7 @@ test("Grok speakers prefer the live /v1/tts/voices list", async () => {
 	)
 })
 
-test("Local speakers prefer sidecar /v1/voices, then Pocket presets", async () => {
+test("Local speakers prefer sidecar /v1/voices, then the Kokoro and Pocket catalog", async () => {
 	const fromSidecar = await listRealtimeSpeakers(
 		{ id: "s2s", baseUrl: "http://127.0.0.1:8765/v1", apiKey: "" },
 		{
@@ -297,22 +304,15 @@ test("Local speakers prefer sidecar /v1/voices, then Pocket presets", async () =
 		["Ryan", "Vivian"],
 	)
 
-	const fromPocket = await listRealtimeSpeakers(
+	const fromCatalog = await listRealtimeSpeakers(
 		{ id: "s2s", baseUrl: "http://127.0.0.1:8765/v1", apiKey: "" },
 		{
-			fetch: async (url) => {
-				if (String(url).endsWith("/voices")) return { ok: false, json: async () => ({}) }
-				return {
-					ok: true,
-					json: async () => [{ type: "file", path: "fantine.safetensors" }],
-				}
-			},
+			fallback: speakersFor("s2s"),
+			fetch: async () => ({ ok: false, json: async () => ({}) }),
 		},
 	)
-	assert.deepEqual(
-		fromPocket.map((v) => v.id),
-		["fantine"],
-	)
+	assert.ok(fromCatalog.some((v) => v.id === "af_heart"))
+	assert.ok(fromCatalog.some((v) => v.id === "jean"))
 })
 
 test("played audio is the heard prefix, not the queued tail", () => {
@@ -455,11 +455,10 @@ test("input transcription events carry the item id", () => {
 	)
 })
 
-test("playback echo is not sent as mic and does not count as barge-in", () => {
+test("mic stays open while the agent talks so the sidecar can hear a barge-in", () => {
 	assert.equal(shouldSendInputAudio({ playing: false, micRms: 0.01 }), true)
-	assert.equal(shouldSendInputAudio({ playing: true, micRms: 0.01 }), false)
-	assert.equal(shouldSendInputAudio({ playing: true, micRms: 0.12 }), true)
-	assert.equal(shouldHonorSpeechStart({ playing: true, micRms: 0.01 }), false)
+	assert.equal(shouldSendInputAudio({ playing: true, micRms: 0.01 }), true)
+	assert.equal(shouldHonorSpeechStart({ playing: true, micRms: 0.01 }), true)
 	assert.equal(shouldHonorSpeechStart({ playing: false, micRms: 0.01 }), true)
 })
 

@@ -9,6 +9,7 @@ test("defaults when given empty input", () => {
 	assert.equal(settings.provider.baseUrl, PROVIDER_PRESETS.xai.baseUrl)
 	assert.equal(settings.voiceBackend.id, "s2s")
 	assert.equal(settings.voiceBackend.baseUrl, "http://127.0.0.1:8765/v1")
+	assert.equal(settings.voiceBackend.voice, "af_heart")
 	assert.equal("engine" in settings, false)
 })
 
@@ -81,7 +82,7 @@ test("unknown keys are not kept on settings", () => {
 	assert.equal("engine" in settings, false)
 })
 
-test("local speech-to-speech uses the sidecar speaker by default", () => {
+test("local speech-to-speech defaults to Kokoro Heart so the picker matches what Voice sends", () => {
 	const settings = normalizeSettings({
 		voiceBackend: {
 			id: "s2s",
@@ -93,7 +94,7 @@ test("local speech-to-speech uses the sidecar speaker by default", () => {
 	})
 	assert.equal(settings.voiceBackend.id, "s2s")
 	assert.equal(settings.voiceBackend.baseUrl, "http://127.0.0.1:8765/v1")
-	assert.equal(settings.voiceBackend.voice, "")
+	assert.equal(settings.voiceBackend.voice, "af_heart")
 })
 
 test("Custom voice settings that pointed at local s2s become Local", () => {

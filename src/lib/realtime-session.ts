@@ -17,6 +17,7 @@ import {
 	voiceBackendNeedsKey,
 	websocketProtocols,
 } from "./voice-backend"
+import { connectFailureMessage } from "./voice-contract"
 
 export type RealtimeHandlers = {
 	onLevel?: (level: number, bands: number[]) => void
@@ -131,7 +132,7 @@ export class RealtimeSession {
 
 		ws.onerror = () => {
 			if (this.gen !== gen || this.ws !== ws) return
-			this.handlers.onError?.(connectError(opts.baseUrl))
+			this.handlers.onError?.(connectFailureMessage(opts.baseUrl))
 		}
 
 		ws.onclose = () => {
@@ -356,14 +357,6 @@ function padBands(bands: number[]): number[] {
 	const out = bands.slice(0, 24)
 	while (out.length < 24) out.push(out[out.length - 1] ?? 0.18)
 	return out
-}
-
-function connectError(baseUrl: string): string {
-	const host = realtimeHttpBase(baseUrl)
-	if (/127\.0\.0\.1|localhost/i.test(host)) {
-		return `Nothing is listening at ${host}. Start speech-to-speech, then tap Voice again.`
-	}
-	return "Could not reach the voice backend. Check the URL and key."
 }
 
 async function mintClientSecret(id: VoiceBackendId, baseUrl: string, apiKey: string): Promise<string | null> {
