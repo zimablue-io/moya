@@ -1,19 +1,17 @@
-import { loadSnapshot as loadLegacySnapshot } from "./idb"
+import { loadSnapshot as loadLegacySnapshot } from "./idb.ts"
 import {
-	type Automation,
-	type Board,
-	DEFAULT_SETTINGS,
-	type InboxItem,
-	type Insight,
-	type McpServer,
-	type Memory,
-	type Message,
-	normalizeArtifacts,
-	normalizeSettings,
-	normalizeSnapshot,
-	type Snapshot,
-	type TimeLog,
-} from "./types"
+	parseJson,
+	rowAuto,
+	rowBoard,
+	rowInbox,
+	rowInsight,
+	rowMcp,
+	rowMemory,
+	rowMessage,
+	rowTime,
+} from "./persist-rows.ts"
+import { MIND_SCHEMA } from "./persist-schema.ts"
+import { DEFAULT_SETTINGS, normalizeSettings, normalizeSnapshot, type Snapshot, type Source } from "./types.ts"
 
 type Pg = {
 	waitReady: Promise<void>
@@ -21,96 +19,6 @@ type Pg = {
 	query: <T>(sql: string, params?: unknown[]) => Promise<{ rows: T[] }>
 	transaction: <T>(fn: (tx: { exec: Pg["exec"]; query: Pg["query"] }) => Promise<T>) => Promise<T>
 }
-
-const SCHEMA = `
-CREATE TABLE IF NOT EXISTS meta (
-  key TEXT PRIMARY KEY,
-  value TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS settings (
-  id TEXT PRIMARY KEY,
-  data TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS messages (
-  id TEXT PRIMARY KEY,
-  role TEXT NOT NULL,
-  content TEXT NOT NULL,
-  created_at TEXT NOT NULL,
-  emotion TEXT,
-  artifacts TEXT,
-  tool_name TEXT,
-  hidden INTEGER NOT NULL DEFAULT 0
-);
-CREATE TABLE IF NOT EXISTS memories (
-  id TEXT PRIMARY KEY,
-  kind TEXT NOT NULL,
-  text TEXT NOT NULL,
-  weight INTEGER NOT NULL DEFAULT 1,
-  pinned INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL,
-  last_used_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS memories_kind_idx ON memories (kind);
-CREATE INDEX IF NOT EXISTS memories_text_idx ON memories (text);
-CREATE TABLE IF NOT EXISTS inbox (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  body TEXT NOT NULL,
-  source TEXT NOT NULL,
-  severity TEXT NOT NULL,
-  created_at TEXT NOT NULL,
-  resolved_at TEXT
-);
-CREATE TABLE IF NOT EXISTS boards (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  summary TEXT NOT NULL DEFAULT '',
-  updated_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS board_items (
-  id TEXT PRIMARY KEY,
-  board_id TEXT NOT NULL,
-  label TEXT NOT NULL,
-  state TEXT NOT NULL,
-  note TEXT NOT NULL DEFAULT '',
-  needs_input INTEGER NOT NULL DEFAULT 0,
-  sort_order INTEGER NOT NULL DEFAULT 0
-);
-CREATE TABLE IF NOT EXISTS time_logs (
-  id TEXT PRIMARY KEY,
-  started_at TEXT NOT NULL,
-  ended_at TEXT NOT NULL,
-  category TEXT NOT NULL,
-  note TEXT NOT NULL DEFAULT ''
-);
-CREATE TABLE IF NOT EXISTS insights (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  body TEXT NOT NULL,
-  created_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS mcp_servers (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  url TEXT NOT NULL,
-  auth_header TEXT NOT NULL DEFAULT '',
-  enabled INTEGER NOT NULL DEFAULT 1,
-  session_id TEXT,
-  tools TEXT NOT NULL DEFAULT '[]',
-  last_error TEXT,
-  last_ok_at TEXT
-);
-CREATE TABLE IF NOT EXISTS automations (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  brief TEXT NOT NULL,
-  enabled INTEGER NOT NULL DEFAULT 1,
-  trigger TEXT NOT NULL,
-  last_run_at TEXT,
-  last_result TEXT NOT NULL DEFAULT '',
-  created_at TEXT NOT NULL
-);
-`
 
 const g = globalThis as typeof globalThis & { __moyaMind?: Promise<Pg> }
 
@@ -120,7 +28,7 @@ async function openMind(): Promise<Pg> {
 		const dataDir = typeof indexedDB !== "undefined" ? "idb://moya-mind" : undefined
 		const pg = (dataDir ? new PGlite(dataDir) : new PGlite()) as unknown as Pg
 		await pg.waitReady
-		await pg.exec(SCHEMA)
+		await pg.exec(MIND_SCHEMA)
 		return pg
 	})().catch((err) => {
 		g.__moyaMind = undefined
@@ -128,15 +36,6 @@ async function openMind(): Promise<Pg> {
 		throw err
 	})
 	return g.__moyaMind
-}
-
-function parseJson<T>(raw: string | null | undefined, fallback: T): T {
-	if (!raw) return fallback
-	try {
-		return JSON.parse(raw) as T
-	} catch {
-		return fallback
-	}
 }
 
 export function emptySnapshot(): Snapshot {
@@ -155,6 +54,7 @@ export function emptySnapshot(): Snapshot {
 		insights: [],
 		mcpServers: [],
 		automations: [],
+		sources: [],
 	}
 }
 
@@ -189,19 +89,25 @@ export async function loadSnapshot(): Promise<Snapshot> {
 		const insights = await db.query<Record<string, unknown>>("SELECT * FROM insights ORDER BY created_at DESC")
 		const mcp = await db.query<Record<string, unknown>>("SELECT * FROM mcp_servers")
 		const autos = await db.query<Record<string, unknown>>("SELECT * FROM automations ORDER BY created_at DESC")
+		let sourceRows: { rows: { data: string }[] } = { rows: [] }
+		try {
+			sourceRows = await db.query<{ data: string }>("SELECT data FROM sources")
+		} catch {
+			await db.exec(`CREATE TABLE IF NOT EXISTS sources (id TEXT PRIMARY KEY, data TEXT NOT NULL)`)
+		}
 
-		const boardItems = items.rows
 		return normalizeSnapshot({
 			version: 1,
 			settings: normalizeSettings(parseJson(settingsRow.rows[0]?.data, {})),
 			messages: messages.rows.map(rowMessage),
 			memories: memories.rows.map(rowMemory),
 			inbox: inbox.rows.map(rowInbox),
-			boards: boards.rows.map((b) => rowBoard(b, boardItems)),
+			boards: boards.rows.map((b) => rowBoard(b, items.rows)),
 			timeLogs: timeLogs.rows.map(rowTime),
 			insights: insights.rows.map(rowInsight),
 			mcpServers: mcp.rows.map(rowMcp),
 			automations: autos.rows.map(rowAuto),
+			sources: sourceRows.rows.map((r) => parseJson<Source | null>(r.data, null)).filter((s): s is Source => s != null),
 		})
 	} catch (err) {
 		console.error("[moya] database load failed", err)
@@ -216,7 +122,7 @@ export async function saveSnapshot(snapshot: Snapshot): Promise<void> {
 			await tx.exec(`
       DELETE FROM board_items; DELETE FROM boards; DELETE FROM messages; DELETE FROM memories;
       DELETE FROM inbox; DELETE FROM time_logs; DELETE FROM insights; DELETE FROM mcp_servers;
-      DELETE FROM automations;
+      DELETE FROM automations; DELETE FROM sources;
     `)
 			await tx.query(
 				"INSERT INTO settings (id, data) VALUES ($1, $2) ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data",
@@ -308,6 +214,9 @@ export async function saveSnapshot(snapshot: Snapshot): Promise<void> {
 					[a.id, a.name, a.brief, a.enabled ? 1 : 0, JSON.stringify(a.trigger), a.lastRunAt, a.lastResult, a.createdAt],
 				)
 			}
+			for (const src of snapshot.sources ?? []) {
+				await tx.query("INSERT INTO sources (id, data) VALUES ($1,$2)", [src.id, JSON.stringify(src)])
+			}
 			await tx.query(
 				"INSERT INTO meta (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value",
 				["ready", "1"],
@@ -321,106 +230,4 @@ export async function saveSnapshot(snapshot: Snapshot): Promise<void> {
 
 export async function clearSnapshot(): Promise<void> {
 	await saveSnapshot(emptySnapshot())
-}
-
-function rowMessage(r: Record<string, unknown>): Message {
-	return {
-		id: String(r.id),
-		role: r.role as Message["role"],
-		content: String(r.content ?? ""),
-		createdAt: String(r.created_at),
-		emotion: (r.emotion as Message["emotion"]) || undefined,
-		artifacts: normalizeArtifacts(parseJson(r.artifacts as string | null, undefined)),
-		toolName: (r.tool_name as string) || undefined,
-		hidden: Number(r.hidden) === 1,
-	}
-}
-
-function rowMemory(r: Record<string, unknown>): Memory {
-	return {
-		id: String(r.id),
-		kind: r.kind as Memory["kind"],
-		text: String(r.text ?? ""),
-		weight: Number(r.weight ?? 1),
-		pinned: Number(r.pinned) === 1,
-		createdAt: String(r.created_at),
-		lastUsedAt: String(r.last_used_at),
-	}
-}
-
-function rowInbox(r: Record<string, unknown>): InboxItem {
-	return {
-		id: String(r.id),
-		title: String(r.title ?? ""),
-		body: String(r.body ?? ""),
-		source: String(r.source ?? "moya"),
-		severity: r.severity as InboxItem["severity"],
-		createdAt: String(r.created_at),
-		resolvedAt: r.resolved_at ? String(r.resolved_at) : null,
-	}
-}
-
-function rowBoard(b: Record<string, unknown>, items: Record<string, unknown>[]): Board {
-	return {
-		id: String(b.id),
-		name: String(b.name ?? ""),
-		summary: String(b.summary ?? ""),
-		updatedAt: String(b.updated_at),
-		items: items
-			.filter((it) => String(it.board_id) === String(b.id))
-			.map((it) => ({
-				id: String(it.id),
-				label: String(it.label ?? ""),
-				state: it.state as Board["items"][number]["state"],
-				note: String(it.note ?? ""),
-				needsInput: Number(it.needs_input) === 1,
-			})),
-	}
-}
-
-function rowTime(r: Record<string, unknown>): TimeLog {
-	return {
-		id: String(r.id),
-		startedAt: String(r.started_at),
-		endedAt: String(r.ended_at),
-		category: String(r.category ?? "work"),
-		note: String(r.note ?? ""),
-	}
-}
-
-function rowInsight(r: Record<string, unknown>): Insight {
-	return {
-		id: String(r.id),
-		title: String(r.title ?? ""),
-		body: String(r.body ?? ""),
-		createdAt: String(r.created_at),
-	}
-}
-
-function rowMcp(r: Record<string, unknown>): McpServer {
-	const tools = parseJson(r.tools as string, [])
-	return {
-		id: String(r.id),
-		name: String(r.name ?? ""),
-		url: String(r.url ?? ""),
-		authHeader: String(r.auth_header ?? ""),
-		enabled: Number(r.enabled) === 1,
-		sessionId: (r.session_id as string) || undefined,
-		tools: Array.isArray(tools) ? tools : [],
-		lastError: (r.last_error as string) || undefined,
-		lastOkAt: (r.last_ok_at as string) || undefined,
-	}
-}
-
-function rowAuto(r: Record<string, unknown>): Automation {
-	return {
-		id: String(r.id),
-		name: String(r.name ?? ""),
-		brief: String(r.brief ?? ""),
-		enabled: Number(r.enabled) === 1,
-		trigger: parseJson(r.trigger as string, { type: "manual" }),
-		lastRunAt: r.last_run_at ? String(r.last_run_at) : null,
-		lastResult: String(r.last_result ?? ""),
-		createdAt: String(r.created_at),
-	}
 }

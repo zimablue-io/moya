@@ -1,9 +1,9 @@
+import { emptyUiState } from "./environment/state.ts"
+
 export function recoverFromRenderError() {
 	return {
-		dialog: null,
-		artifact: null,
+		...emptyUiState(),
 		error: null,
-		composerOpen: false,
 	} as const
 }
 

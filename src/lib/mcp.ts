@@ -1,5 +1,5 @@
-import { mcpCall } from "./llm"
-import type { McpServer, McpTool } from "./types"
+import { mcpCall } from "./llm.ts"
+import type { McpServer, McpTool } from "./types.ts"
 
 type JsonRpc = { jsonrpc?: string; id?: number; result?: unknown; error?: { message?: string } }
 

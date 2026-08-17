@@ -1,6 +1,6 @@
-import { parseOpenAiModelIds, providerNeedsKey } from "./provider-models"
-import type { ProviderConfig, ProviderId } from "./types"
-import { PROVIDER_PRESETS } from "./types"
+import { parseOpenAiModelIds, providerNeedsKey } from "./provider-models.ts"
+import type { ProviderConfig, ProviderId } from "./types.ts"
+import { PROVIDER_PRESETS } from "./types.ts"
 
 export type ChatMessage = {
 	role: "system" | "user" | "assistant" | "tool"

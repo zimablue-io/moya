@@ -183,10 +183,20 @@ test("live captions never fall back to a previous assistant sentence", () => {
 })
 
 test("Settings and Voice mode stay wired to the contract, not a second Speaker field", () => {
-	const settingsSrc = readFileSync(join(root, "src/components/settings-dialog.tsx"), "utf8")
-	const shellSrc = readFileSync(join(root, "src/components/assistant-shell.tsx"), "utf8")
+	const settingsSrc = [
+		"src/components/settings-dialog.tsx",
+		"src/components/settings-voice.tsx",
+		"src/components/settings-speakers.tsx",
+	]
+		.map((p) => readFileSync(join(root, p), "utf8"))
+		.join("\n")
+	const shellSrc = ["src/components/assistant-shell.tsx", "src/components/assistant-status.tsx"]
+		.map((p) => readFileSync(join(root, p), "utf8"))
+		.join("\n")
 	const modeSrc = readFileSync(join(root, "src/lib/voice-mode.ts"), "utf8")
-	const storeSrc = readFileSync(join(root, "src/lib/store.ts"), "utf8")
+	const storeSrc = ["src/lib/store.ts", "src/lib/store-turns.ts"]
+		.map((p) => readFileSync(join(root, p), "utf8"))
+		.join("\n")
 
 	assert.match(settingsSrc, /VOICE_SETTINGS_COPY/)
 	assert.match(settingsSrc, /conversationSpeaker/)

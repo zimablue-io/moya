@@ -111,10 +111,34 @@ function ArtifactInner({ artifact }: { artifact: Artifact }) {
 		return <Diagram artifact={artifact} />
 	}
 
+	if (artifact.type === "mockup") {
+		return (
+			<div>
+				<ArtifactTitle>{artifact.title}</ArtifactTitle>
+				<div className="mt-4 grid gap-3">
+					{(artifact.frames ?? []).map((frame) => (
+						<div key={frame.title} className="rounded-xl border border-border bg-surface-2 p-3">
+							<p className="text-xs text-muted">{frame.title}</p>
+							<ul className="mt-2 flex flex-col gap-1.5">
+								{(frame.blocks ?? []).map((block, i) => (
+									<li key={`${block.label}-${i}`} className="rounded-md bg-surface px-2 py-1.5 text-sm text-fg">
+										<span className="text-subtle">{block.type}</span> {block.label}
+									</li>
+								))}
+							</ul>
+						</div>
+					))}
+				</div>
+			</div>
+		)
+	}
+
 	return (
 		<div>
 			<ArtifactTitle>{artifact.title}</ArtifactTitle>
-			<p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-fg/90">{artifact.body}</p>
+			<p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-fg/90">
+				{"body" in artifact ? artifact.body : ""}
+			</p>
 		</div>
 	)
 }

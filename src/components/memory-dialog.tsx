@@ -22,8 +22,10 @@ export function MemoryDialog() {
 	const updateMemory = useApp((s) => s.updateMemory)
 	const forgetMemory = useApp((s) => s.forgetMemory)
 
-	const [q, setQ] = useState("")
-	const [kind, setKind] = useState<MemoryKind | "all">("all")
+	const q = useApp((s) => s.memoryQuery)
+	const setQ = useApp((s) => s.setMemoryQuery)
+	const kind = useApp((s) => s.memoryKind)
+	const setKind = useApp((s) => s.setMemoryKind)
 	const [draft, setDraft] = useState("")
 	const [draftKind, setDraftKind] = useState<MemoryKind>("fact")
 	const [editing, setEditing] = useState<string | null>(null)

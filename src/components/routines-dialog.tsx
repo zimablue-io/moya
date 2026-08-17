@@ -32,7 +32,8 @@ export function RoutinesDialog() {
 	const [minutes, setMinutes] = useState(60)
 	const [time, setTime] = useState("08:00")
 	const [pattern, setPattern] = useState("remember")
-	const [openForm, setOpenForm] = useState(false)
+	const openForm = useApp((s) => s.routinesFormOpen)
+	const setOpenForm = useApp((s) => s.setRoutinesFormOpen)
 
 	const triggerFromForm = (): AutomationTrigger => {
 		if (kind === "interval") return { type: "interval", everyMinutes: Math.max(5, minutes) }

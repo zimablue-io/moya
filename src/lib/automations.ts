@@ -1,6 +1,7 @@
-import { executeBuiltin, type World } from "./tools"
-import type { Automation, AutomationTrigger, Snapshot } from "./types"
-import { nowIso, uid } from "./utils"
+import { runLocalRoutine } from "./environment/act.ts"
+import type { EnvState } from "./environment/types.ts"
+import type { Automation, AutomationTrigger, Snapshot } from "./types.ts"
+import { nowIso, uid } from "./utils.ts"
 
 export type AutomationDraft = {
 	name: string
@@ -96,54 +97,8 @@ export function quietReply(text: string): boolean {
 	return /^(ok|okay|done|quiet|nothing|all clear|noted)[.!]?$/i.test(text.trim())
 }
 
-export function runLocalAutomation(auto: Automation, world: World): string {
-	const brief = auto.brief.toLowerCase()
-	const snap = world.snapshot
-	const parts: string[] = []
-
-	if (/analy|brief|review|summar|evening|morning/.test(brief)) {
-		executeBuiltin("analyze_history", JSON.stringify({ focus: auto.name }), world)
-		parts.push("Put a brief up.")
-	}
-
-	if (/inbox|loop|need|blocked|watch/.test(brief)) {
-		const blocked = snap.boards.flatMap((b) =>
-			(b.items ?? []).filter((it) => it.needsInput || it.state === "blocked").map((it) => `${b.name}: ${it.label}`),
-		)
-		if (blocked.length) {
-			executeBuiltin(
-				"inbox_add",
-				JSON.stringify({
-					title: `${auto.name}: needs you`,
-					body: blocked.join("; "),
-					severity: "need",
-					source: auto.name,
-				}),
-				world,
-			)
-			parts.push(`${blocked.length} item${blocked.length === 1 ? "" : "s"} need you.`)
-		}
-	}
-
-	if (/remember|memor|decision|preference/.test(brief)) {
-		const recent = snap.messages.filter((m) => m.role === "user").slice(-4)
-		if (recent[0]) {
-			executeBuiltin(
-				"memory_write",
-				JSON.stringify({
-					kind: "insight",
-					text: `From ${auto.name}: ${recent
-						.map((m) => m.content)
-						.join(" / ")
-						.slice(0, 280)}`,
-				}),
-				world,
-			)
-			parts.push("Kept a note from recent talk.")
-		}
-	}
-
-	return parts.join(" ") || "Nothing to do."
+export async function runLocalAutomation(auto: Automation, env: EnvState) {
+	return runLocalRoutine(env, auto)
 }
 
 export function describeRoutines(snap: Snapshot): string {

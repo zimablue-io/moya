@@ -59,6 +59,7 @@ async function startRealtime() {
 		insights: store.insights,
 		mcpServers: store.mcpServers,
 		automations: store.automations,
+		sources: store.sources ?? [],
 	})
 
 	realtimeSession.configure({

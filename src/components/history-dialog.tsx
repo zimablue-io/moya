@@ -30,11 +30,14 @@ export function HistoryDialog() {
 	const dialog = useApp((s) => s.dialog)
 	const openDialog = useApp((s) => s.openDialog)
 	const messages = useApp((s) => s.messages)
-	const send = useApp((s) => s.send)
+	const analyzeLived = useApp((s) => s.analyzeLived)
 	const agentName = useApp((s) => s.settings.agentName)
-	const [q, setQ] = useState("")
-	const [dayKey, setDayKey] = useState<string | null>(null)
-	const [mode, setMode] = useState<ViewMode>("list")
+	const q = useApp((s) => s.historyQuery)
+	const setQ = useApp((s) => s.setHistoryQuery)
+	const dayKey = useApp((s) => s.historyDay)
+	const setDayKey = useApp((s) => s.setHistoryDay)
+	const mode = useApp((s) => s.historyMode)
+	const setMode = useApp((s) => s.setHistoryMode)
 	const [month, setMonth] = useState(() => new Date())
 	const viewportRef = useRef<HTMLDivElement>(null)
 	const itemRefs = useRef(new Map<string, HTMLElement>())
@@ -57,7 +60,7 @@ export function HistoryDialog() {
 			setQ("")
 			setMode("list")
 		}
-	}, [open])
+	}, [open, setDayKey, setMode, setQ])
 
 	useEffect(() => {
 		if (!open || mode !== "list" || !lastId) return
@@ -159,8 +162,7 @@ export function HistoryDialog() {
 					<Button
 						variant="outline"
 						onClick={() => {
-							openDialog(null)
-							void send("Analyze our full transcript. Themes, decisions, open loops, and where my time is going.")
+							void analyzeLived()
 						}}
 					>
 						Analyze

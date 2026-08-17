@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, type Memory, normalizeSnapshot, type Snapshot } from "./types"
+import { DEFAULT_SETTINGS, type Memory, normalizeSnapshot, type Snapshot } from "./types.ts"
 
 const DB_NAME = "moya-local"
 const DB_VERSION = 1
@@ -33,6 +33,7 @@ export function emptySnapshot(): Snapshot {
 		insights: [],
 		mcpServers: [],
 		automations: [],
+		sources: [],
 	}
 }
 
