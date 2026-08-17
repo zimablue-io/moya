@@ -305,9 +305,20 @@ export const VOICE_PRESETS: Record<
   },
 };
 
+export const POCKET_TTS_VOICES: { id: string; label: string }[] = [
+  { id: "alba", label: "Alba" },
+  { id: "marius", label: "Marius" },
+  { id: "javert", label: "Javert" },
+  { id: "jean", label: "Jean" },
+  { id: "fantine", label: "Fantine" },
+  { id: "cosette", label: "Cosette" },
+  { id: "eponine", label: "Eponine" },
+  { id: "azelma", label: "Azelma" },
+];
+
 export const REALTIME_VOICES: Record<VoiceBackendId, { id: string; label: string }[]> = {
   browser: [],
-  s2s: [],
+  s2s: POCKET_TTS_VOICES,
   xai: [
     { id: "eve", label: "Eve" },
     { id: "ara", label: "Ara" },

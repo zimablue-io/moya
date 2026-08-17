@@ -32,7 +32,8 @@ import {
   type VoiceBackendId,
 } from "@/lib/types";
 import { uid } from "@/lib/utils";
-import { voiceBackendNeedsKey } from "@/lib/voice-backend";
+import { resolveVoiceApiKey, voiceBackendNeedsKey } from "@/lib/voice-backend";
+import { listRealtimeSpeakers, type SpeakerOption } from "@/lib/voice-catalog";
 import { restartVoiceIfNeeded } from "@/lib/voice-mode";
 
 export function SettingsDialog() {
@@ -229,6 +230,8 @@ export function SettingsDialog() {
                 <>
                   <SpokenVoice
                     id={settings.voiceBackend.id}
+                    baseUrl={settings.voiceBackend.baseUrl}
+                    apiKey={resolveVoiceApiKey(settings.voiceBackend, settings.provider)}
                     value={settings.voiceBackend.voice}
                     onChange={(v) => setVoiceBackendField("voice", v)}
                     onCommit={() => {
@@ -623,17 +626,37 @@ function MicAccess() {
 
 function SpokenVoice({
   id,
+  baseUrl,
+  apiKey,
   value,
   onChange,
   onCommit,
 }: {
   id: VoiceBackendId;
+  baseUrl: string;
+  apiKey: string;
   value: string;
   onChange: (v: string) => void;
   onCommit?: () => void;
 }) {
-  const named = speakersFor(id);
-  if (!named.length) {
+  const [speakers, setSpeakers] = useState<SpeakerOption[]>(() => speakersFor(id));
+  useEffect(() => {
+    let cancelled = false;
+    setSpeakers(speakersFor(id));
+    if (id === "browser") return;
+    void listRealtimeSpeakers({ id, baseUrl, apiKey }, { fallback: speakersFor(id) }).then(
+      (list) => {
+        if (!cancelled && list.length) setSpeakers(list);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [id, baseUrl, apiKey]);
+
+  const allowEmpty = id === "s2s" || id === "custom";
+  const named = speakers;
+  if (!named.length && !allowEmpty) {
     return (
       <Field label="Speaker">
         <Input
@@ -646,17 +669,28 @@ function SpokenVoice({
     );
   }
   const known = named.some((v) => v.id === value);
+  const selected = known ? value : value ? "__other__" : allowEmpty ? "" : (named[0]?.id ?? "");
   return (
-    <Field label="Speaker">
+    <Field
+      label="Speaker"
+      tip={
+        id === "s2s"
+          ? "From the sidecar if it lists voices, otherwise Pocket presets. Pocket applies the voice at launch."
+          : id === "xai"
+            ? "Live list from xAI."
+            : undefined
+      }
+    >
       <select
         className="h-11 w-full rounded-md border border-border bg-surface px-3 text-sm"
-        value={known ? value : value ? "__other__" : named[0]?.id}
+        value={selected}
         onChange={(e) => {
           if (e.target.value === "__other__") return;
           onChange(e.target.value);
           onCommit?.();
         }}
       >
+        {allowEmpty ? <option value="">Sidecar default</option> : null}
         {named.map((v) => (
           <option key={v.id} value={v.id}>
             {v.label}

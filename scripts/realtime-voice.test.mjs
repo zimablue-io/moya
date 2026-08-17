@@ -17,7 +17,12 @@ import {
   transcriptFromEvent,
   websocketProtocols,
 } from "../src/lib/realtime-protocol.ts";
-import { speakersFor } from "../src/lib/types.ts";
+import { POCKET_TTS_VOICES, speakersFor } from "../src/lib/types.ts";
+import {
+  listRealtimeSpeakers,
+  parsePocketVoiceTree,
+  parseTtsVoices,
+} from "../src/lib/voice-catalog.ts";
 
 test("http voice URLs become websocket realtime URLs", () => {
   assert.equal(
@@ -62,8 +67,12 @@ test("xAI browser sockets use the client-secret subprotocol", () => {
   assert.equal(websocketProtocols("s2s", ""), undefined);
 });
 
-test("local realtime has no baked-in TTS speaker catalog", () => {
-  assert.deepEqual(speakersFor("s2s"), []);
+test("local realtime falls back to Pocket presets", () => {
+  assert.deepEqual(
+    speakersFor("s2s").map((v) => v.id),
+    POCKET_TTS_VOICES.map((v) => v.id),
+  );
+  assert.ok(speakersFor("s2s").some((v) => v.id === "jean"));
   assert.deepEqual(speakersFor("custom"), []);
   assert.deepEqual(
     speakersFor("xai").map((v) => v.id),
@@ -151,4 +160,94 @@ test("48 kHz capture downsamples to 24 kHz PCM16", () => {
   const roundtrip = pcm16ToFloat(base64ToPcm16(pcm16ToBase64(pcm)));
   assert.equal(roundtrip.length, input.length);
   assert.ok(Math.abs((roundtrip[3] ?? 0) - (input[3] ?? 0)) < 0.01);
+});
+
+test("xAI voice JSON becomes speaker options", () => {
+  assert.deepEqual(
+    parseTtsVoices({
+      voices: [
+        { voice_id: "eve", name: "Eve" },
+        { voice_id: "carina", name: "Carina" },
+        { voice_id: "eve", name: "Eve" },
+      ],
+    }),
+    [
+      { id: "eve", label: "Eve" },
+      { id: "carina", label: "Carina" },
+    ],
+  );
+});
+
+test("Pocket embedding filenames become speaker ids", () => {
+  assert.deepEqual(
+    parsePocketVoiceTree([
+      { type: "file", path: "alba.safetensors" },
+      { type: "file", path: "embeddings/jean.safetensors" },
+      { type: "directory", path: "other" },
+    ]),
+    [
+      { id: "alba", label: "Alba" },
+      { id: "jean", label: "Jean" },
+    ],
+  );
+});
+
+test("Grok speakers prefer the live /v1/tts/voices list", async () => {
+  const listed = await listRealtimeSpeakers(
+    { id: "xai", baseUrl: "https://api.x.ai/v1", apiKey: "sk" },
+    {
+      fetch: async (url) => {
+        assert.equal(String(url), "https://api.x.ai/v1/tts/voices");
+        return {
+          ok: true,
+          json: async () => ({
+            voices: [
+              { voice_id: "carina", name: "Carina" },
+              { voice_id: "eve", name: "Eve" },
+            ],
+          }),
+        };
+      },
+    },
+  );
+  assert.deepEqual(
+    listed.map((v) => v.id),
+    ["carina", "eve"],
+  );
+});
+
+test("Local speakers prefer sidecar /v1/voices, then Pocket presets", async () => {
+  const fromSidecar = await listRealtimeSpeakers(
+    { id: "s2s", baseUrl: "http://127.0.0.1:8765/v1", apiKey: "" },
+    {
+      fetch: async (url) => {
+        assert.equal(String(url), "http://127.0.0.1:8765/v1/voices");
+        return {
+          ok: true,
+          json: async () => ({ voices: ["Ryan", "Vivian"] }),
+        };
+      },
+    },
+  );
+  assert.deepEqual(
+    fromSidecar.map((v) => v.id),
+    ["Ryan", "Vivian"],
+  );
+
+  const fromPocket = await listRealtimeSpeakers(
+    { id: "s2s", baseUrl: "http://127.0.0.1:8765/v1", apiKey: "" },
+    {
+      fetch: async (url) => {
+        if (String(url).endsWith("/voices")) return { ok: false, json: async () => ({}) };
+        return {
+          ok: true,
+          json: async () => [{ type: "file", path: "fantine.safetensors" }],
+        };
+      },
+    },
+  );
+  assert.deepEqual(
+    fromPocket.map((v) => v.id),
+    ["fantine"],
+  );
 });
