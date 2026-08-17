@@ -1,6 +1,7 @@
 import { captureDenied, ensureMediaAccess, type MicFix } from "./media-permission";
 import { clamp } from "./utils";
 import { VOICE_PREVIEW_TEXT } from "./voice-preview";
+import { systemSettingsLabel } from "./host";
 
 export type SpeechHandlers = {
   onInterim?: (text: string) => void;
@@ -53,7 +54,7 @@ export function envelopeFromText(text: string): number[] {
 function friendlySpeechError(code: string): string | null {
   if (code === "aborted" || code === "no-speech") return null;
   if (code === "not-allowed" || code === "service-not-allowed") {
-    return "Mic is blocked. Allow Moya in System Settings, then tap Voice again.";
+    return `Mic is blocked. Allow Moya in ${systemSettingsLabel()}, then tap Voice again.`;
   }
   if (code === "network" || code === "service-not-connected") {
     return "Speech service is offline. Type instead.";
@@ -177,7 +178,7 @@ export class SpeechEngine {
       this.recDesired = false;
       this.micFix = "settings";
       this.handlers.onError?.(
-        "Mic is blocked. Allow Moya in System Settings, then tap Voice again.",
+        `Mic is blocked. Allow Moya in ${systemSettingsLabel()}, then tap Voice again.`,
       );
     }
   }

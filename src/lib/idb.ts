@@ -20,7 +20,11 @@ function openDb(): Promise<IDBDatabase> {
 export function emptySnapshot(): Snapshot {
   return {
     version: 1,
-    settings: { ...DEFAULT_SETTINGS, provider: { ...DEFAULT_SETTINGS.provider } },
+    settings: {
+      ...DEFAULT_SETTINGS,
+      provider: { ...DEFAULT_SETTINGS.provider },
+      voiceBackend: { ...DEFAULT_SETTINGS.voiceBackend },
+    },
     messages: [],
     memories: [],
     inbox: [],

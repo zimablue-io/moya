@@ -1,12 +1,19 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { parseOpenAiModelIds } from "../src/lib/provider-models.ts";
-import { llamaCppBaseUrl, normalizeSettings, PROVIDER_PRESETS } from "../src/lib/types.ts";
+import {
+  llamaCppBaseUrl,
+  normalizeSettings,
+  PROVIDER_PRESETS,
+  VOICE_CHOICES,
+  VOICE_PRESETS,
+} from "../src/lib/types.ts";
 
 test("defaults when given empty input", () => {
   const settings = normalizeSettings({});
   assert.equal(settings.provider.id, "xai");
   assert.equal(settings.provider.baseUrl, PROVIDER_PRESETS.xai.baseUrl);
+  assert.equal(settings.voiceBackend.id, "browser");
   assert.equal("engine" in settings, false);
 });
 
@@ -69,6 +76,58 @@ test("unknown keys are not kept on settings", () => {
   });
   assert.equal("extra" in settings, false);
   assert.equal("engine" in settings, false);
+});
+
+test("local speech-to-speech uses the sidecar speaker by default", () => {
+  const settings = normalizeSettings({
+    voiceBackend: {
+      id: "s2s",
+      model: "local",
+      baseUrl: "http://127.0.0.1:8765/v1",
+      apiKey: "",
+      voice: "",
+    },
+  });
+  assert.equal(settings.voiceBackend.id, "s2s");
+  assert.equal(settings.voiceBackend.baseUrl, "http://127.0.0.1:8765/v1");
+  assert.equal(settings.voiceBackend.voice, "");
+});
+
+test("Custom voice settings that pointed at local s2s become Local", () => {
+  const settings = normalizeSettings({
+    voiceBackend: {
+      id: "custom",
+      model: "local",
+      baseUrl: "http://127.0.0.1:8765/v1",
+      apiKey: "",
+      voice: "Ryan",
+    },
+  });
+  assert.equal(settings.voiceBackend.id, "s2s");
+  assert.equal(settings.voiceBackend.voice, "Ryan");
+  assert.equal(settings.voiceBackend.baseUrl, "http://127.0.0.1:8765/v1");
+});
+
+test("the Voice tab only offers System, Local, Grok, and OpenAI", () => {
+  assert.deepEqual(VOICE_CHOICES, ["browser", "s2s", "xai", "openai"]);
+  assert.deepEqual(
+    VOICE_CHOICES.map((id) => VOICE_PRESETS[id].label),
+    ["System", "Local", "Grok", "OpenAI"],
+  );
+});
+
+test("an unknown voice backend becomes System", () => {
+  const settings = normalizeSettings({
+    voiceBackend: { id: "moshi", baseUrl: "http://127.0.0.1:8998" },
+  });
+  assert.equal(settings.voiceBackend.id, "browser");
+});
+
+test("voice preset copy stays short enough for a tooltip", () => {
+  for (const preset of Object.values(VOICE_PRESETS)) {
+    assert.ok(preset.hint.length < 72, `${preset.label} hint is a paragraph`);
+    assert.equal(preset.hint.includes("--mode"), false);
+  }
 });
 
 test("OpenAI-style /models payloads become a flat id list", () => {

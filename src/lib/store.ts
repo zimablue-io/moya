@@ -17,6 +17,8 @@ import { BUILTIN_TOOLS, executeBuiltin, type World } from "./tools";
 import {
   normalizeSettings,
   PROVIDER_PRESETS,
+  VOICE_PRESETS,
+  usesRealtimeVoice,
   type Artifact,
   type Automation,
   type DialogId,
@@ -29,6 +31,7 @@ import {
   type ProviderId,
   type Settings,
   type Snapshot,
+  type VoiceBackendId,
 } from "./types";
 import { nowIso, uid } from "./utils";
 
@@ -54,6 +57,18 @@ type Actions = {
   patchSettings: (partial: Partial<Settings>) => void;
   applyProvider: (id: ProviderId) => void;
   setProviderField: (field: Exclude<keyof Settings["provider"], "id">, value: string) => void;
+  applyVoiceBackend: (id: VoiceBackendId) => void;
+  setVoiceBackendField: (
+    field: Exclude<keyof Settings["voiceBackend"], "id">,
+    value: string,
+  ) => void;
+  commitVoiceUser: (text: string) => Message | null;
+  commitVoiceAssistant: (text: string) => void;
+  executeVoiceTool: (
+    name: string,
+    args: string,
+  ) => Promise<{ content: string; artifact?: Artifact }>;
+  realtimeTools: () => ChatTool[];
   setPresence: (
     p: Partial<
       Pick<Live, "presence" | "emotion" | "level" | "bands" | "caption" | "interim" | "error">
@@ -93,7 +108,7 @@ let persistTimer: ReturnType<typeof setTimeout> | null = null;
 function takeSnapshot(s: Snapshot): Snapshot {
   return {
     version: 1,
-    settings: s.settings,
+    settings: normalizeSettings(s.settings),
     messages: [...s.messages],
     memories: [...s.memories],
     inbox: [...s.inbox],
@@ -263,6 +278,76 @@ export const useApp = create<AppStore>((set, get) => ({
     get().persist();
   },
 
+  applyVoiceBackend: (id) => {
+    const next = VOICE_PRESETS[id];
+    set((s) => ({
+      settings: {
+        ...s.settings,
+        voiceBackend: {
+          id,
+          model: next.model,
+          baseUrl: next.baseUrl,
+          apiKey: "",
+          voice: next.voice,
+        },
+      },
+    }));
+    get().persist();
+  },
+
+  setVoiceBackendField: (field, value) => {
+    set((s) => ({
+      settings: {
+        ...s.settings,
+        voiceBackend: { ...s.settings.voiceBackend, [field]: value },
+      },
+    }));
+    get().persist();
+  },
+
+  realtimeTools: () => toolsFor(takeSnapshot(get())),
+
+  commitVoiceUser: (text) => {
+    const trimmed = text.trim();
+    if (!trimmed) return null;
+    const last = [...get().messages].reverse().find((m) => !m.hidden);
+    if (last?.role === "user" && last.content === trimmed) return last;
+    return get().addUserMessage(trimmed);
+  },
+
+  commitVoiceAssistant: (text) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    const last = [...get().messages].reverse().find((m) => !m.hidden);
+    if (last?.role === "assistant" && last.content === trimmed) {
+      set({ caption: trimmed });
+      return;
+    }
+    const em = /sorry|cannot|can't|blocked|urgent/i.test(trimmed)
+      ? "concerned"
+      : /good|glad|nice|yes/i.test(trimmed)
+        ? "warm"
+        : "calm";
+    const reply: Message = {
+      id: uid("a"),
+      role: "assistant",
+      content: trimmed,
+      createdAt: nowIso(),
+      emotion: em,
+    };
+    set({ messages: [...get().messages, reply], emotion: em, caption: trimmed });
+    get().persist();
+  },
+
+  executeVoiceTool: async (name, args) => {
+    const world: World = { snapshot: takeSnapshot(get()) };
+    const result = await runTool(name, args, world);
+    set(applyWorld(world));
+    if (world.opened) get().openArtifact(world.opened);
+    get().persist();
+    return result;
+  },
+
   setPresence: (p) => set(p),
 
   openDialog: (d) => set({ dialog: d }),
@@ -338,12 +423,13 @@ export const useApp = create<AppStore>((set, get) => ({
       artifacts: world.opened ? [world.opened] : undefined,
     };
 
+    const speakBrowser = get().settings.autoSpeak && !skipBrowserSpeak(get());
     set({
       messages: [...get().messages, reply],
       ...applyWorld(world),
       emotion: em,
       caption: spoken,
-      presence: get().settings.autoSpeak ? "speaking" : "idle",
+      presence: speakBrowser ? "speaking" : get().voiceMode ? "listening" : "idle",
     });
     if (world.opened) get().openArtifact(world.opened);
     get().persist();
@@ -352,14 +438,12 @@ export const useApp = create<AppStore>((set, get) => ({
     );
     if (added[0]) void notify(added[0].title, added[0].body);
 
-    if (get().settings.autoSpeak) {
+    if (speakBrowser) {
       speech.speak(spoken, {
         voiceURI: get().settings.voiceURI,
         rate: get().settings.rate,
         pitch: get().settings.pitch,
       });
-    } else {
-      set({ presence: get().voiceMode ? "listening" : "idle" });
     }
   },
 
@@ -495,7 +579,7 @@ export const useApp = create<AppStore>((set, get) => ({
     );
     if (addedAuto[0]) void notify(addedAuto[0].title, addedAuto[0].body);
 
-    if (speak && keep && get().settings.autoSpeak) {
+    if (speak && keep && get().settings.autoSpeak && !skipBrowserSpeak(get())) {
       speech.speak(result, {
         voiceURI: get().settings.voiceURI,
         rate: get().settings.rate,
@@ -580,6 +664,10 @@ async function runTool(
   }
   const result = executeBuiltin(name, args, world);
   return { content: result.content, artifact: result.artifact };
+}
+
+function skipBrowserSpeak(s: { voiceMode: boolean; settings: Settings }) {
+  return s.voiceMode && usesRealtimeVoice(s.settings.voiceBackend.id);
 }
 
 export function pendingInboxCount(inbox: { resolvedAt: string | null }[]) {

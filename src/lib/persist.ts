@@ -143,6 +143,7 @@ export function emptySnapshot(): Snapshot {
     settings: {
       ...DEFAULT_SETTINGS,
       provider: { ...DEFAULT_SETTINGS.provider },
+      voiceBackend: { ...DEFAULT_SETTINGS.voiceBackend },
     },
     messages: [],
     memories: [],

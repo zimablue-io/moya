@@ -7,6 +7,7 @@ This is **Moya**, a local-first personal assistant (web + Tauri desktop). Produc
 - Home (`/`) is the assistant. Sign-in is optional; `/login` is not a gate.
 - Memory, transcript, routines, inbox, and settings persist locally (`src/lib/persist.ts`).
 - Chat completion is a client `fetch` to the configured provider (`src/lib/llm.ts`). Desktop uses the same function.
+- Voice mode talks to Settings → Voice backend. `browser` is Web Speech. Anything else is OpenAI Realtime over WebSocket (`src/lib/realtime-session.ts`). Moya does not start speech-to-speech or llama-server.
 - The packaged `.app` has no Node server. Do not add `createServerFn` paths that the `.app` must call.
 
 ## Commands

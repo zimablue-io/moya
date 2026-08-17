@@ -105,6 +105,7 @@ test("macOS Info.plist declares microphone and speech-recognition usage", () => 
   assert.match(plist, /<key>NSMicrophoneUsageDescription<\/key>/);
   assert.match(plist, /<key>NSSpeechRecognitionUsageDescription<\/key>/);
   assert.match(plist, /microphone/i);
+  assert.match(plist, /<key>NSAllowsLocalNetworking<\/key>/);
 });
 
 test("macOS bundle requires 10.15 so Speech and mic auth APIs are in range", () => {

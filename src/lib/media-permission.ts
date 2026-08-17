@@ -1,4 +1,4 @@
-import { isDesktop } from "./host";
+import { isDesktop, systemSettingsLabel, deviceNoun } from "./host";
 
 export type MediaAuthState = "prompt" | "denied" | "restricted" | "granted";
 
@@ -42,6 +42,15 @@ export async function ensureMediaAccess(): Promise<
   return blocked(status);
 }
 
+export async function ensureMicrophoneAccess(): Promise<
+  { ok: true } | { ok: false; message: string; fix: MicFix }
+> {
+  let status = await mediaPermissionStatus();
+  if (status.microphone === "prompt") status = await requestMediaPermission();
+  if (status.microphone === "granted") return { ok: true };
+  return blocked({ ...status, speech: "granted" });
+}
+
 export async function allowMicrophone(): Promise<"granted" | "opened-settings" | "denied"> {
   const status = await mediaPermissionStatus();
   if (status.microphone === "denied" || status.speech === "denied") {
@@ -70,7 +79,7 @@ function blocked(status: MediaAuth): { ok: false; message: string; fix: MicFix }
     return {
       ok: false,
       message: desktop
-        ? "Mic is blocked. Allow Moya in System Settings, then tap Voice again."
+        ? `Mic is blocked. Allow Moya in ${systemSettingsLabel()}, then tap Voice again.`
         : "Mic is blocked. Allow the microphone in the address bar, then try again.",
       fix: desktop ? "settings" : "allow",
     };
@@ -79,13 +88,13 @@ function blocked(status: MediaAuth): { ok: false; message: string; fix: MicFix }
     return {
       ok: false,
       message: desktop
-        ? "Speech recognition is blocked. Allow Moya in System Settings, then tap Voice again."
+        ? `Speech recognition is blocked. Allow Moya in ${systemSettingsLabel()}, then tap Voice again.`
         : "Speech recognition is blocked. Type if you need to talk.",
       fix: desktop ? "settings" : null,
     };
   }
   if (status.microphone === "restricted") {
-    return { ok: false, message: "Mic is blocked on this Mac.", fix: null };
+    return { ok: false, message: `Mic is blocked on ${deviceNoun()}.`, fix: null };
   }
   return {
     ok: false,

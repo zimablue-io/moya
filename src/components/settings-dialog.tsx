@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Play, Square } from "lucide-react";
+import { Info, Play, Square } from "lucide-react";
 import { UserButton } from "@/lib/auth/gates";
 import { authEnabled } from "@/lib/auth/client";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -19,12 +20,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { speech } from "@/lib/speech";
 import { useApp } from "@/lib/store";
-import { isDesktop } from "@/lib/host";
+import { isDesktop, systemSettingsLabel, systemVoiceLabel, thisDeviceLabel } from "@/lib/host";
 import { allowMicrophone, mediaPermissionStatus, type MediaAuth } from "@/lib/media-permission";
 import { listProviderModels } from "@/lib/llm";
-import { PROVIDER_PRESETS, type ProviderId } from "@/lib/types";
+import {
+  PROVIDER_PRESETS,
+  VOICE_CHOICES,
+  VOICE_PRESETS,
+  speakersFor,
+  type ProviderId,
+  type VoiceBackendId,
+} from "@/lib/types";
 import { uid } from "@/lib/utils";
-import { VOICE_PREVIEW_TEXT } from "@/lib/voice-preview";
+import { voiceBackendNeedsKey } from "@/lib/voice-backend";
+import { restartVoiceIfNeeded } from "@/lib/voice-mode";
 
 export function SettingsDialog() {
   const dialog = useApp((s) => s.dialog);
@@ -33,6 +42,8 @@ export function SettingsDialog() {
   const patch = useApp((s) => s.patchSettings);
   const applyProvider = useApp((s) => s.applyProvider);
   const setProviderField = useApp((s) => s.setProviderField);
+  const applyVoiceBackend = useApp((s) => s.applyVoiceBackend);
+  const setVoiceBackendField = useApp((s) => s.setVoiceBackendField);
   const mcpServers = useApp((s) => s.mcpServers);
   const addMcp = useApp((s) => s.addMcp);
   const removeMcp = useApp((s) => s.removeMcp);
@@ -142,76 +153,119 @@ export function SettingsDialog() {
             </TabsContent>
             <TabsContent value="voice" className="space-y-4">
               <MicAccess />
-              <Row label="Speak replies">
-                <Switch
-                  checked={settings.autoSpeak}
-                  onCheckedChange={(v) => patch({ autoSpeak: v })}
-                />
-              </Row>
-              <Row label="Captions">
-                <Switch
-                  checked={settings.showCaptions}
-                  onCheckedChange={(v) => patch({ showCaptions: v })}
-                />
-              </Row>
-              <div className="grid gap-2">
-                <Label htmlFor="voice-select">Voice</Label>
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+                <label className="flex h-8 items-center gap-2 text-sm">
+                  <Switch
+                    checked={settings.autoSpeak}
+                    onCheckedChange={(v) => patch({ autoSpeak: v })}
+                  />
+                  Speak typed replies
+                </label>
+                <label className="flex h-8 items-center gap-2 text-sm">
+                  <Switch
+                    checked={settings.showCaptions}
+                    onCheckedChange={(v) => patch({ showCaptions: v })}
+                  />
+                  Captions
+                </label>
+              </div>
+              <Field label="Provider" tip={VOICE_PRESETS[settings.voiceBackend.id].hint}>
                 <select
-                  id="voice-select"
                   className="h-11 w-full rounded-md border border-border bg-surface px-3 text-sm"
-                  value={settings.voiceURI}
+                  value={
+                    VOICE_CHOICES.includes(settings.voiceBackend.id)
+                      ? settings.voiceBackend.id
+                      : "s2s"
+                  }
                   onChange={(e) => {
-                    patch({ voiceURI: e.target.value });
-                    playVoicePreview({ voiceURI: e.target.value });
+                    applyVoiceBackend(e.target.value as VoiceBackendId);
+                    if (useApp.getState().voiceMode) void restartVoiceIfNeeded();
                   }}
                 >
-                  <option value="">System default</option>
-                  {settings.voiceURI && !voices.some((v) => v.voiceURI === settings.voiceURI) ? (
-                    <option value={settings.voiceURI}>Saved voice (not in this list yet)</option>
-                  ) : null}
-                  {voices.map((v) => (
-                    <option key={v.voiceURI} value={v.voiceURI}>
-                      {v.name} ({v.lang})
+                  {VOICE_CHOICES.map((id) => (
+                    <option key={id} value={id}>
+                      {id === "browser" ? systemVoiceLabel() : VOICE_PRESETS[id].label}
                     </option>
                   ))}
                 </select>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={!speech.ttsSupported}
-                  aria-pressed={previewing}
-                  aria-label={previewing ? "Stop voice preview" : "Hear this voice"}
-                  onClick={() => (previewing ? stopVoicePreview() : playVoicePreview())}
-                >
-                  {previewing ? <Square className="size-4" /> : <Play className="size-4" />}
-                  {previewing ? "Stop" : "Hear this voice"}
-                </Button>
-                <p className="text-xs text-muted">{VOICE_PREVIEW_TEXT}</p>
-              </div>
-              <Field label={`Rate ${settings.rate.toFixed(2)}`}>
-                <Slider
-                  min={0.7}
-                  max={1.3}
-                  step={0.05}
-                  value={[settings.rate]}
-                  onValueChange={([v]) => patch({ rate: v ?? 1 })}
-                  onValueCommit={([v]) => playVoicePreview({ rate: v ?? 1 })}
-                />
               </Field>
-              <Field label={`Pitch ${settings.pitch.toFixed(2)}`}>
-                <Slider
-                  min={0.7}
-                  max={1.3}
-                  step={0.05}
-                  value={[settings.pitch]}
-                  onValueChange={([v]) => patch({ pitch: v ?? 1 })}
-                  onValueCommit={([v]) => playVoicePreview({ pitch: v ?? 1 })}
-                />
-              </Field>
-              <p className="text-xs text-muted">
-                Speech stays on-device. Hold the core to talk. Tap Voice for a live discussion. The
-                bar is for transcribe, edit, send.
-              </p>
+              {settings.voiceBackend.id === "browser" ? (
+                <>
+                  <Field label="Speaker">
+                    <MacVoicePicker
+                      voices={voices}
+                      value={settings.voiceURI}
+                      previewing={previewing}
+                      onVoice={(voiceURI) => {
+                        patch({ voiceURI });
+                        playVoicePreview({ voiceURI });
+                      }}
+                      onPreview={() => playVoicePreview()}
+                      onStop={stopVoicePreview}
+                    />
+                  </Field>
+                  <Field label={`Rate ${settings.rate.toFixed(2)}`}>
+                    <Slider
+                      min={0.7}
+                      max={1.3}
+                      step={0.05}
+                      value={[settings.rate]}
+                      onValueChange={([v]) => patch({ rate: v ?? 1 })}
+                      onValueCommit={([v]) => playVoicePreview({ rate: v ?? 1 })}
+                    />
+                  </Field>
+                  <Field label={`Pitch ${settings.pitch.toFixed(2)}`}>
+                    <Slider
+                      min={0.7}
+                      max={1.3}
+                      step={0.05}
+                      value={[settings.pitch]}
+                      onValueChange={([v]) => patch({ pitch: v ?? 1 })}
+                      onValueCommit={([v]) => playVoicePreview({ pitch: v ?? 1 })}
+                    />
+                  </Field>
+                </>
+              ) : (
+                <>
+                  <SpokenVoice
+                    id={settings.voiceBackend.id}
+                    value={settings.voiceBackend.voice}
+                    onChange={(v) => setVoiceBackendField("voice", v)}
+                    onCommit={() => {
+                      if (useApp.getState().voiceMode) void restartVoiceIfNeeded();
+                    }}
+                  />
+                  {voiceBackendNeedsKey(settings.voiceBackend.id) ? (
+                    <Field label="API key">
+                      <Input
+                        type="password"
+                        autoComplete="off"
+                        value={settings.voiceBackend.apiKey}
+                        onChange={(e) => setVoiceBackendField("apiKey", e.target.value)}
+                        placeholder={
+                          settings.provider.id === settings.voiceBackend.id
+                            ? "Same as Model"
+                            : "Required"
+                        }
+                      />
+                    </Field>
+                  ) : null}
+                  {settings.voiceBackend.id === "s2s" ? (
+                    <details className="rounded-xl bg-surface-2 px-3 py-2">
+                      <summary className="cursor-pointer text-xs text-muted">Connection</summary>
+                      <div className="mt-3 grid gap-3">
+                        <Field label="URL">
+                          <Input
+                            value={settings.voiceBackend.baseUrl}
+                            onChange={(e) => setVoiceBackendField("baseUrl", e.target.value)}
+                            placeholder="http://127.0.0.1:8765/v1"
+                          />
+                        </Field>
+                      </div>
+                    </details>
+                  ) : null}
+                </>
+              )}
             </TabsContent>
             <TabsContent value="model" className="space-y-4">
               <Field label="Provider">
@@ -525,56 +579,169 @@ function MicAccess() {
 
   const mic = auth?.microphone ?? "prompt";
   const speechAuth = auth?.speech ?? "prompt";
+  const allowed = mic === "granted" && speechAuth !== "denied";
   const blocked = mic === "denied" || mic === "restricted" || speechAuth === "denied";
-  const label =
-    mic === "granted" && speechAuth !== "denied"
-      ? "Microphone allowed"
-      : blocked
-        ? "Microphone blocked"
-        : "Microphone not allowed yet";
+
+  if (!auth || allowed) {
+    return allowed ? <p className="text-xs text-muted">Microphone allowed</p> : null;
+  }
 
   return (
-    <div className="rounded-xl bg-surface-2 p-3">
-      <p className="text-sm text-fg">{label}</p>
-      <p className="mt-1 text-xs text-muted">
-        {isDesktop()
-          ? "Allow and this Mac will ask. If you already declined, open System Settings."
-          : "Allow and the browser will ask. If you already declined, use the control in the address bar."}
-      </p>
-      <div className="mt-3">
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={busy || (mic === "granted" && speechAuth !== "denied")}
-          onClick={() => {
-            setBusy(true);
-            void allowMicrophone()
-              .then(() => mediaPermissionStatus())
-              .then(setAuth)
-              .finally(() => setBusy(false));
-          }}
-        >
-          {blocked && isDesktop() ? "Open System Settings" : "Allow microphone"}
-        </Button>
+    <div className="flex items-center justify-between gap-3 rounded-xl bg-surface-2 px-3 py-2">
+      <div className="min-w-0">
+        <p className="text-sm text-fg">
+          {blocked ? "Microphone blocked" : "Microphone not allowed yet"}
+        </p>
+        <p className="text-xs text-muted">
+          {isDesktop()
+            ? blocked
+              ? `Open ${systemSettingsLabel()} to allow Moya.`
+              : `${thisDeviceLabel()} will ask the first time you allow it.`
+            : blocked
+              ? "Use the control in the address bar."
+              : "The browser will ask the first time you allow it."}
+        </p>
       </div>
+      <Button
+        size="sm"
+        variant="outline"
+        className="shrink-0"
+        disabled={busy}
+        onClick={() => {
+          setBusy(true);
+          void allowMicrophone()
+            .then(() => mediaPermissionStatus())
+            .then(setAuth)
+            .finally(() => setBusy(false));
+        }}
+      >
+        {blocked && isDesktop() ? `Open ${systemSettingsLabel()}` : "Allow microphone"}
+      </Button>
     </div>
   );
 }
 
-function Field({ label, children }: { label: string; children: ReactNode }) {
+function SpokenVoice({
+  id,
+  value,
+  onChange,
+  onCommit,
+}: {
+  id: VoiceBackendId;
+  value: string;
+  onChange: (v: string) => void;
+  onCommit?: () => void;
+}) {
+  const named = speakersFor(id);
+  if (!named.length) {
+    return (
+      <Field label="Speaker">
+        <Input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onBlur={() => onCommit?.()}
+          placeholder="Sidecar default"
+        />
+      </Field>
+    );
+  }
+  const known = named.some((v) => v.id === value);
   return (
-    <label className="grid gap-2">
-      <Label>{label}</Label>
-      {children}
-    </label>
+    <Field label="Speaker">
+      <select
+        className="h-11 w-full rounded-md border border-border bg-surface px-3 text-sm"
+        value={known ? value : value ? "__other__" : named[0]?.id}
+        onChange={(e) => {
+          if (e.target.value === "__other__") return;
+          onChange(e.target.value);
+          onCommit?.();
+        }}
+      >
+        {named.map((v) => (
+          <option key={v.id} value={v.id}>
+            {v.label}
+          </option>
+        ))}
+        {!known && value ? <option value="__other__">{value}</option> : null}
+      </select>
+    </Field>
   );
 }
 
-function Row({ label, children }: { label: string; children: ReactNode }) {
+function MacVoicePicker({
+  voices,
+  value,
+  previewing,
+  onVoice,
+  onPreview,
+  onStop,
+}: {
+  voices: SpeechSynthesisVoice[];
+  value: string;
+  previewing: boolean;
+  onVoice: (voiceURI: string) => void;
+  onPreview: () => void;
+  onStop: () => void;
+}) {
   return (
-    <div className="flex h-11 items-center justify-between gap-4">
-      <Label>{label}</Label>
+    <div className="flex gap-2">
+      <select
+        id="voice-select"
+        className="h-11 min-w-0 flex-1 rounded-md border border-border bg-surface px-3 text-sm"
+        value={value}
+        onChange={(e) => onVoice(e.target.value)}
+      >
+        <option value="">System default</option>
+        {value && !voices.some((v) => v.voiceURI === value) ? (
+          <option value={value}>Saved voice</option>
+        ) : null}
+        {voices.map((v) => (
+          <option key={v.voiceURI} value={v.voiceURI}>
+            {v.name} ({v.lang})
+          </option>
+        ))}
+      </select>
+      <Button
+        type="button"
+        variant="outline"
+        size="icon"
+        className="shrink-0"
+        disabled={!speech.ttsSupported}
+        aria-pressed={previewing}
+        aria-label={previewing ? "Stop preview" : "Hear this voice"}
+        onClick={() => (previewing ? onStop() : onPreview())}
+      >
+        {previewing ? <Square className="size-4" /> : <Play className="size-4" />}
+      </Button>
+    </div>
+  );
+}
+
+function Field({ label, tip, children }: { label: string; tip?: string; children: ReactNode }) {
+  return (
+    <div className="grid gap-2">
+      <div className="flex items-center gap-0.5">
+        <Label>{label}</Label>
+        {tip ? <InfoTip text={tip} /> : null}
+      </div>
       {children}
     </div>
+  );
+}
+
+function InfoTip({ text }: { text: string }) {
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex size-7 items-center justify-center rounded-full text-subtle hover:bg-surface-2 hover:text-fg"
+          aria-label="About this setting"
+        >
+          <Info className="size-3.5" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent>{text}</PopoverContent>
+    </Popover>
   );
 }

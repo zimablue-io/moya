@@ -22,6 +22,8 @@ import { speech } from "@/lib/speech";
 import { allowMicrophone } from "@/lib/media-permission";
 import { pendingInboxCount, useApp } from "@/lib/store";
 import { type DialogId } from "@/lib/types";
+import { enterVoiceMode, exitVoiceMode, restartVoiceIfNeeded } from "@/lib/voice-mode";
+import { systemSettingsLabel } from "@/lib/host";
 import { cn, formatClock } from "@/lib/utils";
 
 const TOOLS: {
@@ -53,7 +55,6 @@ export function AssistantShell() {
   const error = useApp((s) => s.error);
   const send = useApp((s) => s.send);
   const setPresence = useApp((s) => s.setPresence);
-  const setVoiceMode = useApp((s) => s.setVoiceMode);
   const setComposerOpen = useApp((s) => s.setComposerOpen);
   const openDialog = useApp((s) => s.openDialog);
   const dialog = useApp((s) => s.dialog);
@@ -124,7 +125,9 @@ export function AssistantShell() {
         const s = useApp.getState();
         if (s.voiceMode) {
           s.setPresence({ presence: "listening" });
-          void speech.startListen({ continuous: true });
+          if (s.settings.voiceBackend.id === "browser") {
+            void speech.startListen({ continuous: true });
+          }
         } else {
           s.setPresence({ presence: "idle" });
         }
@@ -149,20 +152,14 @@ export function AssistantShell() {
   }, [send]);
 
   const enterVoice = useCallback(() => {
-    speech.stopSpeak();
     setNoteListen(false);
-    setVoiceMode(true);
     setMicFix(null);
-    setPresence({ presence: "listening", caption: "", interim: "", error: null });
-    void speech.startListen({ continuous: true });
-  }, [setPresence, setVoiceMode]);
+    void enterVoiceMode();
+  }, []);
 
   const exitVoice = useCallback(() => {
-    speech.stopListen();
-    speech.stopSpeak();
-    setVoiceMode(false);
-    setPresence({ presence: "idle", interim: "" });
-  }, [setPresence, setVoiceMode]);
+    exitVoiceMode();
+  }, []);
 
   const startHold = useCallback(() => {
     if (voiceMode || presence === "thinking" || noteListen) return;
@@ -350,7 +347,7 @@ export function AssistantShell() {
         {error ? (
           <div className="mt-3 flex max-w-sm flex-col items-center gap-2">
             <p className="text-xs text-subtle">{error}</p>
-            {micFix ? (
+            {micFix || /mic is blocked|microphone/i.test(error) ? (
               <button
                 type="button"
                 className="pointer-events-auto text-xs text-fg underline decoration-border underline-offset-4"
@@ -362,11 +359,11 @@ export function AssistantShell() {
                     }
                     setMicFix(null);
                     useApp.getState().setPresence({ error: null });
-                    if (useApp.getState().voiceMode) void speech.startListen({ continuous: true });
+                    if (useApp.getState().voiceMode) void restartVoiceIfNeeded();
                   });
                 }}
               >
-                {micFix === "settings" ? "Open System Settings" : "Allow microphone"}
+                {micFix === "settings" ? `Open ${systemSettingsLabel()}` : "Allow microphone"}
               </button>
             ) : null}
           </div>

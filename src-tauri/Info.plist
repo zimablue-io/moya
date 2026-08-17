@@ -6,5 +6,10 @@
 	<string>Moya needs the microphone when you tap Voice or hold to talk.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Moya turns what you say into text on this Mac.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 </dict>
 </plist>
