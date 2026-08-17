@@ -4,6 +4,7 @@ import type { RealtimeTool } from "./realtime-protocol";
 
 export {
   REALTIME_SAMPLE_RATE,
+  applyTranscriptBit,
   audioDeltaFromEvent,
   buildSessionUpdate,
   errorFromEvent,

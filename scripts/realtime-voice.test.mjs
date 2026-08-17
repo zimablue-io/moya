@@ -9,6 +9,7 @@ import {
   resampleLinear,
 } from "../src/lib/pcm.ts";
 import {
+  applyTranscriptBit,
   audioDeltaFromEvent,
   buildSessionUpdate,
   functionCallFromEvent,
@@ -160,6 +161,31 @@ test("48 kHz capture downsamples to 24 kHz PCM16", () => {
   const roundtrip = pcm16ToFloat(base64ToPcm16(pcm16ToBase64(pcm)));
   assert.equal(roundtrip.length, input.length);
   assert.ok(Math.abs((roundtrip[3] ?? 0) - (input[3] ?? 0)) < 0.01);
+});
+
+test("sidecar cumulative STT deltas replace instead of concatenating", () => {
+  const parts = [
+    "Okay.",
+    "Okay.",
+    "Okay, this is just",
+    "Okay, this is just a test.",
+    "Okay, this is just a test, test, test.",
+  ];
+  let text = "";
+  for (const part of parts) text = applyTranscriptBit(text, part, "delta");
+  assert.equal(text, "Okay, this is just a test, test, test.");
+});
+
+test("OpenAI incremental STT deltas still append", () => {
+  let text = applyTranscriptBit("", "Hel", "delta");
+  text = applyTranscriptBit(text, "lo", "delta");
+  text = applyTranscriptBit(text, " there", "delta");
+  assert.equal(text, "Hello there");
+});
+
+test("final transcripts replace the live buffer", () => {
+  const live = applyTranscriptBit("Okay.Okay.", "Okay, this is just a test.", "final");
+  assert.equal(live, "Okay, this is just a test.");
 });
 
 test("xAI voice JSON becomes speaker options", () => {

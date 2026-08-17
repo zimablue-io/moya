@@ -3,6 +3,7 @@ import { base64ToPcm16, capturePcm16Base64, pcm16ToFloat, rmsLevel } from "./pcm
 import { clamp } from "./utils";
 import {
   REALTIME_SAMPLE_RATE,
+  applyTranscriptBit,
   audioDeltaFromEvent,
   buildSessionUpdate,
   errorFromEvent,
@@ -201,8 +202,7 @@ export class RealtimeSession {
     const cue = transcriptFromEvent(event);
     if (cue) {
       if (cue.role === "user") {
-        if (cue.mode === "delta") this.userBits += cue.text;
-        else this.userBits = cue.text || this.userBits;
+        this.userBits = applyTranscriptBit(this.userBits, cue.text, cue.mode);
         const text = this.userBits.trim();
         if (cue.mode === "final") {
           if (text) this.handlers.onFinal?.("user", text);
@@ -211,8 +211,7 @@ export class RealtimeSession {
           this.handlers.onInterim?.("user", text);
         }
       } else {
-        if (cue.mode === "delta") this.assistantBits += cue.text;
-        else this.assistantBits = cue.text || this.assistantBits;
+        this.assistantBits = applyTranscriptBit(this.assistantBits, cue.text, cue.mode);
         const text = this.assistantBits.trim();
         if (cue.mode === "final") {
           if (text) this.handlers.onFinal?.("assistant", text);

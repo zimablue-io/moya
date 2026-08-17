@@ -91,6 +91,35 @@ export function audioDeltaFromEvent(event: Record<string, unknown>): string | nu
   return null;
 }
 
+export function applyTranscriptBit(
+  prev: string,
+  incoming: string,
+  mode: TranscriptCue["mode"],
+): string {
+  if (mode === "replace" || mode === "final") return incoming || prev;
+  if (!incoming) return prev;
+  if (!prev) return incoming;
+  if (incoming.startsWith(prev) || prev.startsWith(incoming)) return incoming;
+  if (isCumulativeRevision(prev, incoming)) return incoming;
+  return prev + incoming;
+}
+
+function isCumulativeRevision(prev: string, incoming: string): boolean {
+  const older = transcriptWords(prev);
+  const newer = transcriptWords(incoming);
+  if (!older.length || !newer.length) return false;
+  const shared = Math.min(older.length, newer.length, 3);
+  return older.slice(0, shared).every((word, i) => word === newer[i]);
+}
+
+function transcriptWords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]+/gu, " ")
+    .split(/\s+/)
+    .filter(Boolean);
+}
+
 export function transcriptFromEvent(event: Record<string, unknown>): TranscriptCue | null {
   const type = String(event.type ?? "");
   const text = pickTranscript(event);
