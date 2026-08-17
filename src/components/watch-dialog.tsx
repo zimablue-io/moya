@@ -92,7 +92,7 @@ export function WatchDialog() {
 											<h3 className="text-sm font-medium text-fg">{b.name}</h3>
 											<p className="mt-1 text-sm text-muted">{b.summary}</p>
 											<ul className="mt-3 flex flex-col gap-1.5">
-												{b.items.map((it) => (
+												{(b.items ?? []).map((it) => (
 													<li key={it.id} className="flex items-baseline justify-between gap-3 text-sm">
 														<span className="text-fg">{it.label}</span>
 														<span className={it.needsInput ? "text-warn" : "text-muted"}>

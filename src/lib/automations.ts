@@ -108,7 +108,7 @@ export function runLocalAutomation(auto: Automation, world: World): string {
 
 	if (/inbox|loop|need|blocked|watch/.test(brief)) {
 		const blocked = snap.boards.flatMap((b) =>
-			b.items.filter((it) => it.needsInput || it.state === "blocked").map((it) => `${b.name}: ${it.label}`),
+			(b.items ?? []).filter((it) => it.needsInput || it.state === "blocked").map((it) => `${b.name}: ${it.label}`),
 		)
 		if (blocked.length) {
 			executeBuiltin(

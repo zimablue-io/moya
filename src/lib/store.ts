@@ -12,6 +12,7 @@ import { type ChatMessage, type ChatTool, completeTurn } from "./llm"
 import { callMcpTool, handshakeMcp } from "./mcp"
 import { emptySnapshot, loadSnapshot, saveSnapshot } from "./persist"
 import { applyLocalIntent, buildSystemPrompt } from "./prompt"
+import { recoverFromRenderError } from "./recover"
 import { speech } from "./speech"
 import { BUILTIN_TOOLS, executeBuiltin, type World } from "./tools"
 import {
@@ -24,6 +25,7 @@ import {
 	type MemoryKind,
 	type Message,
 	normalizeSettings,
+	normalizeSnapshot,
 	PROVIDER_PRESETS,
 	type PresenceState,
 	type ProviderId,
@@ -88,6 +90,7 @@ type Actions = {
 	wipe: () => Promise<void>
 	exportJson: () => string
 	importJson: (raw: string) => void
+	recoverFromError: () => void
 }
 
 export type AppStore = Snapshot & Live & Actions
@@ -101,7 +104,7 @@ function takeSnapshot(s: Snapshot): Snapshot {
 		messages: [...s.messages],
 		memories: [...s.memories],
 		inbox: [...s.inbox],
-		boards: s.boards.map((b) => ({ ...b, items: [...b.items] })),
+		boards: s.boards.map((b) => ({ ...b, items: [...(b.items ?? [])] })),
 		timeLogs: [...s.timeLogs],
 		insights: [...s.insights],
 		mcpServers: [...s.mcpServers],
@@ -133,7 +136,7 @@ function toolsFor(snap: Snapshot): ChatTool[] {
 	const remote: ChatTool[] = snap.mcpServers
 		.filter((s) => s.enabled)
 		.flatMap((s) =>
-			s.tools.map((t) => ({
+			(s.tools ?? []).map((t) => ({
 				type: "function" as const,
 				function: {
 					name: `mcp__${s.id}__${t.name}`,
@@ -218,7 +221,7 @@ export const useApp = create<AppStore>((set, get) => ({
 	runningAutomation: null,
 
 	hydrate: async () => {
-		const snap = await loadSnapshot()
+		const snap = normalizeSnapshot(await loadSnapshot())
 		set((s) => {
 			if (s.messages.length > 0 || s.presence === "thinking" || s.presence === "speaking") {
 				return { ready: true }
@@ -589,6 +592,8 @@ export const useApp = create<AppStore>((set, get) => ({
 
 	exportJson: () => JSON.stringify(takeSnapshot(get()), null, 2),
 
+	recoverFromError: () => set(recoverFromRenderError()),
+
 	importJson: (raw) => {
 		try {
 			const parsed = JSON.parse(raw) as Snapshot
@@ -596,18 +601,7 @@ export const useApp = create<AppStore>((set, get) => ({
 				set({ error: "Unknown snapshot version." })
 				return
 			}
-			set({
-				settings: normalizeSettings(parsed.settings),
-				messages: parsed.messages ?? [],
-				memories: parsed.memories ?? [],
-				inbox: parsed.inbox ?? [],
-				boards: parsed.boards ?? [],
-				timeLogs: parsed.timeLogs ?? [],
-				insights: parsed.insights ?? [],
-				mcpServers: parsed.mcpServers ?? [],
-				automations: parsed.automations ?? [],
-				error: null,
-			})
+			set({ ...normalizeSnapshot(parsed), error: null })
 			get().persist()
 		} catch (err) {
 			set({

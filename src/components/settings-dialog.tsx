@@ -336,7 +336,7 @@ export function SettingsDialog() {
 													<p className="text-sm font-medium text-fg">{s.name}</p>
 													<p className="text-xs break-all text-muted">{s.url}</p>
 													<p className="mt-1 text-xs text-subtle">
-														{s.tools.length} tools
+														{(s.tools ?? []).length} tools
 														{s.lastError ? ` · ${s.lastError}` : s.lastOkAt ? " · connected" : ""}
 													</p>
 												</div>

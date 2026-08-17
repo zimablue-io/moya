@@ -8,7 +8,9 @@ import {
 	type McpServer,
 	type Memory,
 	type Message,
+	normalizeArtifacts,
 	normalizeSettings,
+	normalizeSnapshot,
 	type Snapshot,
 	type TimeLog,
 } from "./types"
@@ -189,7 +191,7 @@ export async function loadSnapshot(): Promise<Snapshot> {
 		const autos = await db.query<Record<string, unknown>>("SELECT * FROM automations ORDER BY created_at DESC")
 
 		const boardItems = items.rows
-		return {
+		return normalizeSnapshot({
 			version: 1,
 			settings: normalizeSettings(parseJson(settingsRow.rows[0]?.data, {})),
 			messages: messages.rows.map(rowMessage),
@@ -200,7 +202,7 @@ export async function loadSnapshot(): Promise<Snapshot> {
 			insights: insights.rows.map(rowInsight),
 			mcpServers: mcp.rows.map(rowMcp),
 			automations: autos.rows.map(rowAuto),
-		}
+		})
 	} catch (err) {
 		console.error("[moya] database load failed", err)
 		return emptySnapshot()
@@ -257,7 +259,7 @@ export async function saveSnapshot(snapshot: Snapshot): Promise<void> {
 					b.summary,
 					b.updatedAt,
 				])
-				for (const [si, it] of b.items.entries()) {
+				for (const [si, it] of (b.items ?? []).entries()) {
 					await tx.query(
 						`INSERT INTO board_items (id, board_id, label, state, note, needs_input, sort_order)
            VALUES ($1,$2,$3,$4,$5,$6,$7)`,
@@ -328,7 +330,7 @@ function rowMessage(r: Record<string, unknown>): Message {
 		content: String(r.content ?? ""),
 		createdAt: String(r.created_at),
 		emotion: (r.emotion as Message["emotion"]) || undefined,
-		artifacts: parseJson(r.artifacts as string | null, undefined),
+		artifacts: normalizeArtifacts(parseJson(r.artifacts as string | null, undefined)),
 		toolName: (r.tool_name as string) || undefined,
 		hidden: Number(r.hidden) === 1,
 	}
@@ -396,6 +398,7 @@ function rowInsight(r: Record<string, unknown>): Insight {
 }
 
 function rowMcp(r: Record<string, unknown>): McpServer {
+	const tools = parseJson(r.tools as string, [])
 	return {
 		id: String(r.id),
 		name: String(r.name ?? ""),
@@ -403,7 +406,7 @@ function rowMcp(r: Record<string, unknown>): McpServer {
 		authHeader: String(r.auth_header ?? ""),
 		enabled: Number(r.enabled) === 1,
 		sessionId: (r.session_id as string) || undefined,
-		tools: parseJson(r.tools as string, []),
+		tools: Array.isArray(tools) ? tools : [],
 		lastError: (r.last_error as string) || undefined,
 		lastOkAt: (r.last_ok_at as string) || undefined,
 	}
