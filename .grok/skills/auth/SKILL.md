@@ -45,7 +45,7 @@ Build real sign-in; do **NOT** scaffold demo/mock/hardcoded users.
   sign-in is off. `src/lib/auth/origin.ts` (`resolveAuthClientConfig`) disables
   Better Auth and supplies an `http(s)` `baseURL` so `createAuthClient` does not
   throw. The `.app` has no `/api/auth` server. `pnpm desktop` uses
-  `http://127.0.0.1:8080` and keeps sign-in on.
+  `http://127.0.0.1:5173` and keeps sign-in on.
 - **Off**: `VITE_AUTH_ENABLED=false`, or a packaged-desktop origin — then
   `useCurrentUserState` returns the dev user and no `/get-session` runs.
 
@@ -370,7 +370,7 @@ Use **only** these three — no other method is supported:
 
   If sign-up/sign-in returns **"Invalid origin"**, do **not** disable CSRF and
   do **not** edit `server.ts`. The template's `trustedOrigins` already covers
-  `*.grok-sandbox.com` and local loopback on port 8080 (`localhost` /
+  `*.grok-sandbox.com` and local loopback on port 5173 (`localhost` /
   `127.0.0.1` / `[::1]`). Open the app at one of those origins (not a random
   host/port).
 

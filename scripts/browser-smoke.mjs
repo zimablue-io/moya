@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Lightweight headless load + screenshot for http://127.0.0.1:8080 (or argv URL).
+ * Lightweight headless load + screenshot for http://127.0.0.1:5173 (or argv URL).
  * Does not try to "play" the app — just proves the page loads and captures a PNG
  * the agent can Read. Exit 0 on success, 1 on navigation failure, 2 if console errors.
  *
@@ -16,7 +16,7 @@ import { chromium } from "playwright";
 import { checkedOutputPath, checkedUrl } from "./browser-guard.mjs";
 import { computeBrandWarnings } from "./brand-check.mjs";
 
-const url = checkedUrl(process.argv[2] || "http://127.0.0.1:8080/");
+const url = checkedUrl(process.argv[2] || "http://127.0.0.1:5173/");
 const outPng = checkedOutputPath(
   process.argv[3] || "/workspace/screenshots/app-builder-preview.png",
   ["/workspace"],

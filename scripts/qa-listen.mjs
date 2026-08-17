@@ -6,7 +6,7 @@ page.on("pageerror", (e) => errors.push(String(e)));
 page.on("console", (m) => {
   if (m.type() === "error") errors.push(m.text());
 });
-await page.goto("http://127.0.0.1:8080/", { waitUntil: "networkidle" });
+await page.goto("http://127.0.0.1:5173/", { waitUntil: "networkidle" });
 await page.waitForTimeout(600);
 await page.getByRole("button", { name: "Voice" }).click();
 await page.waitForTimeout(400);

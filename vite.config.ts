@@ -65,7 +65,7 @@ function authPopupPlugin(): Plugin {
           }
 
           const host = String(
-            req.headers["x-forwarded-host"] ?? req.headers.host ?? "localhost:8080",
+            req.headers["x-forwarded-host"] ?? req.headers.host ?? "localhost:5173",
           );
           const proto = String(
             req.headers["x-forwarded-proto"] ??
@@ -122,7 +122,8 @@ function authPopupPlugin(): Plugin {
   };
 }
 
-// `0.0.0.0:8080` is the live-preview contract — don't change host/port.
+// Bind `0.0.0.0` so the live preview can reach the app. Port is Vite's default
+// (5173) so it does not collide with llama-server's default (8080).
 // Keep `nitro` gated to `build` (the Vercel deploy target): enabled in dev it
 // opens a second dev-server port, which breaks the single-port preview.
 // The dev server starts once `src/router.tsx` and `src/routes/` exist.
@@ -131,7 +132,7 @@ export default defineConfig(({ command, mode }) => {
   return {
     server: {
       host: "0.0.0.0",
-      port: 8080,
+      port: 5173,
       strictPort: true,
     },
     resolve: { tsconfigPaths: true },

@@ -7,14 +7,14 @@
     "nf3": "0.3.17"
   },
   "scripts": {
-    "dev": "vite dev --host 0.0.0.0 --port 8080",
+    "dev": "vite dev --host 0.0.0.0 --port 5173",
     "build": "vite build && npm run db:migrate",
     "db:migrate": "node scripts/migrate.mjs",
     "build:dev": "vite build --mode development",
-    "preview": "vite preview --host 0.0.0.0 --port 8080",
+    "preview": "vite preview --host 0.0.0.0 --port 5173",
     "build:desktop": "vite build --mode desktop && node scripts/desktop-frontend.mjs",
     "desktop": "tauri dev",
-    "desktop:build": "CI=true tauri build",
+    "package:mac": "CI=true tauri build",
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test 'scripts/**/*.test.mjs'",
     "lint": "eslint .",

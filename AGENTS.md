@@ -12,9 +12,9 @@ This is **Moya**, a local-first personal assistant (web + Tauri desktop). Produc
 ## Commands
 
 ```sh
-pnpm dev              # http://127.0.0.1:8080
+pnpm dev              # http://127.0.0.1:5173
 pnpm desktop          # tauri dev; beforeDevCommand is `npm run dev`
-pnpm desktop:build    # CI=true tauri build → .app + .dmg
+pnpm package:mac      # CI=true tauri build → .app + .dmg
 pnpm test
 pnpm lint
 pnpm typecheck
@@ -45,7 +45,7 @@ Better Auth at `/api/auth/*` federates to the Grok broker (Google, X only). Do *
 - `frontendDist` is `../dist/client` and must contain a bootable `index.html` after `pnpm build:desktop`.
 - Desktop Vite is SPA mode (`vite.config.ts`, `prerender.outputPath: "/index"`).
 - Icons listed in `bundle.icon` must exist; `.icns` files must be real icns (magic `icns`).
-- `desktop:build` sets `CI=true` so DMG creation does not need Finder automation.
+- `package:mac` sets `CI=true` so DMG creation does not need Finder automation.
 - `scripts/desktop-frontend.mjs` runs after the desktop Vite build and fails if `index.html` is missing.
 - Closing the window hides to the tray (`src-tauri/src/lib.rs`).
 

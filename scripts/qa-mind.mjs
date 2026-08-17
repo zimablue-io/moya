@@ -7,7 +7,7 @@ page.on("pageerror", (e) => errors.push(String(e)));
 page.on("console", (m) => {
   if (m.type() === "error") errors.push(m.text());
 });
-await page.goto("http://127.0.0.1:8080/", { waitUntil: "networkidle" });
+await page.goto("http://127.0.0.1:5173/", { waitUntil: "networkidle" });
 await page.waitForTimeout(400);
 await page.getByRole("button", { name: "Memory" }).click();
 await page.waitForTimeout(250);
@@ -27,7 +27,7 @@ await page.getByRole("button", { name: "New routine" }).click();
 await page.waitForTimeout(200);
 await page.screenshot({ path: "/workspace/screenshots/moya-routines-form.png" });
 const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
-await mobile.goto("http://127.0.0.1:8080/", { waitUntil: "networkidle" });
+await mobile.goto("http://127.0.0.1:5173/", { waitUntil: "networkidle" });
 await mobile.waitForTimeout(400);
 await mobile.getByRole("button", { name: "Memory" }).click();
 await mobile.waitForTimeout(250);

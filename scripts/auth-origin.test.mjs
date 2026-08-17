@@ -15,7 +15,7 @@ test("http://tauri.localhost packaged webview is not a Better Auth host", () => 
 });
 
 test("local vite / tauri-dev origin keeps auth on same-origin", () => {
-  const config = resolveAuthClientConfig("http://127.0.0.1:8080");
+  const config = resolveAuthClientConfig("http://127.0.0.1:5173");
   assert.equal(config.enabled, true);
   assert.equal(config.baseURL, undefined);
 });

@@ -5,7 +5,7 @@
   "identifier": "africa.moya",
   "build": {
     "frontendDist": "../dist/client",
-    "devUrl": "http://127.0.0.1:8080",
+    "devUrl": "http://127.0.0.1:5173",
     "beforeDevCommand": "npm run dev",
     "beforeBuildCommand": "npm run build:desktop"
   },
@@ -41,7 +41,11 @@
     ],
     "category": "Productivity",
     "shortDescription": "One local-first assistant",
-    "longDescription": "Moya is a single personal assistant. Memory, routines, and models stay on this machine."
+    "longDescription": "Moya is a single personal assistant. Memory, routines, and models stay on this machine.",
+    "macOS": {
+      "entitlements": "Entitlements.plist",
+      "minimumSystemVersion": "10.15"
+    }
   },
   "plugins": {}
 }

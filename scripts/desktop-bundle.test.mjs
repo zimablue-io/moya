@@ -69,10 +69,10 @@ test("build:desktop validates the frontend after vite", () => {
   assert.match(pkg.scripts["build:desktop"], /desktop-frontend\.mjs/);
 });
 
-test("desktop:build sets CI so DMG packaging does not require Finder automation", () => {
+test("package:mac sets CI so DMG packaging does not require Finder automation", () => {
   const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
   assert.match(
-    pkg.scripts["desktop:build"],
+    pkg.scripts["package:mac"],
     /\bCI=true\b/,
     "macOS create-dmg AppleScript needs Finder automation; CI=true passes --skip-jenkins",
   );
@@ -85,8 +85,8 @@ test("tauri beforeDevCommand starts the frontend that desktop waits for", () => 
   assert.equal(typeof command, "string");
   assert.notEqual(command.trim(), "", "beforeDevCommand is empty so tauri dev waits 180s and dies");
   assert.match(command, /npm run dev/);
-  assert.equal(conf.build.devUrl, "http://127.0.0.1:8080");
-  assert.match(pkg.scripts.dev, /--port 8080/);
+  assert.equal(conf.build.devUrl, "http://127.0.0.1:5173");
+  assert.match(pkg.scripts.dev, /--port 5173/);
 });
 
 test("bundle identifier does not end with .app", () => {
@@ -98,4 +98,33 @@ test("bundle identifier does not end with .app", () => {
     false,
     `identifier "${identifier}" ends with .app and conflicts with the macOS bundle extension`,
   );
+});
+
+test("macOS Info.plist declares microphone and speech-recognition usage", () => {
+  const plist = readFileSync(join(tauriDir, "Info.plist"), "utf8");
+  assert.match(plist, /<key>NSMicrophoneUsageDescription<\/key>/);
+  assert.match(plist, /<key>NSSpeechRecognitionUsageDescription<\/key>/);
+  assert.match(plist, /microphone/i);
+});
+
+test("macOS bundle requires 10.15 so Speech and mic auth APIs are in range", () => {
+  const conf = readConf();
+  assert.equal(conf.bundle?.macOS?.minimumSystemVersion, "10.15");
+  const buildRs = readFileSync(join(tauriDir, "build.rs"), "utf8");
+  assert.match(buildRs, /mmacosx-version-min=10\.15/);
+});
+
+test("macOS entitlements allow hardened-runtime microphone access", () => {
+  const conf = readConf();
+  assert.equal(conf.bundle?.macOS?.entitlements, "Entitlements.plist");
+  const entitlements = readFileSync(join(tauriDir, "Entitlements.plist"), "utf8");
+  assert.match(entitlements, /<key>com\.apple\.security\.device\.audio-input<\/key>/);
+  assert.match(entitlements, /<key>com\.apple\.security\.cs\.allow-jit<\/key>/);
+});
+
+test("desktop app registers native microphone permission commands", () => {
+  const lib = readFileSync(join(tauriDir, "src/lib.rs"), "utf8");
+  assert.match(lib, /media::request_media_permission/);
+  assert.match(lib, /media::open_media_settings/);
+  assert.equal(existsSync(join(tauriDir, "src/macos_media.m")), true);
 });
