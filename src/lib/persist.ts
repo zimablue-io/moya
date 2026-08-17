@@ -1,17 +1,17 @@
 import { loadSnapshot as loadLegacySnapshot } from "./idb";
-import type {
-  Automation,
-  Board,
-  InboxItem,
-  Insight,
-  McpServer,
-  Memory,
-  Message,
-  Settings,
-  Snapshot,
-  TimeLog,
+import {
+  DEFAULT_SETTINGS,
+  normalizeSettings,
+  type Automation,
+  type Board,
+  type InboxItem,
+  type Insight,
+  type McpServer,
+  type Memory,
+  type Message,
+  type Snapshot,
+  type TimeLog,
 } from "./types";
-import { DEFAULT_ENGINE, DEFAULT_SETTINGS } from "./types";
 
 type Pg = {
   waitReady: Promise<void>;
@@ -143,7 +143,6 @@ export function emptySnapshot(): Snapshot {
     settings: {
       ...DEFAULT_SETTINGS,
       provider: { ...DEFAULT_SETTINGS.provider },
-      engine: { ...DEFAULT_ENGINE },
     },
     messages: [],
     memories: [],
@@ -153,16 +152,6 @@ export function emptySnapshot(): Snapshot {
     insights: [],
     mcpServers: [],
     automations: [],
-  };
-}
-
-function mergeSettings(raw: unknown): Settings {
-  const s = (raw ?? {}) as Partial<Settings>;
-  return {
-    ...DEFAULT_SETTINGS,
-    ...s,
-    provider: { ...DEFAULT_SETTINGS.provider, ...s.provider },
-    engine: { ...DEFAULT_ENGINE, ...s.engine },
   };
 }
 
@@ -223,7 +212,7 @@ export async function loadSnapshot(): Promise<Snapshot> {
     const boardItems = items.rows;
     return {
       version: 1,
-      settings: mergeSettings(parseJson(settingsRow.rows[0]?.data, {})),
+      settings: normalizeSettings(parseJson(settingsRow.rows[0]?.data, {})),
       messages: messages.rows.map(rowMessage),
       memories: memories.rows.map(rowMemory),
       inbox: inbox.rows.map(rowInbox),

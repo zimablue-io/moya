@@ -14,19 +14,21 @@ import { callMcpTool, handshakeMcp } from "./mcp";
 import { applyLocalIntent, buildSystemPrompt } from "./prompt";
 import { speech } from "./speech";
 import { BUILTIN_TOOLS, executeBuiltin, type World } from "./tools";
-import type {
-  Artifact,
-  Automation,
-  DialogId,
-  Emotion,
-  EngineSettings,
-  McpServer,
-  Memory,
-  MemoryKind,
-  Message,
-  PresenceState,
-  Settings,
-  Snapshot,
+import {
+  normalizeSettings,
+  PROVIDER_PRESETS,
+  type Artifact,
+  type Automation,
+  type DialogId,
+  type Emotion,
+  type McpServer,
+  type Memory,
+  type MemoryKind,
+  type Message,
+  type PresenceState,
+  type ProviderId,
+  type Settings,
+  type Snapshot,
 } from "./types";
 import { nowIso, uid } from "./utils";
 
@@ -50,8 +52,8 @@ type Actions = {
   hydrate: () => Promise<void>;
   persist: () => void;
   patchSettings: (partial: Partial<Settings>) => void;
-  patchEngine: (partial: Partial<EngineSettings>) => void;
-  setProviderField: (field: keyof Settings["provider"], value: string) => void;
+  applyProvider: (id: ProviderId) => void;
+  setProviderField: (field: Exclude<keyof Settings["provider"], "id">, value: string) => void;
   setPresence: (
     p: Partial<
       Pick<Live, "presence" | "emotion" | "level" | "bands" | "caption" | "interim" | "error">
@@ -238,19 +240,19 @@ export const useApp = create<AppStore>((set, get) => ({
     get().persist();
   },
 
-  patchEngine: (partial) => {
-    set((s) => {
-      const engine = { ...s.settings.engine, ...partial };
-      const provider = engine.useLocal
-        ? {
-            ...s.settings.provider,
-            id: "llamacpp" as const,
-            baseUrl: `http://127.0.0.1:${engine.port}/v1`,
-            model: engine.hfRepo.split("/").pop() || s.settings.provider.model,
-          }
-        : s.settings.provider;
-      return { settings: { ...s.settings, engine, provider } };
-    });
+  applyProvider: (id) => {
+    const next = PROVIDER_PRESETS[id];
+    set((s) => ({
+      settings: {
+        ...s.settings,
+        provider: {
+          id,
+          model: next.model,
+          baseUrl: next.baseUrl,
+          apiKey: "",
+        },
+      },
+    }));
     get().persist();
   },
 
@@ -526,36 +528,33 @@ export const useApp = create<AppStore>((set, get) => ({
     get().persist();
   },
 
-  exportJson: () => {
-    const s = get();
-    return JSON.stringify(
-      {
-        ...takeSnapshot(s),
-        mcpServers: s.mcpServers.map((m) => ({
-          ...m,
-          authHeader: m.authHeader ? "[redacted]" : "",
-        })),
-      },
-      null,
-      2,
-    );
-  },
+  exportJson: () => JSON.stringify(takeSnapshot(get()), null, 2),
 
   importJson: (raw) => {
-    const parsed = JSON.parse(raw) as Snapshot;
-    if (parsed.version !== 1) throw new Error("Unknown snapshot version.");
-    set({
-      settings: parsed.settings,
-      messages: parsed.messages ?? [],
-      memories: parsed.memories ?? [],
-      inbox: parsed.inbox ?? [],
-      boards: parsed.boards ?? [],
-      timeLogs: parsed.timeLogs ?? [],
-      insights: parsed.insights ?? [],
-      mcpServers: parsed.mcpServers ?? [],
-      automations: parsed.automations ?? [],
-    });
-    get().persist();
+    try {
+      const parsed = JSON.parse(raw) as Snapshot;
+      if (parsed.version !== 1) {
+        set({ error: "Unknown snapshot version." });
+        return;
+      }
+      set({
+        settings: normalizeSettings(parsed.settings),
+        messages: parsed.messages ?? [],
+        memories: parsed.memories ?? [],
+        inbox: parsed.inbox ?? [],
+        boards: parsed.boards ?? [],
+        timeLogs: parsed.timeLogs ?? [],
+        insights: parsed.insights ?? [],
+        mcpServers: parsed.mcpServers ?? [],
+        automations: parsed.automations ?? [],
+        error: null,
+      });
+      get().persist();
+    } catch (err) {
+      set({
+        error: err instanceof Error ? err.message : "Could not import that file.",
+      });
+    }
   },
 }));
 

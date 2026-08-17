@@ -1,5 +1,4 @@
-import type { Memory, Snapshot } from "./types";
-import { DEFAULT_ENGINE, DEFAULT_SETTINGS } from "./types";
+import { DEFAULT_SETTINGS, normalizeSettings, type Memory, type Snapshot } from "./types";
 
 const DB_NAME = "moya-local";
 const DB_VERSION = 1;
@@ -51,12 +50,7 @@ export async function loadSnapshot(): Promise<Snapshot> {
     return {
       ...emptySnapshot(),
       ...value,
-      settings: {
-        ...DEFAULT_SETTINGS,
-        ...value.settings,
-        provider: { ...DEFAULT_SETTINGS.provider, ...value.settings?.provider },
-        engine: { ...DEFAULT_ENGINE, ...value.settings?.engine },
-      },
+      settings: normalizeSettings(value.settings),
       memories: (value.memories ?? []).map(migrateMemory),
       automations: value.automations ?? [],
     };

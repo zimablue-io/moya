@@ -19,9 +19,9 @@ import { RoutinesDialog } from "@/components/routines-dialog";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { WatchDialog } from "@/components/watch-dialog";
 import { speech } from "@/lib/speech";
-import { engineStart } from "@/lib/host";
+import { allowMicrophone } from "@/lib/media-permission";
 import { pendingInboxCount, useApp } from "@/lib/store";
-import type { DialogId } from "@/lib/types";
+import { type DialogId } from "@/lib/types";
 import { cn, formatClock } from "@/lib/utils";
 
 const TOOLS: {
@@ -34,7 +34,7 @@ const TOOLS: {
   { id: "memory", label: "Memory", hint: "What stays", icon: Brain },
   { id: "routines", label: "Routines", hint: "What runs", icon: Repeat },
   { id: "watch", label: "Watch", hint: "Needs you", icon: MessageSquare },
-  { id: "settings", label: "Settings", hint: "Mind and voice", icon: Settings },
+  { id: "settings", label: "Settings", hint: "Name, voice, model", icon: Settings },
 ];
 
 export function AssistantShell() {
@@ -62,6 +62,7 @@ export function AssistantShell() {
   const [clock, setClock] = useState("");
   const [noteListen, setNoteListen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [micFix, setMicFix] = useState<"allow" | "settings" | null>(null);
   const holding = useRef(false);
   const holdBits = useRef("");
   const noteListenRef = useRef(false);
@@ -78,14 +79,6 @@ export function AssistantShell() {
       void useApp.getState().tickAutomations();
     }, 20_000);
     return () => window.clearInterval(id);
-  }, [ready]);
-
-  useEffect(() => {
-    if (!ready) return;
-    const { settings } = useApp.getState();
-    if (settings.engine.autoStart || settings.engine.useLocal) {
-      void engineStart(settings.engine);
-    }
   }, [ready]);
 
   useEffect(() => {
@@ -148,10 +141,8 @@ export function AssistantShell() {
         }
       },
       onError: (message) => {
-        const text = /not-allowed|service-not-allowed|audio-capture/i.test(message)
-          ? "Mic is blocked. Type if you need to talk."
-          : message;
-        useApp.getState().setPresence({ error: text });
+        useApp.getState().setPresence({ error: message });
+        setMicFix(speech.micFix);
       },
     });
     return () => speech.dispose();
@@ -161,7 +152,8 @@ export function AssistantShell() {
     speech.stopSpeak();
     setNoteListen(false);
     setVoiceMode(true);
-    setPresence({ presence: "listening", caption: "", interim: "" });
+    setMicFix(null);
+    setPresence({ presence: "listening", caption: "", interim: "", error: null });
     void speech.startListen({ continuous: true });
   }, [setPresence, setVoiceMode]);
 
@@ -177,7 +169,8 @@ export function AssistantShell() {
     holding.current = true;
     holdBits.current = "";
     speech.stopSpeak();
-    setPresence({ presence: "listening", interim: "" });
+    setMicFix(null);
+    setPresence({ presence: "listening", interim: "", error: null });
     void speech.startListen({ continuous: true });
   }, [noteListen, presence, setPresence, voiceMode]);
 
@@ -200,7 +193,8 @@ export function AssistantShell() {
     }
     setNoteListen(true);
     setComposerOpen(true);
-    setPresence({ presence: "listening" });
+    setMicFix(null);
+    setPresence({ presence: "listening", error: null });
     void speech.startListen({ continuous: true });
   }, [noteListen, setComposerOpen, setPresence]);
 
@@ -353,7 +347,30 @@ export function AssistantShell() {
             Tap the core for voice. Hold to speak a note. T to type.
           </p>
         )}
-        {error ? <p className="mt-3 max-w-sm text-xs text-subtle">{error}</p> : null}
+        {error ? (
+          <div className="mt-3 flex max-w-sm flex-col items-center gap-2">
+            <p className="text-xs text-subtle">{error}</p>
+            {micFix ? (
+              <button
+                type="button"
+                className="pointer-events-auto text-xs text-fg underline decoration-border underline-offset-4"
+                onClick={() => {
+                  void allowMicrophone().then((result) => {
+                    if (result !== "granted") {
+                      setMicFix("settings");
+                      return;
+                    }
+                    setMicFix(null);
+                    useApp.getState().setPresence({ error: null });
+                    if (useApp.getState().voiceMode) void speech.startListen({ continuous: true });
+                  });
+                }}
+              >
+                {micFix === "settings" ? "Open System Settings" : "Allow microphone"}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       <div className="pointer-events-none absolute inset-x-0 bottom-0 z-20 flex justify-center px-3 pb-[max(1.25rem,env(safe-area-inset-bottom))]">

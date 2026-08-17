@@ -1,3 +1,4 @@
+import { parseOpenAiModelIds, providerNeedsKey } from "./provider-models";
 import type { ProviderConfig, ProviderId } from "./types";
 import { PROVIDER_PRESETS } from "./types";
 
@@ -36,17 +37,52 @@ export type ChatResponse = ChatOk | ChatErr;
 function resolveEndpoint(
   provider: ProviderConfig,
 ): { url: string; key: string; model: string } | { error: string } {
-  const preset = PROVIDER_PRESETS[provider.id as ProviderId] ?? PROVIDER_PRESETS.custom;
-  const base = (provider.baseUrl || preset.baseUrl).replace(/\/+$/, "");
-  const model = provider.model || preset.model;
+  const preset = PROVIDER_PRESETS[provider.id as ProviderId];
+  const base = provider.baseUrl.trim().replace(/\/+$/, "");
+  const model = provider.model.trim();
   const key = provider.apiKey.trim();
+  if (!preset) return { error: "Unknown provider." };
   if (!base) return { error: "No provider endpoint configured." };
-  if (provider.id !== "ollama" && provider.id !== "llamacpp" && provider.id !== "custom" && !key) {
-    if (provider.id === "xai")
-      return { error: "xAI is not available here. Add a key in Settings." };
+  if (!model) return { error: "Set a model in Settings." };
+  if (providerNeedsKey(provider.id) && !key) {
     return { error: `Add an API key for ${preset.label} in Settings.` };
   }
   return { url: `${base}/chat/completions`, key: key || "local", model };
+}
+
+export type ProviderModels = { ok: true; models: string[] } | { ok: false; error: string };
+
+export async function listProviderModels(provider: ProviderConfig): Promise<ProviderModels> {
+  const preset = PROVIDER_PRESETS[provider.id as ProviderId];
+  const base = provider.baseUrl.trim().replace(/\/+$/, "");
+  const key = provider.apiKey.trim();
+  if (!preset) return { ok: false, error: "Unknown provider." };
+  if (!base) return { ok: false, error: "No provider endpoint configured." };
+  if (providerNeedsKey(provider.id) && !key) {
+    return { ok: false, error: `Add an API key for ${preset.label}.` };
+  }
+  const headers: Record<string, string> = {};
+  if (key) headers.Authorization = `Bearer ${key}`;
+  try {
+    const res = await fetch(`${base}/models`, {
+      headers,
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      return {
+        ok: false,
+        error: `Could not list models (${res.status})${text ? `: ${text.slice(0, 160)}` : ""}`,
+      };
+    }
+    const models = parseOpenAiModelIds(await res.json());
+    return { ok: true, models };
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Could not reach the provider.",
+    };
+  }
 }
 
 export async function completeTurn(data: ChatRequest): Promise<ChatResponse> {

@@ -1,4 +1,4 @@
-mod engine;
+mod media;
 
 use tauri::{
     menu::{Menu, MenuItem},
@@ -17,12 +17,10 @@ pub fn run() {
             MacosLauncher::LaunchAgent,
             Some(vec!["--hidden"]),
         ))
-        .manage(engine::EngineState::default())
         .invoke_handler(tauri::generate_handler![
-            engine::engine_status,
-            engine::engine_install,
-            engine::engine_start,
-            engine::engine_stop
+            media::media_permission_status,
+            media::request_media_permission,
+            media::open_media_settings
         ])
         .setup(|app| {
             let quit = MenuItem::with_id(app, "quit", "Quit Moya", true, None::<&str>)?;

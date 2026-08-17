@@ -17,17 +17,6 @@ export interface ProviderConfig {
   apiKey: string;
 }
 
-export interface EngineSettings {
-  useLocal: boolean;
-  autoStart: boolean;
-  port: number;
-  modelPath: string;
-  hfRepo: string;
-  threads: number;
-  gpuLayers: number;
-  ctx: number;
-}
-
 export interface Settings {
   agentName: string;
   userName: string;
@@ -37,9 +26,7 @@ export interface Settings {
   rate: number;
   pitch: number;
   showCaptions: boolean;
-  voiceModeAutoListen: boolean;
   provider: ProviderConfig;
-  engine: EngineSettings;
 }
 
 export interface ArtifactNode {
@@ -186,17 +173,6 @@ export interface Snapshot {
   automations: Automation[];
 }
 
-export const DEFAULT_ENGINE: EngineSettings = {
-  useLocal: false,
-  autoStart: false,
-  port: 8081,
-  modelPath: "",
-  hfRepo: "Qwen/Qwen2.5-1.5B-Instruct-GGUF",
-  threads: 0,
-  gpuLayers: 99,
-  ctx: 4096,
-};
-
 export const DEFAULT_SETTINGS: Settings = {
   agentName: "Moya",
   userName: "",
@@ -206,14 +182,12 @@ export const DEFAULT_SETTINGS: Settings = {
   rate: 1,
   pitch: 1,
   showCaptions: true,
-  voiceModeAutoListen: true,
   provider: {
     id: "xai",
     model: "grok-4.5",
-    baseUrl: "",
+    baseUrl: "https://api.x.ai/v1",
     apiKey: "",
   },
-  engine: { ...DEFAULT_ENGINE },
 };
 
 export const PROVIDER_PRESETS: Record<
@@ -224,7 +198,7 @@ export const PROVIDER_PRESETS: Record<
     label: "xAI Grok",
     model: "grok-4.5",
     baseUrl: "https://api.x.ai/v1",
-    hint: "Uses the host connection when no key is set.",
+    hint: "Requires your xAI API key. Stored only on this device.",
   },
   openai: {
     label: "OpenAI",
@@ -248,13 +222,13 @@ export const PROVIDER_PRESETS: Record<
     label: "Ollama (local)",
     model: "qwen3:8b",
     baseUrl: "http://127.0.0.1:11434/v1",
-    hint: "Local models. Nothing leaves the machine.",
+    hint: "You run Ollama. Moya does not start it.",
   },
   llamacpp: {
     label: "llama.cpp (local)",
-    model: "qwen3",
-    baseUrl: "http://127.0.0.1:8081/v1",
-    hint: "Moya starts llama-server for you.",
+    model: "",
+    baseUrl: "http://127.0.0.1:8080/v1",
+    hint: "You run llama-server. Moya does not start it. URL must end in /v1.",
   },
   custom: {
     label: "Custom OpenAI-compatible",
@@ -271,3 +245,43 @@ export const MEMORY_KINDS: { id: MemoryKind; label: string }[] = [
   { id: "project", label: "Project" },
   { id: "insight", label: "Insight" },
 ];
+
+const PROVIDER_IDS = new Set<string>(Object.keys(PROVIDER_PRESETS));
+
+export function llamaCppBaseUrl(port: number): string {
+  return `http://127.0.0.1:${port}/v1`;
+}
+
+export function isProviderId(value: string): value is ProviderId {
+  return PROVIDER_IDS.has(value);
+}
+
+export function normalizeSettings(raw: unknown): Settings {
+  const s = (raw ?? {}) as Partial<Settings> & { engine?: { port?: number } };
+  const rawEngine = s.engine ?? {};
+  const rawProvider = (s.provider ?? {}) as Partial<ProviderConfig>;
+  const rawId = rawProvider.id ?? "";
+  const id = isProviderId(rawId) ? rawId : DEFAULT_SETTINGS.provider.id;
+  const preset = PROVIDER_PRESETS[id];
+  const storedUrl = rawProvider.baseUrl?.trim() ?? "";
+  const legacyPort = Number(rawEngine.port) || 0;
+  const provider: ProviderConfig = {
+    id,
+    model: rawProvider.model?.trim() || (id === "llamacpp" ? "" : preset.model),
+    baseUrl:
+      storedUrl || (id === "llamacpp" && legacyPort ? llamaCppBaseUrl(legacyPort) : preset.baseUrl),
+    apiKey: rawProvider.apiKey ?? DEFAULT_SETTINGS.provider.apiKey,
+  };
+
+  return {
+    agentName: s.agentName ?? DEFAULT_SETTINGS.agentName,
+    userName: s.userName ?? DEFAULT_SETTINGS.userName,
+    brief: s.brief ?? DEFAULT_SETTINGS.brief,
+    autoSpeak: s.autoSpeak ?? DEFAULT_SETTINGS.autoSpeak,
+    voiceURI: s.voiceURI ?? DEFAULT_SETTINGS.voiceURI,
+    rate: s.rate ?? DEFAULT_SETTINGS.rate,
+    pitch: s.pitch ?? DEFAULT_SETTINGS.pitch,
+    showCaptions: s.showCaptions ?? DEFAULT_SETTINGS.showCaptions,
+    provider,
+  };
+}
