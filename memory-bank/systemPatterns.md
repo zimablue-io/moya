@@ -38,7 +38,7 @@ Better Auth at `/api/auth/*` → Grok broker (Google, X). Off on `tauri://localh
 
 ## UI kit
 
-`src/components/ui/*` are the existing shadcn wrappers. Beige is `COLOR.accent` / `--color-accent`. Gray copy is `text-muted`. Calendar is `react-day-picker`. Do not invent a second design system beside `src/lib/brand.ts`.
+`src/components/ui/*` are Base UI (or native HTML). Use `render`, not `asChild`. Label is `<label>`. Sliders take a scalar. Switch rows wrap the control in `<label>`. Beige fill is `bg-primary` / `text-primary-foreground`. Gray copy is `text-muted-foreground`. Do not `shadcn add --overwrite` customized files; replay Moya classes from a `--dry-run` / `--diff`. Calendar is `react-day-picker`, not a Radix wrapper.
 
 ## Desktop
 

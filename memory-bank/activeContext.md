@@ -2,25 +2,29 @@
 
 ## Current focus
 
-Local Voice listed speakers the sidecar cannot speak, and Settings restarted Voice before the store write landed. Display type was still an editorial serif (Source Serif 4).
+Shadcn on Base UI is in. The leftover token pass is done: beige fill is `bg-primary`, gray copy is `text-muted-foreground`, and `bg-accent` / `bg-muted` are shadcn hover/muted surfaces.
 
 ## What just changed
 
-1. Local catalog is Kokoro-only. Pocket names are not offered. Unknown Local ids coerce to `af_heart`.
-2. `applyVoiceBackend` / `setVoiceBackendField` return the persist promise. Settings awaits that write before `restartVoiceIfNeeded()`.
-3. Display is **Bricolage Grotesque**, UI is **Ubuntu**. Self-hosted. `--font-display` falls back to sans-serif, not Times.
+1. Product classes moved off colliding Moya names: `bg-accent` / `text-accent-fg` → `bg-primary` / `text-primary-foreground`; `text-muted` → `text-muted-foreground`.
+2. Brand palette SSOT: beige is `--color-brand` / `COLOR.brand`; gray text is `--color-quiet` / `COLOR.quiet`. `:root --primary` still points at beige.
+3. Unused `cmdk` and `vaul` removed so `@radix-ui/*` is gone from the lockfile.
+4. `Input` / `Textarea` dropped `forwardRef` (React 19 props refs).
 
 ## What is not done
 
-- Spoken Local Kokoro voice still needs a sidecar restart + listen. The handler on this machine was patched so session voice is not overwritten by STT `en` → `bm_fable`. A running process does not pick that up.
-- Do not claim Voice works from `session.update` payload or unit tests.
+- Spoken Local Kokoro voice still needs a sidecar restart + listen (unchanged).
+- Do not `shadcn add --overwrite` customized wrappers. Do not `init -d`. Do not `migrate radix`.
+- Settings forms still use the local Field helper, not shadcn `Field` / `FieldGroup`.
+- Dropdowns are shadcn `Select` (`@base-ui/react/select`), not a native `<select>`. Focus is `outline-none` + `focus-visible:border-ring` + `ring-3 ring-ring/50`.
 
 ## Active decisions
 
-- Conversation speaker ≠ Mac `voiceURI`.
-- Two sans faces only. No typical AI serif.
+- Beige CTA is `bg-primary`. `accent` is the muted hover surface so CLI-added components look right.
+- Wrappers keep Moya sizes (`h-11`) and `danger` / `destructive` aliases.
+- Calendar stays `react-day-picker`. Transcript calendar is behind the Calendar chip, not shown in List.
 
 ## Next
 
-1. Owner restarts speech-to-speech and listens (Heart vs Fable).
-2. Keep `scripts/voice-system.test.mjs` and `scripts/brand-ssot.test.mjs` red if Pocket returns to Local or a serif returns to display.
+1. Add new UI with `pnpm dlx shadcn@latest add <name>` (Base UI). Replay Moya classes; do not overwrite.
+2. Owner restarts the sidecar to hear Local voice.

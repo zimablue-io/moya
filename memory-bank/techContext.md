@@ -3,7 +3,7 @@
 ## Stack
 
 - React 19, TanStack Start / Router, Tailwind v4, Biome
-- UI: existing shadcn wrappers in `src/components/ui`. Beige is `--color-accent` / `COLOR.accent`. Gray text is `--color-muted` / `COLOR.muted`.
+- UI: shadcn (`components.json` style `base-nova`) on `@base-ui/react`. No Radix. Beige primary is `--color-brand` → `--primary`; `--accent` / `--muted` are surface-2.
 - Zustand store + Environment act/query
 - PGLite (`@electric-sql/pglite`) or Neon when `DATABASE_URL` is set
 - Better Auth (web / `pnpm desktop` only)
