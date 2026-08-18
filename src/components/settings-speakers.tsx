@@ -125,7 +125,7 @@ function speakerGroups(speakers: SpeakerOption[]): { name: string; items: Speake
 	return groups
 }
 
-export function MacVoicePicker({
+export function SystemVoicePicker({
 	voices,
 	value,
 	previewing,

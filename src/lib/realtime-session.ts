@@ -14,7 +14,7 @@ import {
 	voiceBackendNeedsKey,
 	websocketProtocols,
 } from "./voice-backend"
-import { connectFailureMessage } from "./voice-contract"
+import { connectFailureMessage, voiceUsesRealtime } from "./voice-contract"
 
 export type RealtimeHandlers = {
 	onLevel?: (level: number, bands: number[]) => void
@@ -65,6 +65,7 @@ export class RealtimeSession {
 
 	async start(opts: ConnectOpts) {
 		this.stop()
+		if (!voiceUsesRealtime(opts.id)) return
 		const gen = ++this.gen
 		const access = await ensureMicrophoneAccess()
 		if (this.gen !== gen) return
@@ -99,7 +100,7 @@ export class RealtimeSession {
 			ws.send(
 				JSON.stringify(
 					buildSessionUpdate({
-						backend: opts.id,
+						backend: opts.id === "xai" || opts.id === "openai" || opts.id === "custom" ? opts.id : "s2s",
 						instructions: opts.instructions,
 						voice: opts.voice,
 						tools: opts.tools,

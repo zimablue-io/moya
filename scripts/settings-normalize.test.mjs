@@ -13,12 +13,11 @@ test("defaults when given empty input", () => {
 	assert.equal("engine" in settings, false)
 })
 
-test("stored System voice migrates to Local speech-to-speech", () => {
+test("stored System voice stays System", () => {
 	const settings = normalizeSettings({
 		voiceBackend: { id: "browser", model: "", baseUrl: "", apiKey: "", voice: "" },
 	})
-	assert.equal(settings.voiceBackend.id, "s2s")
-	assert.equal(settings.voiceBackend.baseUrl, "http://127.0.0.1:8765/v1")
+	assert.equal(settings.voiceBackend.id, "browser")
 })
 
 test("llama.cpp defaults to llama-server's own port", () => {
@@ -112,11 +111,11 @@ test("Custom voice settings that pointed at local s2s become Local", () => {
 	assert.equal(settings.voiceBackend.baseUrl, "http://127.0.0.1:8765/v1")
 })
 
-test("the Voice tab only offers Local, Grok, and OpenAI", () => {
-	assert.deepEqual(VOICE_CHOICES, ["s2s", "xai", "openai"])
+test("the Voice tab offers Local, Grok, OpenAI, and System", () => {
+	assert.deepEqual(VOICE_CHOICES, ["s2s", "xai", "openai", "browser"])
 	assert.deepEqual(
 		VOICE_CHOICES.map((id) => VOICE_PRESETS[id].label),
-		["Local", "Grok", "OpenAI"],
+		["Local", "Grok", "OpenAI", "System"],
 	)
 })
 

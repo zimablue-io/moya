@@ -64,7 +64,7 @@ Better Auth at `/api/auth/*` federates to the Grok broker (Google, X only). Do *
 - Desktop/runtime claims require booting `Moya.app` or `pnpm desktop`, not path-exists.
 - One path per behavior. No dual auth, no “old origin still works” aliases.
 - Voice protocol JSON tests are not enough to claim barge-in works. `scripts/realtime-voice.test.mjs` must cover flush-stops-queued-sources and dropping stale output audio (`src/lib/realtime-playback.ts`).
-- Voice is the product. `scripts/voice-system.test.mjs` must stay red if Conversation speaker and Mac speaker get mixed, empty Local omits `af_heart`, Web Speech finals become Voice turns, leftover cancelled audio plays, or Settings stops using `src/lib/voice-contract.ts`.
+- Voice is the product. `scripts/voice-system.test.mjs` must stay red if Conversation speaker and the system `voiceURI` get mixed, empty Local omits `af_heart`, Web Speech finals become realtime Voice turns, leftover cancelled audio plays, or Settings stops using `src/lib/voice-contract.ts`.
 
 ## Skills in this repo
 

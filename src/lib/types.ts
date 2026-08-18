@@ -9,7 +9,7 @@ export type MemoryKind = "fact" | "preference" | "decision" | "project" | "insig
 
 export type ProviderId = "xai" | "openai" | "groq" | "openrouter" | "ollama" | "llamacpp" | "custom"
 
-export type VoiceBackendId = "s2s" | "xai" | "openai" | "custom"
+export type VoiceBackendId = "s2s" | "xai" | "openai" | "custom" | "browser"
 
 export type DialogId = "history" | "watch" | "settings" | "artifact" | "memory" | "routines" | null
 
@@ -283,4 +283,6 @@ export {
 	speakersFor,
 	VOICE_CHOICES,
 	VOICE_PRESETS,
+	voiceUrlIsEditable,
+	voiceUsesRealtime,
 } from "./types-presets.ts"

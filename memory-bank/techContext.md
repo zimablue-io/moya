@@ -29,6 +29,7 @@ pnpm format
 | `s2s` | Local | `http://127.0.0.1:8765/v1` | Kokoro ids only |
 | `xai` | Grok | `https://api.x.ai/v1` | Live `/v1/tts/voices` or preset |
 | `openai` | OpenAI | `https://api.openai.com/v1` | Realtime voices |
+| `browser` | System | — | Built-in Web Speech voices on this device |
 
 Local sidecar (human-started, example observed 2026-08-17):
 

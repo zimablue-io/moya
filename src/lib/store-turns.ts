@@ -86,6 +86,7 @@ export function createTurnActions(get: Get, set: Set) {
 			const speakBrowser = shouldSpeakTypedReply({
 				autoSpeak: get().settings.autoSpeak,
 				voiceMode: get().voiceMode,
+				backend: get().settings.voiceBackend.id,
 			})
 			set({
 				...applyEnv(result.env),
@@ -100,6 +101,7 @@ export function createTurnActions(get: Get, set: Set) {
 			if (added[0]) void notify(added[0].title, added[0].body)
 
 			if (speakBrowser) {
+				if (get().settings.voiceBackend.id === "browser") speech.stopListen()
 				speech.speak(spoken, {
 					voiceURI: get().settings.voiceURI,
 					rate: get().settings.rate,
@@ -140,7 +142,15 @@ export function createTurnActions(get: Get, set: Set) {
 			)
 			if (addedAuto[0]) void notify(addedAuto[0].title, addedAuto[0].body)
 
-			if (speak && keep && shouldSpeakTypedReply({ autoSpeak: get().settings.autoSpeak, voiceMode: get().voiceMode })) {
+			if (
+				speak &&
+				keep &&
+				shouldSpeakTypedReply({
+					autoSpeak: get().settings.autoSpeak,
+					voiceMode: get().voiceMode,
+					backend: get().settings.voiceBackend.id,
+				})
+			) {
 				speech.speak(result.spoken, {
 					voiceURI: get().settings.voiceURI,
 					rate: get().settings.rate,

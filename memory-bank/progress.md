@@ -4,8 +4,8 @@
 
 - Assistant home, local persist (PGLite), transcript calendar, routines, inbox, sources.
 - Environment-owned turns and chrome (`settings.voice`, `settings.provider`, `ui.*`).
-- Voice **contract**: Conversation speaker ≠ Mac speaker; empty Local sends `af_heart`; Web Speech finals are not Voice turns; barge-in flush/stale-audio tests in `scripts/realtime-voice.test.mjs`.
-- Settings Voice offers Local / Grok / OpenAI only. Local picker is Kokoro-only.
+- Voice **contract**: Conversation speaker ≠ system `voiceURI`; empty Local sends `af_heart`; Web Speech finals are not realtime Voice turns; barge-in flush/stale-audio tests in `scripts/realtime-voice.test.mjs`.
+- Settings Voice offers Local / Grok / OpenAI / System. Same layout as Model. Local picker is Kokoro-only. System fields show only when System is selected.
 - Brand SSOT: Bricolage Grotesque + Ubuntu; palette in `src/lib/brand.ts` (`COLOR.brand` beige, `COLOR.quiet` gray text).
 - **UI kit:** `components.json` is `style: base-nova`, `base: base`. Wrappers use `@base-ui/react` (`render`, native `<label>`, scalar sliders). No `@radix-ui/*` in app or lockfile. `pnpm test` 167 pass. Booted `http://127.0.0.1:5173`: Settings tabs/switches/sliders/info popover; Transcript Calendar 42 cells; dialogs close.
 

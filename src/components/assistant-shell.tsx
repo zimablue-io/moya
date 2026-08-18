@@ -85,12 +85,17 @@ export function AssistantShell() {
 				const sink = browserSpeechFinalSink({
 					voiceMode: useApp.getState().voiceMode,
 					noteListen: noteListenRef.current,
+					backend: useApp.getState().settings.voiceBackend.id,
 				})
 				if (sink === "note") {
 					setDraft((prev) => `${prev.replace(/\s+$/, "")} ${text}`.trim())
 					return
 				}
 				if (sink === "ignore") return
+				if (sink === "send") {
+					void useApp.getState().send(text)
+					return
+				}
 				if (holding.current) {
 					holdBits.current = `${holdBits.current} ${text}`.trim()
 				}
@@ -98,8 +103,10 @@ export function AssistantShell() {
 			onLevel: (lv, bd) => useApp.getState().setPresence({ level: lv, bands: bd }),
 			onSpeakEnd: () => {
 				const s = useApp.getState()
-				if (s.voiceMode) s.setPresence({ presence: "listening" })
-				else s.setPresence({ presence: "idle" })
+				if (s.voiceMode) {
+					s.setPresence({ presence: "listening" })
+					if (s.settings.voiceBackend.id === "browser") void speech.startListen({ continuous: true })
+				} else s.setPresence({ presence: "idle" })
 			},
 			onListenEnd: () => {
 				const s = useApp.getState()

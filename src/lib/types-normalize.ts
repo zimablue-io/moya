@@ -53,7 +53,7 @@ export function normalizeSettings(raw: unknown): Settings {
 
 	const rawVoice = (s.voiceBackend ?? {}) as Partial<VoiceConfig>
 	const storedId = String(rawVoice.id ?? "")
-	const rawVoiceId = storedId === "custom" || storedId === "browser" ? "s2s" : storedId
+	const rawVoiceId = storedId === "custom" ? "s2s" : storedId
 	const voiceId = isVoiceBackendId(rawVoiceId) ? rawVoiceId : DEFAULT_SETTINGS.voiceBackend.id
 	const voicePreset = VOICE_PRESETS[voiceId]
 	const keepStoredUrl = storedId === "s2s" || storedId === "custom" || storedId === "xai" || storedId === "openai"

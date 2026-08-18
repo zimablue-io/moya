@@ -2,7 +2,7 @@
 
 ## Current focus
 
-Shadcn on Base UI is in. The leftover token pass is done: beige fill is `bg-primary`, gray copy is `text-muted-foreground`, and `bg-accent` / `bg-muted` are shadcn hover/muted surfaces.
+Voice Settings matches Model: one Provider select, then only that provider’s fields. System is the built-in-voices choice (not a Mac option). Local Base URL is a field, not a hidden Connection drawer.
 
 ## What just changed
 

@@ -38,7 +38,7 @@ function settings(partial = {}) {
 	return normalizeSettings({ ...DEFAULT_SETTINGS, ...partial })
 }
 
-test("Voice mode sends Conversation speaker, never the Mac speaker", () => {
+test("Voice mode sends Conversation speaker, never the system voiceURI", () => {
 	const mac = "com.apple.voice.compact.en-US.Samantha"
 	const stored = settings({
 		voiceURI: mac,
@@ -54,7 +54,7 @@ test("Voice mode sends Conversation speaker, never the Mac speaker", () => {
 	assert.equal(JSON.stringify(event).includes("voiceURI"), false)
 })
 
-test("changing Mac speaker does not change what Voice sends to the sidecar", () => {
+test("changing the system speaker does not change what Voice sends to the sidecar", () => {
 	const before = settings({
 		voiceURI: "",
 		voiceBackend: { ...DEFAULT_SETTINGS.voiceBackend, voice: "af_heart" },
@@ -142,25 +142,32 @@ test("silent sidecar /v1/voices must not wipe Kokoro or fetch the Pocket Hugging
 	)
 })
 
-test("Voice tab only offers Local, Grok, and OpenAI", () => {
-	assert.deepEqual(VOICE_CHOICES, ["s2s", "xai", "openai"])
-	assert.equal("browser" in VOICE_PRESETS, false)
+test("Voice tab offers Local, Grok, OpenAI, and System — same one-provider pattern as Model", () => {
+	assert.deepEqual(VOICE_CHOICES, ["s2s", "xai", "openai", "browser"])
+	assert.equal(VOICE_PRESETS.browser.label, "System")
+	assert.equal(
+		VOICE_CHOICES.some((id) => VOICE_PRESETS[id].label === "This Mac"),
+		false,
+	)
+	assert.equal("browser" in VOICE_PRESETS, true)
 })
 
-test("Web Speech finals never become a Voice-mode turn", () => {
-	assert.equal(browserSpeechFinalSink({ voiceMode: true, noteListen: false }), "ignore")
-	assert.equal(browserSpeechFinalSink({ voiceMode: true, noteListen: true }), "note")
-	assert.equal(browserSpeechFinalSink({ voiceMode: false, noteListen: true }), "note")
-	assert.equal(browserSpeechFinalSink({ voiceMode: false, noteListen: false }), "hold")
+test("Web Speech finals never become a realtime Voice-mode turn", () => {
+	assert.equal(browserSpeechFinalSink({ voiceMode: true, noteListen: false, backend: "s2s" }), "ignore")
+	assert.equal(browserSpeechFinalSink({ voiceMode: true, noteListen: true, backend: "s2s" }), "note")
+	assert.equal(browserSpeechFinalSink({ voiceMode: false, noteListen: true, backend: "s2s" }), "note")
+	assert.equal(browserSpeechFinalSink({ voiceMode: false, noteListen: false, backend: "s2s" }), "hold")
+	assert.equal(browserSpeechFinalSink({ voiceMode: true, noteListen: false, backend: "browser" }), "send")
 })
 
 test("hold-to-speak and typed Mac speech stay off while Voice is live", () => {
 	assert.equal(shouldStartHoldListen({ voiceMode: true, presence: "listening", noteListen: false }), false)
 	assert.equal(shouldStartHoldListen({ voiceMode: false, presence: "idle", noteListen: false }), true)
 	assert.equal(shouldStartHoldListen({ voiceMode: false, presence: "thinking", noteListen: false }), false)
-	assert.equal(shouldSpeakTypedReply({ autoSpeak: true, voiceMode: true }), false)
-	assert.equal(shouldSpeakTypedReply({ autoSpeak: true, voiceMode: false }), true)
-	assert.equal(shouldSpeakTypedReply({ autoSpeak: false, voiceMode: false }), false)
+	assert.equal(shouldSpeakTypedReply({ autoSpeak: true, voiceMode: true, backend: "s2s" }), false)
+	assert.equal(shouldSpeakTypedReply({ autoSpeak: true, voiceMode: false, backend: "s2s" }), true)
+	assert.equal(shouldSpeakTypedReply({ autoSpeak: false, voiceMode: false, backend: "s2s" }), false)
+	assert.equal(shouldSpeakTypedReply({ autoSpeak: false, voiceMode: true, backend: "browser" }), true)
 	assert.equal(shouldExitVoiceForComposer(true), true)
 	assert.equal(shouldExitVoiceForComposer(false), false)
 })
@@ -202,6 +209,8 @@ test("Settings and Voice mode stay wired to the contract, not a second Speaker f
 	const shellSrc = ["src/components/assistant-shell.tsx", "src/components/assistant-status.tsx"]
 		.map((p) => readFileSync(join(root, p), "utf8"))
 		.join("\n")
+	const voiceSrc = readFileSync(join(root, "src/components/settings-voice.tsx"), "utf8")
+	const modelSrc = readFileSync(join(root, "src/components/settings-model.tsx"), "utf8")
 	const modeSrc = readFileSync(join(root, "src/lib/voice-mode.ts"), "utf8")
 	const storeSrc = ["src/lib/store.ts", "src/lib/store-turns.ts"]
 		.map((p) => readFileSync(join(root, p), "utf8"))
@@ -209,12 +218,15 @@ test("Settings and Voice mode stay wired to the contract, not a second Speaker f
 
 	assert.match(settingsSrc, /VOICE_SETTINGS_COPY/)
 	assert.match(settingsSrc, /conversationSpeaker/)
-	assert.match(settingsSrc, /typedSpeaker/)
 	assert.match(settingsSrc, /voiceBackend\.voice/)
 	assert.match(settingsSrc, /settings\.voiceURI/)
 	assert.match(settingsSrc, /await setVoiceBackendField/)
 	assert.match(settingsSrc, /await applyVoiceBackend/)
-	assert.equal(settingsSrc.includes('label="Speaker"'), false)
+	assert.match(settingsSrc, /id === "browser"/)
+	assert.equal(settingsSrc.includes("<details"), false)
+	assert.equal(settingsSrc.includes("typedSpeaker"), false)
+	assert.equal(settingsSrc.includes("This Mac"), false)
+	assert.equal(/Mac speaker/i.test(settingsSrc), false)
 	assert.equal(settingsSrc.includes("Sidecar launch default"), false)
 	assert.equal(/Pocket/i.test(settingsSrc), false)
 
@@ -227,11 +239,14 @@ test("Settings and Voice mode stay wired to the contract, not a second Speaker f
 
 	assert.match(modeSrc, /realtimeConnectFromSettings/)
 	assert.match(modeSrc, /voiceUiAfterConnectError/)
+	assert.match(modeSrc, /voiceUsesRealtime/)
+	assert.match(modeSrc, /startListen/)
 	assert.match(storeSrc, /shouldSpeakTypedReply/)
 	assert.equal(/void run\("settings\.voice"/.test(storeSrc), false)
 	assert.match(storeSrc, /run\("settings\.voice"/)
-	assert.equal(VOICE_SETTINGS_COPY.conversationSpeaker, "Conversation speaker")
-	assert.equal(VOICE_SETTINGS_COPY.typedSpeaker, "Mac speaker")
+	assert.equal(VOICE_SETTINGS_COPY.conversationSpeaker, "Speaker")
+	assert.match(voiceSrc, /label="Base URL"/)
+	assert.match(modelSrc, /label="Base URL"/)
 })
 
 test("SpokenVoice waits for the store write before restarting Voice", () => {

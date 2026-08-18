@@ -78,6 +78,13 @@ export const VOICE_PRESETS: Record<
 		voice: "",
 		hint: "Any OpenAI Realtime URL.",
 	},
+	browser: {
+		label: "System",
+		model: "",
+		baseUrl: "",
+		voice: "",
+		hint: "Built-in voices on this device. No sidecar.",
+	},
 }
 
 export const POCKET_TTS_VOICES: { id: string; label: string; group?: string }[] = [
@@ -127,9 +134,18 @@ export const REALTIME_VOICES: Record<VoiceBackendId, { id: string; label: string
 		{ id: "verse", label: "Verse" },
 	],
 	custom: [],
+	browser: [],
 }
 
-export const VOICE_CHOICES: VoiceBackendId[] = ["s2s", "xai", "openai"]
+export const VOICE_CHOICES: VoiceBackendId[] = ["s2s", "xai", "openai", "browser"]
+
+export function voiceUsesRealtime(id: VoiceBackendId): boolean {
+	return id !== "browser"
+}
+
+export function voiceUrlIsEditable(id: VoiceBackendId): boolean {
+	return id === "s2s" || id === "custom"
+}
 
 const PROVIDER_IDS = new Set<string>(Object.keys(PROVIDER_PRESETS))
 const VOICE_BACKEND_IDS = new Set<string>(Object.keys(VOICE_PRESETS))

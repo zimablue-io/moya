@@ -8,15 +8,16 @@ import {
 	type VoiceBackendId,
 } from "./types.ts"
 
-/** Settings copy. Conversation speaker is Voice mode; Mac speaker is typed chat only. */
+/** Settings copy. One provider, one speaker. */
 export const VOICE_SETTINGS_COPY = {
-	conversationSpeaker: "Conversation speaker",
-	conversationTipLocal: "Kokoro ids such as af_heart. Sent on session.update. The sidecar has no /v1/voices list.",
-	typedSpeaker: "Mac speaker",
-	typedTip: "Only for typed chat. Voice mode uses Conversation speaker above.",
+	conversationSpeaker: "Speaker",
+	conversationTipLocal: "Kokoro ids such as af_heart. The sidecar has no /v1/voices list.",
 } as const
 
+export { voiceUrlIsEditable, voiceUsesRealtime } from "./types.ts"
+
 export function conversationVoice(settings: Pick<Settings, "voiceBackend">): string {
+	if (settings.voiceBackend.id === "browser") return ""
 	const stored = settings.voiceBackend.voice.trim()
 	if (settings.voiceBackend.id === "s2s") return localConversationVoice(stored)
 	if (stored) return stored
@@ -31,8 +32,10 @@ export function sessionUpdateFromSettings(
 	settings: Settings,
 	opts?: { instructions?: string; tools?: RealtimeTool[] },
 ): Record<string, unknown> {
+	const id = settings.voiceBackend.id
+	const backend = id === "xai" || id === "openai" || id === "custom" ? id : "s2s"
 	return buildSessionUpdate({
-		backend: settings.voiceBackend.id,
+		backend,
 		instructions: opts?.instructions ?? "",
 		voice: conversationVoice(settings),
 		tools: opts?.tools ?? [],
@@ -66,8 +69,13 @@ export function sessionOutputVoice(event: Record<string, unknown>): string | und
 	return undefined
 }
 
-export function browserSpeechFinalSink(opts: { voiceMode: boolean; noteListen: boolean }): "note" | "ignore" | "hold" {
+export function browserSpeechFinalSink(opts: {
+	voiceMode: boolean
+	noteListen: boolean
+	backend?: VoiceBackendId
+}): "note" | "ignore" | "hold" | "send" {
 	if (opts.noteListen) return "note"
+	if (opts.voiceMode && opts.backend === "browser") return "send"
 	if (opts.voiceMode) return "ignore"
 	return "hold"
 }
@@ -80,7 +88,12 @@ export function shouldStartHoldListen(opts: {
 	return !opts.voiceMode && opts.presence !== "thinking" && !opts.noteListen
 }
 
-export function shouldSpeakTypedReply(opts: { autoSpeak: boolean; voiceMode: boolean }): boolean {
+export function shouldSpeakTypedReply(opts: {
+	autoSpeak: boolean
+	voiceMode: boolean
+	backend?: VoiceBackendId
+}): boolean {
+	if (opts.backend === "browser" && opts.voiceMode) return true
 	return opts.autoSpeak && !opts.voiceMode
 }
 

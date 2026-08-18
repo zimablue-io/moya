@@ -22,6 +22,8 @@ Single source: `src/lib/voice-contract.ts`.
 
 Local Conversation speaker is **Kokoro ids only** (`af_heart`, `af_bella`, `bm_fable`, …). `localConversationVoice()` coerces Pocket / unknown ids to `af_heart`. The sidecar has **no** `/v1/voices` (404). Do not list Pocket names in the Local picker.
 
+`browser` (System) is a Voice provider, not a second settings section. Voice mode then uses Web Speech listen + the device TTS. Realtime backends never receive a system `voiceURI`.
+
 Settings must `await` `settings.voice` before `restartVoiceIfNeeded()`. Fire-and-forget `void run()` then restart reads the old voice.
 
 ## Realtime session
@@ -30,7 +32,7 @@ Settings must `await` `settings.voice` before `restartVoiceIfNeeded()`. Fire-and
 
 ## Persist
 
-`src/lib/persist.ts` — PGLite in IndexedDB (`idb://moya-mind`) when no `DATABASE_URL`; Neon when set. Settings are one JSON row. `normalizeSettings` heals legacy backends (`browser` / `custom` → `s2s`) and coerces Local voice to a Kokoro id.
+`src/lib/persist.ts` — PGLite in IndexedDB (`idb://moya-mind`) when no `DATABASE_URL`; Neon when set. Settings are one JSON row. `normalizeSettings` heals `custom` → `s2s` and coerces Local voice to a Kokoro id. Stored `browser` stays System.
 
 ## Auth
 
