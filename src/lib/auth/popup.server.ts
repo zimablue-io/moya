@@ -135,7 +135,7 @@ function completionHtml(message: PopupMessage): string {
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Signing in…</title>
 <style>
-  html,body{margin:0;min-height:100%;background:${COLOR.bg};color:${COLOR.muted};
+  html,body{margin:0;min-height:100%;background:${COLOR.bg};color:${COLOR.quiet};
     font:14px/1.5 "${FONT.sans}","Segoe UI",system-ui,sans-serif}
   main{min-height:100vh;display:grid;place-items:center;padding:1.5rem;text-align:center}
 </style>

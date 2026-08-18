@@ -50,7 +50,7 @@ test("root head and native chrome read brand.ts", () => {
 
 	const favicon = read("public/favicon.svg")
 	assert.match(favicon, new RegExp(COLOR.bg))
-	assert.match(favicon, new RegExp(COLOR.accent))
+	assert.match(favicon, new RegExp(COLOR.brand))
 
 	const tauri = read("src-tauri/tauri.conf.json")
 	assert.match(tauri, new RegExp(`"productName":\\s*"${APP_NAME}"`))
