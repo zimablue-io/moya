@@ -78,8 +78,11 @@ function ModeBtn({
 			type="button"
 			onClick={onClick}
 			className={cn(
-				"type-chip flex h-11 items-center gap-2 rounded-full border px-4 transition-colors",
-				active ? "border-accent bg-accent text-accent-fg" : "border-border bg-surface text-muted hover:text-fg",
+				"type-chip flex h-11 items-center gap-2 rounded-full border px-4 transition-colors outline-none",
+				"focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+				active
+					? "border-primary bg-primary text-primary-foreground"
+					: "border-border bg-surface text-muted-foreground hover:text-fg",
 			)}
 		>
 			{children}

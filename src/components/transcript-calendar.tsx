@@ -38,7 +38,7 @@ function DayCell({
 		>
 			<span className="tabular-nums">{day.date.getDate()}</span>
 			{count > 0 ? (
-				<span className={cn("type-time", modifiers.selected ? "text-accent-fg" : "text-muted")}>
+				<span className={cn("type-time", modifiers.selected ? "text-primary-foreground" : "text-muted-foreground")}>
 					{count} {count === 1 ? "turn" : "turns"}
 				</span>
 			) : null}
@@ -79,26 +79,26 @@ export function TranscriptCalendar({
 				nav: "flex h-10 shrink-0 items-center gap-2",
 				month_grid: "flex min-h-0 w-full flex-1 flex-col",
 				weekdays: "flex shrink-0",
-				weekday: "type-chip flex-1 py-1 text-center text-muted",
+				weekday: "type-chip flex-1 py-1 text-center text-muted-foreground",
 				weeks: "flex min-h-0 flex-1 flex-col gap-1",
 				week: "flex min-h-0 flex-1 gap-1",
 				day: "min-h-0 min-w-0 flex-1 p-0",
 				day_button: cn(
 					"type-chip flex size-full min-h-0 flex-col items-start gap-0.5 rounded-lg p-1.5 text-left text-fg",
-					"hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+					"outline-none hover:bg-surface-2 focus-visible:ring-3 focus-visible:ring-ring/50",
 				),
-				selected: "[&>button]:bg-accent [&>button]:text-accent-fg [&>button]:hover:bg-accent",
+				selected: "[&>button]:bg-primary [&>button]:text-primary-foreground [&>button]:hover:bg-primary",
 				today: "[&>button]:ring-1 [&>button]:ring-border-strong",
 				outside: "[&>button]:text-subtle [&>button]:hover:text-fg",
 			}}
 			modifiers={{ heat1: heat.heat1, heat2: heat.heat2, heat3: heat.heat3 }}
 			modifiersClassNames={{
 				heat1:
-					"[&>button]:bg-[color-mix(in_oklab,var(--color-accent)_16%,transparent)] [&>button]:hover:bg-[color-mix(in_oklab,var(--color-accent)_28%,transparent)]",
+					"[&>button]:bg-[color-mix(in_oklab,var(--primary)_16%,transparent)] [&>button]:hover:bg-[color-mix(in_oklab,var(--primary)_28%,transparent)]",
 				heat2:
-					"[&>button]:bg-[color-mix(in_oklab,var(--color-accent)_28%,transparent)] [&>button]:hover:bg-[color-mix(in_oklab,var(--color-accent)_40%,transparent)]",
+					"[&>button]:bg-[color-mix(in_oklab,var(--primary)_28%,transparent)] [&>button]:hover:bg-[color-mix(in_oklab,var(--primary)_40%,transparent)]",
 				heat3:
-					"[&>button]:bg-[color-mix(in_oklab,var(--color-accent)_42%,transparent)] [&>button]:hover:bg-[color-mix(in_oklab,var(--color-accent)_54%,transparent)]",
+					"[&>button]:bg-[color-mix(in_oklab,var(--primary)_42%,transparent)] [&>button]:hover:bg-[color-mix(in_oklab,var(--primary)_54%,transparent)]",
 			}}
 			components={{
 				Nav: ({ onPreviousClick, onNextClick, previousMonth, nextMonth }) => (

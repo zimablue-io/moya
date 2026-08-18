@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { AUTOMATION_PRESETS, type AutomationDraft, formatTrigger } from "@/lib/automations"
@@ -64,13 +65,13 @@ export function RoutinesDialog() {
 				<ScrollArea className="min-h-0 pr-2">
 					{automations.length === 0 && !openForm ? (
 						<div className="flex flex-col gap-4 py-2">
-							<p className="text-sm text-muted">Start with one of these, or write your own.</p>
+							<p className="text-sm text-muted-foreground">Start with one of these, or write your own.</p>
 							<ul className="flex flex-col gap-2">
 								{AUTOMATION_PRESETS.map((p) => (
 									<li key={p.name} className="flex items-start justify-between gap-3 rounded-xl bg-surface-2 p-3">
 										<div>
 											<h3 className="text-sm font-medium text-fg">{p.name}</h3>
-											<p className="mt-1 text-xs text-muted">{formatTrigger(p.trigger)}</p>
+											<p className="mt-1 text-xs text-muted-foreground">{formatTrigger(p.trigger)}</p>
 											<p className="mt-2 text-sm text-fg/80">{p.brief}</p>
 										</div>
 										<Button size="sm" variant="outline" onClick={() => addAutomation(p)}>
@@ -89,7 +90,7 @@ export function RoutinesDialog() {
 											<div className="flex flex-wrap items-center gap-2">
 												<h3 className="text-sm font-medium text-fg">{a.name}</h3>
 												<Badge variant={a.enabled ? "ok" : "default"}>{formatTrigger(a.trigger)}</Badge>
-												{running === a.id ? <span className="type-chip text-muted">Running</span> : null}
+												{running === a.id ? <span className="type-chip text-muted-foreground">Running</span> : null}
 											</div>
 											<p className="mt-1.5 text-sm leading-relaxed text-fg/80">{a.brief}</p>
 											<p className="type-time mt-2 text-subtle">
@@ -109,7 +110,7 @@ export function RoutinesDialog() {
 												<Play className="size-4" />
 											</Button>
 											<Button size="icon" variant="ghost" aria-label="Remove" onClick={() => removeAutomation(a.id)}>
-												<Trash2 className="size-4 text-muted" />
+												<Trash2 className="size-4 text-muted-foreground" />
 											</Button>
 										</div>
 									</div>
@@ -136,16 +137,28 @@ export function RoutinesDialog() {
 						<div className="grid gap-3 sm:grid-cols-2">
 							<div className="space-y-1.5">
 								<Label>When</Label>
-								<select
+								<Select
+									items={[
+										{ value: "manual", label: "Manual" },
+										{ value: "interval", label: "On an interval" },
+										{ value: "daily", label: "Every day" },
+										{ value: "phrase", label: "When I say…" },
+									]}
 									value={kind}
-									onChange={(e) => setKind(e.target.value as TriggerKind)}
-									className="h-11 w-full rounded-md border border-border bg-surface px-3 text-sm text-fg"
+									onValueChange={(v) => {
+										if (v) setKind(v as TriggerKind)
+									}}
 								>
-									<option value="manual">Manual</option>
-									<option value="interval">On an interval</option>
-									<option value="daily">Every day</option>
-									<option value="phrase">When I say…</option>
-								</select>
+									<SelectTrigger>
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value="manual">Manual</SelectItem>
+										<SelectItem value="interval">On an interval</SelectItem>
+										<SelectItem value="daily">Every day</SelectItem>
+										<SelectItem value="phrase">When I say…</SelectItem>
+									</SelectContent>
+								</Select>
 							</div>
 							{kind === "interval" ? (
 								<div className="space-y-1.5">

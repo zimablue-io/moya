@@ -24,11 +24,11 @@ export function AssistantStatus({
 
 	return (
 		<div className="pointer-events-none absolute inset-x-0 top-[58%] z-10 flex flex-col items-center px-6 text-center sm:top-[54%]">
-			<p className="type-kicker text-muted">{status}</p>
+			<p className="type-kicker text-muted-foreground">{status}</p>
 			{shown ? (
 				<p className="mt-3 max-w-md text-sm leading-relaxed text-fg/80">{shown}</p>
 			) : !ready ? (
-				<p className="mt-3 text-sm text-muted">Waking…</p>
+				<p className="mt-3 text-sm text-muted-foreground">Waking…</p>
 			) : (
 				<p className="mt-3 max-w-sm text-sm text-subtle">Tap the core for voice. Hold to speak a note. T to type.</p>
 			)}
@@ -38,7 +38,7 @@ export function AssistantStatus({
 					{micFix || /mic is blocked|microphone/i.test(error) ? (
 						<button
 							type="button"
-							className="pointer-events-auto text-xs text-fg underline decoration-border underline-offset-4"
+							className="pointer-events-auto text-xs text-fg underline decoration-border underline-offset-4 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
 							onClick={() => {
 								void allowMicrophone().then((result) => {
 									if (result !== "granted") {

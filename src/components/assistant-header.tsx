@@ -12,7 +12,7 @@ export function AssistantHeader({ clock, pending }: { clock: string; pending: nu
 		<header className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-start justify-between px-4 pt-[max(1rem,env(safe-area-inset-top))] sm:px-6">
 			<div>
 				<p className="type-display text-2xl text-fg">{displayName(agentName)}</p>
-				<p className="type-clock mt-1 text-muted">{clock}</p>
+				<p className="type-clock mt-1 text-muted-foreground">{clock}</p>
 			</div>
 			<button
 				type="button"
@@ -20,7 +20,7 @@ export function AssistantHeader({ clock, pending }: { clock: string; pending: nu
 				aria-expanded={menuOpen}
 				onClick={() => setMenuOpen(!menuOpen)}
 				className={cn(
-					"pointer-events-auto relative z-40 grid size-11 place-items-center rounded-full text-muted transition-[color,background-color,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-surface-2 hover:text-fg active:scale-[0.96]",
+					"pointer-events-auto relative z-40 grid size-11 place-items-center rounded-full text-muted-foreground transition-[color,background-color,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] outline-none hover:bg-surface-2 hover:text-fg focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]",
 					menuOpen && "bg-surface-2 text-fg",
 				)}
 			>

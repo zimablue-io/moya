@@ -11,7 +11,7 @@ function Login() {
 			<div className="w-full max-w-sm space-y-6">
 				<div>
 					<p className="type-display text-4xl">{APP_NAME}</p>
-					<p className="mt-2 text-sm text-muted">
+					<p className="mt-2 text-sm text-muted-foreground">
 						One assistant. Sign in is optional — memory stays on this device either way.
 					</p>
 				</div>
@@ -30,9 +30,12 @@ function Login() {
 						))}
 					</div>
 				) : (
-					<p className="text-sm text-muted">Sign-in is disabled.</p>
+					<p className="text-sm text-muted-foreground">Sign-in is disabled.</p>
 				)}
-				<a href="/" className="block text-center text-sm text-muted hover:text-fg">
+				<a
+					href="/"
+					className="block text-center text-sm text-muted-foreground outline-none hover:text-fg focus-visible:ring-3 focus-visible:ring-ring/50"
+				>
 					Back
 				</a>
 			</div>

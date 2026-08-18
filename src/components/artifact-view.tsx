@@ -12,7 +12,7 @@ function ArtifactTitle({ children }: { children: ReactNode }) {
 export function ArtifactView({ artifact }: { artifact: Artifact }) {
 	const safe = normalizeArtifact(artifact)
 	if (!safe) {
-		return <p className="text-sm text-muted">{ARTIFACT_FALLBACK}</p>
+		return <p className="text-sm text-muted-foreground">{ARTIFACT_FALLBACK}</p>
 	}
 	return (
 		<ArtifactGuard key={`${safe.type}:${safe.title}`}>
@@ -34,7 +34,7 @@ class ArtifactGuard extends Component<{ children: ReactNode }, { error: Error | 
 
 	render() {
 		if (this.state.error) {
-			return <p className="text-sm text-muted">{ARTIFACT_FALLBACK}</p>
+			return <p className="text-sm text-muted-foreground">{ARTIFACT_FALLBACK}</p>
 		}
 		return this.props.children
 	}
@@ -51,7 +51,7 @@ function ArtifactInner({ artifact }: { artifact: Artifact }) {
 							key={item.label}
 							className="flex items-baseline justify-between gap-4 rounded-lg bg-surface-2 px-3 py-2"
 						>
-							<span className="text-sm text-muted">{item.label}</span>
+							<span className="text-sm text-muted-foreground">{item.label}</span>
 							<span
 								className={cn(
 									"text-sm tabular-nums text-fg",
@@ -80,8 +80,8 @@ function ArtifactInner({ artifact }: { artifact: Artifact }) {
 					<ResponsiveContainer width="100%" height="100%">
 						<LineChart data={rows}>
 							<CartesianGrid stroke="color-mix(in oklab, var(--color-fg) 8%, transparent)" vertical={false} />
-							<XAxis dataKey="x" stroke="var(--color-muted)" fontSize={12} tickLine={false} axisLine={false} />
-							<YAxis stroke="var(--color-muted)" fontSize={12} tickLine={false} axisLine={false} width={32} />
+							<XAxis dataKey="x" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
+							<YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} width={32} />
 							<Tooltip
 								contentStyle={{
 									background: "var(--color-surface)",
@@ -95,7 +95,7 @@ function ArtifactInner({ artifact }: { artifact: Artifact }) {
 									key={k}
 									type="monotone"
 									dataKey={k}
-									stroke={i === 0 ? "var(--color-accent)" : "var(--color-muted)"}
+									stroke={i === 0 ? "var(--primary)" : "var(--muted-foreground)"}
 									strokeWidth={1.6}
 									dot={false}
 								/>
@@ -118,7 +118,7 @@ function ArtifactInner({ artifact }: { artifact: Artifact }) {
 				<div className="mt-4 grid gap-3">
 					{(artifact.frames ?? []).map((frame) => (
 						<div key={frame.title} className="rounded-xl border border-border bg-surface-2 p-3">
-							<p className="text-xs text-muted">{frame.title}</p>
+							<p className="text-xs text-muted-foreground">{frame.title}</p>
 							<ul className="mt-2 flex flex-col gap-1.5">
 								{(frame.blocks ?? []).map((block, i) => (
 									<li key={`${block.label}-${i}`} className="rounded-md bg-surface px-2 py-1.5 text-sm text-fg">
@@ -180,19 +180,13 @@ function Diagram({ artifact }: { artifact: Extract<Artifact, { type: "diagram" }
 					if (!a || !b) return null
 					return (
 						<g key={`${e.from}-${e.to}-${i}`}>
-							<line
-								x1={a.x}
-								y1={a.y}
-								x2={b.x}
-								y2={b.y}
-								stroke="color-mix(in oklab, var(--color-accent) 35%, transparent)"
-							/>
+							<line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="color-mix(in oklab, var(--primary) 35%, transparent)" />
 							{e.label ? (
 								<text
 									x={(a.x + b.x) / 2}
 									y={(a.y + b.y) / 2 - 6}
 									textAnchor="middle"
-									fill="var(--color-muted)"
+									fill="var(--muted-foreground)"
 									fontSize="12"
 								>
 									{e.label}
@@ -207,14 +201,7 @@ function Diagram({ artifact }: { artifact: Extract<Artifact, { type: "diagram" }
 					const label = node.label ?? ""
 					return (
 						<g key={node.id}>
-							<circle
-								cx={p.x}
-								cy={p.y}
-								r="22"
-								fill="var(--color-surface-2)"
-								stroke="var(--color-accent)"
-								strokeWidth="1"
-							/>
+							<circle cx={p.x} cy={p.y} r="22" fill="var(--color-surface-2)" stroke="var(--primary)" strokeWidth="1" />
 							<text x={p.x} y={p.y + 4} textAnchor="middle" fill="var(--color-fg)" fontSize="12">
 								{label.length > 12 ? `${label.slice(0, 11)}…` : label}
 							</text>

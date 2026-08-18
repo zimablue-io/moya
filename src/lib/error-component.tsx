@@ -16,7 +16,7 @@ export function AppErrorComponent({ error, reset }: ErrorComponentProps) {
 				<TriangleAlert className="size-8" strokeWidth={1.5} />
 			</span>
 			<h1 className="type-display text-2xl">Something broke</h1>
-			<p className="max-w-md text-sm break-words text-muted">
+			<p className="max-w-md text-sm break-words text-muted-foreground">
 				{error.message || "An unexpected error occurred. Try again, or reload."}
 			</p>
 			<div className="mt-3 flex flex-wrap items-center justify-center gap-2">

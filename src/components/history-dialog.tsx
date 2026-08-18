@@ -84,7 +84,7 @@ export function HistoryDialog() {
 						{mode === "list" ? (
 							<Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search" className="h-11" />
 						) : (
-							<p className="flex h-11 items-center text-sm text-muted">Pick a day to open its turns.</p>
+							<p className="flex h-11 items-center text-sm text-muted-foreground">Pick a day to open its turns.</p>
 						)}
 					</div>
 					<div className="flex shrink-0 gap-1">
@@ -96,13 +96,13 @@ export function HistoryDialog() {
 					</div>
 				</div>
 				<div className="flex h-5 items-center justify-between gap-2">
-					<p className="type-time truncate text-muted">
+					<p className="type-time truncate text-muted-foreground">
 						{mode === "list" ? (visible.length > 0 ? stats : empty) : "Days with activity are highlighted."}
 					</p>
 					{mode === "list" && dayKey ? (
 						<button
 							type="button"
-							className="shrink-0 text-xs text-muted transition-colors hover:text-fg"
+							className="shrink-0 text-xs text-muted-foreground transition-colors outline-none hover:text-fg focus-visible:ring-3 focus-visible:ring-ring/50"
 							onClick={() => setDayKey(null)}
 						>
 							All days · {formatLocalDayKey(dayKey)}
@@ -127,7 +127,7 @@ export function HistoryDialog() {
 						<ScrollArea className="min-h-0 min-w-0 flex-1 pr-1" viewportRef={viewportRef} hideScrollbar>
 							<ol className="flex flex-col gap-3 pb-2">
 								{visible.length === 0 ? (
-									<li className="py-10 text-center text-sm text-muted">{empty}</li>
+									<li className="py-10 text-center text-sm text-muted-foreground">{empty}</li>
 								) : (
 									visible.map((m) => (
 										<li
@@ -139,7 +139,7 @@ export function HistoryDialog() {
 											className="flex flex-col gap-1 rounded-lg px-1 py-0.5 transition-colors hover:bg-surface-2"
 										>
 											<div className="flex items-baseline justify-between gap-3">
-												<span className="type-chip text-muted">{speakerLabel(m.role, agentName)}</span>
+												<span className="type-chip text-muted-foreground">{speakerLabel(m.role, agentName)}</span>
 												<span className="type-time text-subtle">{formatWhen(m.createdAt)}</span>
 											</div>
 											<p className={cn("text-sm leading-relaxed", m.role === "user" ? "text-fg" : "text-fg/85")}>

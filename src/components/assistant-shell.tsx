@@ -221,7 +221,7 @@ export function AssistantShell() {
 
 	return (
 		<main className="relative isolate min-h-dvh overflow-hidden bg-bg text-fg">
-			<div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,color-mix(in_oklab,var(--color-accent)_5%,transparent),transparent_55%)]" />
+			<div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,color-mix(in_oklab,var(--primary)_5%,transparent),transparent_55%)]" />
 
 			<AssistantHeader clock={clock} pending={pending} />
 

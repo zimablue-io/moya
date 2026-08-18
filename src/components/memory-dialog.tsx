@@ -6,6 +6,7 @@ import { chipToggleClass } from "@/components/ui/chip-toggle"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { APP_NAME } from "@/lib/brand"
 import { useApp } from "@/lib/store"
@@ -61,7 +62,7 @@ export function MemoryDialog() {
 				</div>
 				<ScrollArea className="min-h-0 pr-2">
 					{list.length === 0 ? (
-						<p className="py-10 text-center text-sm text-muted">
+						<p className="py-10 text-center text-sm text-muted-foreground">
 							{memories.length === 0 ? "Nothing kept yet. Add one below, or say “remember that…”" : "No match."}
 						</p>
 					) : (
@@ -72,7 +73,7 @@ export function MemoryDialog() {
 										<div className="min-w-0 flex-1">
 											<div className="flex flex-wrap items-center gap-2">
 												<Badge>{m.kind}</Badge>
-												{m.pinned ? <span className="type-chip text-muted">Pinned</span> : null}
+												{m.pinned ? <span className="type-chip text-muted-foreground">Pinned</span> : null}
 												{m.weight > 1 ? <span className="type-time text-subtle">×{m.weight}</span> : null}
 											</div>
 											{editing === m.id ? (
@@ -89,7 +90,7 @@ export function MemoryDialog() {
 											) : (
 												<button
 													type="button"
-													className="mt-1.5 w-full text-left text-sm leading-relaxed text-fg"
+													className="mt-1.5 w-full text-left text-sm leading-relaxed text-fg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
 													onClick={() => {
 														setEditing(m.id)
 														setEditText(m.text)
@@ -107,10 +108,10 @@ export function MemoryDialog() {
 												aria-label={m.pinned ? "Unpin" : "Pin"}
 												onClick={() => updateMemory(m.id, { pinned: !m.pinned })}
 											>
-												<Pin className={cn("size-4", m.pinned ? "fill-current text-fg" : "text-muted")} />
+												<Pin className={cn("size-4", m.pinned ? "fill-current text-fg" : "text-muted-foreground")} />
 											</Button>
 											<Button size="icon" variant="ghost" aria-label="Forget" onClick={() => forgetMemory(m.id)}>
-												<Trash2 className="size-4 text-muted" />
+												<Trash2 className="size-4 text-muted-foreground" />
 											</Button>
 										</div>
 									</div>
@@ -128,18 +129,24 @@ export function MemoryDialog() {
 						setDraft("")
 					}}
 				>
-					<select
+					<Select
+						items={MEMORY_KINDS.map((k) => ({ value: k.id, label: k.label }))}
 						value={draftKind}
-						onChange={(e) => setDraftKind(e.target.value as MemoryKind)}
-						className="h-11 rounded-md border border-border bg-surface px-3 text-sm text-fg"
-						aria-label="Kind"
+						onValueChange={(v) => {
+							if (v) setDraftKind(v as MemoryKind)
+						}}
 					>
-						{MEMORY_KINDS.map((k) => (
-							<option key={k.id} value={k.id}>
-								{k.label}
-							</option>
-						))}
-					</select>
+						<SelectTrigger className="w-fit shrink-0" aria-label="Kind">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{MEMORY_KINDS.map((k) => (
+								<SelectItem key={k.id} value={k.id}>
+									{k.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
 					<Input
 						value={draft}
 						onChange={(e) => setDraft(e.target.value)}

@@ -18,7 +18,7 @@ export function ToolsTab() {
 
 	return (
 		<div className="space-y-4">
-			<p className="text-xs text-muted">
+			<p className="text-xs text-muted-foreground">
 				One assistant. Tools come from MCP servers your projects already expose. If a capability is missing, that is a
 				gap in that project.
 			</p>
@@ -52,7 +52,7 @@ export function ToolsTab() {
 			</Button>
 			<ul className="flex flex-col gap-2">
 				{mcpServers.length === 0 ? (
-					<li className="text-sm text-muted">
+					<li className="text-sm text-muted-foreground">
 						No servers yet. Built-in tools still work: memory, boards, time, inbox, visuals.
 					</li>
 				) : (
@@ -61,7 +61,7 @@ export function ToolsTab() {
 							<div className="flex items-start justify-between gap-3">
 								<div>
 									<p className="text-sm font-medium text-fg">{s.name}</p>
-									<p className="text-xs break-all text-muted">{s.url}</p>
+									<p className="text-xs break-all text-muted-foreground">{s.url}</p>
 									<p className="mt-1 text-xs text-subtle">
 										{(s.tools ?? []).length} tools
 										{s.lastError ? ` · ${s.lastError}` : s.lastOkAt ? " · connected" : ""}
@@ -92,11 +92,11 @@ export function DataTab() {
 
 	return (
 		<div className="space-y-4">
-			<p className="text-sm text-muted">
+			<p className="text-sm text-muted-foreground">
 				Transcripts, memory, boards, and keys live in a SQL database on this device. Nothing is stored on a {APP_NAME}{" "}
 				server.
 			</p>
-			<p className="text-xs text-muted">
+			<p className="text-xs text-muted-foreground">
 				Export is a private backup of this device, including API keys and MCP headers. Keep the file to yourself.
 			</p>
 			<div className="flex flex-wrap gap-2">

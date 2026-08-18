@@ -28,14 +28,16 @@ export function Field({
 export function InfoTip({ text }: { text: string }) {
 	return (
 		<Popover>
-			<PopoverTrigger asChild>
-				<button
-					type="button"
-					className="inline-flex size-7 items-center justify-center rounded-full text-subtle hover:bg-surface-2 hover:text-fg"
-					aria-label="About this setting"
-				>
-					<Info className="size-3.5" />
-				</button>
+			<PopoverTrigger
+				render={
+					<button
+						type="button"
+						className="inline-flex size-7 items-center justify-center rounded-full text-subtle outline-none hover:bg-surface-2 hover:text-fg focus-visible:ring-3 focus-visible:ring-ring/50"
+						aria-label="About this setting"
+					/>
+				}
+			>
+				<Info className="size-3.5" />
 			</PopoverTrigger>
 			<PopoverContent>{text}</PopoverContent>
 		</Popover>

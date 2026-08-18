@@ -3,6 +3,7 @@ import { Field } from "@/components/settings-field"
 import { MacVoicePicker, SpokenVoice } from "@/components/settings-speakers"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { openSettingsToAllow } from "@/lib/brand"
@@ -44,22 +45,28 @@ export function VoiceTab({
 				</label>
 			</div>
 			<Field label="Provider" field="voice" tip={VOICE_PRESETS[settings.voiceBackend.id].hint}>
-				<select
-					className="h-11 w-full rounded-md border border-border bg-surface px-3 text-sm"
+				<Select
+					items={VOICE_CHOICES.map((id) => ({ value: id, label: VOICE_PRESETS[id].label }))}
 					value={VOICE_CHOICES.includes(settings.voiceBackend.id) ? settings.voiceBackend.id : "s2s"}
-					onChange={(e) => {
+					onValueChange={(v) => {
+						if (!v) return
 						void (async () => {
-							await applyVoiceBackend(e.target.value as VoiceBackendId)
+							await applyVoiceBackend(v as VoiceBackendId)
 							if (useApp.getState().voiceMode) await restartVoiceIfNeeded()
 						})()
 					}}
 				>
-					{VOICE_CHOICES.map((id) => (
-						<option key={id} value={id}>
-							{VOICE_PRESETS[id].label}
-						</option>
-					))}
-				</select>
+					<SelectTrigger>
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						{VOICE_CHOICES.map((id) => (
+							<SelectItem key={id} value={id}>
+								{VOICE_PRESETS[id].label}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
 			</Field>
 			<SpokenVoice
 				id={settings.voiceBackend.id}
@@ -86,7 +93,7 @@ export function VoiceTab({
 			) : null}
 			{settings.voiceBackend.id === "s2s" ? (
 				<details className="rounded-xl bg-surface-2 px-3 py-2">
-					<summary className="cursor-pointer text-xs text-muted">Connection</summary>
+					<summary className="cursor-pointer text-xs text-muted-foreground">Connection</summary>
 					<div className="mt-3 grid gap-3">
 						<Field label="URL">
 							<Input
@@ -100,7 +107,7 @@ export function VoiceTab({
 			) : null}
 			{settings.autoSpeak ? (
 				<details className="rounded-xl bg-surface-2 px-3 py-2">
-					<summary className="cursor-pointer text-xs text-muted">Typed replies</summary>
+					<summary className="cursor-pointer text-xs text-muted-foreground">Typed replies</summary>
 					<div className="mt-3 grid gap-3">
 						<Field label={VOICE_SETTINGS_COPY.typedSpeaker} tip={VOICE_SETTINGS_COPY.typedTip}>
 							<MacVoicePicker
@@ -120,9 +127,9 @@ export function VoiceTab({
 								min={0.7}
 								max={1.3}
 								step={0.05}
-								value={[settings.rate]}
-								onValueChange={([v]) => patch({ rate: v ?? 1 })}
-								onValueCommit={([v]) => onPreview({ rate: v ?? 1 })}
+								value={settings.rate}
+								onValueChange={(v) => patch({ rate: typeof v === "number" ? v : (v[0] ?? 1) })}
+								onValueCommitted={(v) => onPreview({ rate: typeof v === "number" ? v : (v[0] ?? 1) })}
 							/>
 						</Field>
 						<Field label={`Pitch ${settings.pitch.toFixed(2)}`}>
@@ -130,9 +137,9 @@ export function VoiceTab({
 								min={0.7}
 								max={1.3}
 								step={0.05}
-								value={[settings.pitch]}
-								onValueChange={([v]) => patch({ pitch: v ?? 1 })}
-								onValueCommit={([v]) => onPreview({ pitch: v ?? 1 })}
+								value={settings.pitch}
+								onValueChange={(v) => patch({ pitch: typeof v === "number" ? v : (v[0] ?? 1) })}
+								onValueCommitted={(v) => onPreview({ pitch: typeof v === "number" ? v : (v[0] ?? 1) })}
 							/>
 						</Field>
 					</div>
@@ -161,14 +168,14 @@ function MicAccess() {
 	const blocked = mic === "denied" || mic === "restricted" || speechAuth === "denied"
 
 	if (!auth || allowed) {
-		return allowed ? <p className="text-xs text-muted">Microphone allowed</p> : null
+		return allowed ? <p className="text-xs text-muted-foreground">Microphone allowed</p> : null
 	}
 
 	return (
 		<div className="flex items-center justify-between gap-3 rounded-xl bg-surface-2 px-3 py-2">
 			<div className="min-w-0">
 				<p className="text-sm text-fg">{blocked ? "Microphone blocked" : "Microphone not allowed yet"}</p>
-				<p className="text-xs text-muted">
+				<p className="text-xs text-muted-foreground">
 					{isDesktop()
 						? blocked
 							? openSettingsToAllow(systemSettingsLabel())

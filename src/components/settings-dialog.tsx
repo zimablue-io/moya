@@ -123,7 +123,7 @@ export function SettingsDialog() {
 							</Field>
 							{authEnabled ? (
 								<div className="rounded-xl bg-surface-2 p-3">
-									<p className="mb-2 text-xs text-muted">Account</p>
+									<p className="mb-2 text-xs text-muted-foreground">Account</p>
 									<UserButton />
 								</div>
 							) : null}

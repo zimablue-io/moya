@@ -1,8 +1,17 @@
 import { Play, Square } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Field } from "@/components/settings-field"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+	Select,
+	SelectContent,
+	SelectGroup,
+	SelectItem,
+	SelectLabel,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select"
 import { speech } from "@/lib/speech"
 import { speakersFor, type VoiceBackendId } from "@/lib/types"
 import { listRealtimeSpeakers, type SpeakerOption } from "@/lib/voice-catalog"
@@ -50,41 +59,52 @@ export function SpokenVoice({
 	const known = speakers.some((v) => v.id === value)
 	const selected = known ? value : value ? "__other__" : (speakers[0]?.id ?? "")
 	const groups = speakerGroups(speakers)
+	const items = [
+		...groups.flatMap((group) => group.items.map((v) => ({ value: v.id, label: v.label }))),
+		...(!known && value ? [{ value: "__other__", label: value }] : []),
+	]
+
 	return (
 		<Field
 			label={VOICE_SETTINGS_COPY.conversationSpeaker}
 			tip={id === "s2s" ? VOICE_SETTINGS_COPY.conversationTipLocal : id === "xai" ? "Live list from xAI." : undefined}
 		>
-			<select
-				className="h-11 w-full rounded-md border border-border bg-surface px-3 text-sm"
+			<Select
+				items={items}
 				value={selected}
-				onChange={(e) => {
-					if (e.target.value === "__other__") return
+				onValueChange={(v) => {
+					if (!v || v === "__other__") return
 					void (async () => {
-						await onChange(e.target.value)
+						await onChange(v)
 						await onCommit?.()
 					})()
 				}}
 			>
-				{groups.map((group) =>
-					group.name ? (
-						<optgroup key={group.name} label={group.name}>
-							{group.items.map((v) => (
-								<option key={v.id} value={v.id}>
+				<SelectTrigger>
+					<SelectValue />
+				</SelectTrigger>
+				<SelectContent>
+					{groups.map((group) =>
+						group.name ? (
+							<SelectGroup key={group.name}>
+								<SelectLabel>{group.name}</SelectLabel>
+								{group.items.map((v) => (
+									<SelectItem key={v.id} value={v.id}>
+										{v.label}
+									</SelectItem>
+								))}
+							</SelectGroup>
+						) : (
+							group.items.map((v) => (
+								<SelectItem key={v.id} value={v.id}>
 									{v.label}
-								</option>
-							))}
-						</optgroup>
-					) : (
-						group.items.map((v) => (
-							<option key={v.id} value={v.id}>
-								{v.label}
-							</option>
-						))
-					),
-				)}
-				{!known && value ? <option value="__other__">{value}</option> : null}
-			</select>
+								</SelectItem>
+							))
+						),
+					)}
+					{!known && value ? <SelectItem value="__other__">{value}</SelectItem> : null}
+				</SelectContent>
+			</Select>
 		</Field>
 	)
 }
@@ -120,22 +140,38 @@ export function MacVoicePicker({
 	onPreview: () => void
 	onStop: () => void
 }) {
+	const items = useMemo(() => {
+		const next = [{ value: "", label: "System default" }]
+		if (value && !voices.some((v) => v.voiceURI === value)) next.push({ value, label: "Saved voice" })
+		for (const v of voices) next.push({ value: v.voiceURI, label: `${v.name} (${v.lang})` })
+		return next
+	}, [value, voices])
+
 	return (
 		<div className="flex gap-2">
-			<select
+			<Select
 				id="voice-select"
-				className="h-11 min-w-0 flex-1 rounded-md border border-border bg-surface px-3 text-sm"
+				items={items}
 				value={value}
-				onChange={(e) => onVoice(e.target.value)}
+				onValueChange={(v) => {
+					if (v != null) onVoice(v)
+				}}
 			>
-				<option value="">System default</option>
-				{value && !voices.some((v) => v.voiceURI === value) ? <option value={value}>Saved voice</option> : null}
-				{voices.map((v) => (
-					<option key={v.voiceURI} value={v.voiceURI}>
-						{v.name} ({v.lang})
-					</option>
-				))}
-			</select>
+				<SelectTrigger className="min-w-0 w-auto flex-1">
+					<SelectValue />
+				</SelectTrigger>
+				<SelectContent>
+					<SelectItem value="">System default</SelectItem>
+					{value && !voices.some((v) => v.voiceURI === value) ? (
+						<SelectItem value={value}>Saved voice</SelectItem>
+					) : null}
+					{voices.map((v) => (
+						<SelectItem key={v.voiceURI} value={v.voiceURI}>
+							{v.name} ({v.lang})
+						</SelectItem>
+					))}
+				</SelectContent>
+			</Select>
 			<Button
 				type="button"
 				variant="outline"

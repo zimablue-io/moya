@@ -44,13 +44,13 @@ export function AssistantMenu({ pending }: { pending: number }) {
 						}}
 						style={{ transitionDelay: menuOpen ? `${i * 45}ms` : "0ms" }}
 						className={cn(
-							"group flex items-center justify-end gap-4 text-right transition-[opacity,transform,filter] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] active:scale-[0.96]",
+							"group flex items-center justify-end gap-4 text-right transition-[opacity,transform,filter] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] outline-none focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]",
 							menuOpen ? "translate-x-0 opacity-100 blur-0" : "translate-x-6 opacity-0 blur-[4px]",
 						)}
 					>
 						<span className="min-w-0">
 							<span className="block type-display text-2xl text-fg">{tool.label}</span>
-							<span className="block text-xs text-muted">{tool.hint}</span>
+							<span className="block text-xs text-muted-foreground">{tool.hint}</span>
 						</span>
 						<span className="relative grid size-14 shrink-0 place-items-center rounded-full border border-border bg-surface text-fg transition-colors group-hover:border-border-strong group-hover:bg-surface-2">
 							<tool.icon className="size-5" />

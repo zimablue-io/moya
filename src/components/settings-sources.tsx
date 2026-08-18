@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export function SourcesPanel({
 	sources,
@@ -31,20 +32,30 @@ export function SourcesPanel({
 
 	return (
 		<div className="space-y-4">
-			<p className="text-sm text-muted">
+			<p className="text-sm text-muted-foreground">
 				Read-only. Calendar is an ICS feed or file. Work is Linear readonly or GitHub read. Attach copies notes into
 				Moya. Removing a source deletes Moya&apos;s copy only — never your files.
 			</p>
 			<div className="grid gap-2">
 				<Input placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
-				<select
-					className="h-11 w-full rounded-md border border-border bg-surface px-3 text-sm"
+				<Select
+					items={[
+						{ value: "calendar", label: "Calendar (ICS)" },
+						{ value: "work", label: "Work (Linear / GitHub)" },
+					]}
 					value={kind}
-					onChange={(e) => setKind(e.target.value as "calendar" | "work")}
+					onValueChange={(v) => {
+						if (v === "calendar" || v === "work") setKind(v)
+					}}
 				>
-					<option value="calendar">Calendar (ICS)</option>
-					<option value="work">Work (Linear / GitHub)</option>
-				</select>
+					<SelectTrigger>
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="calendar">Calendar (ICS)</SelectItem>
+						<SelectItem value="work">Work (Linear / GitHub)</SelectItem>
+					</SelectContent>
+				</Select>
 				<Input
 					placeholder={kind === "calendar" ? "https://…/calendar.ics" : "https://api.linear.app or GitHub issues URL"}
 					value={origin}
@@ -93,14 +104,16 @@ export function SourcesPanel({
 			</div>
 			<ul className="flex flex-col gap-2">
 				{sources.length === 0 ? (
-					<li className="text-sm text-muted">No sources yet. Lived data on this device is always readable.</li>
+					<li className="text-sm text-muted-foreground">
+						No sources yet. Lived data on this device is always readable.
+					</li>
 				) : (
 					sources.map((s) => (
 						<li key={s.id} className="rounded-xl bg-surface-2 p-3">
 							<div className="flex items-start justify-between gap-3">
 								<div>
 									<p className="text-sm font-medium text-fg">{s.name}</p>
-									<p className="text-xs text-muted">
+									<p className="text-xs text-muted-foreground">
 										{s.kind} · read · {s.origin}
 									</p>
 									<p className="mt-1 text-xs text-subtle">

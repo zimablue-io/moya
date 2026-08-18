@@ -66,7 +66,7 @@ export function WatchDialog() {
 					<ScrollArea className="h-[min(52dvh,28rem)] pr-2">
 						<TabsContent value="inbox" className="mt-0">
 							{open.length === 0 ? (
-								<p className="py-10 text-center text-sm text-muted">Nothing waiting.</p>
+								<p className="py-10 text-center text-sm text-muted-foreground">Nothing waiting.</p>
 							) : (
 								<ul className="flex flex-col gap-2">
 									{open.map((item) => (
@@ -83,7 +83,7 @@ export function WatchDialog() {
 														</Badge>
 														<h3 className="text-sm font-medium text-fg">{item.title}</h3>
 													</div>
-													<p className="mt-1 text-sm text-muted">{item.body}</p>
+													<p className="mt-1 text-sm text-muted-foreground">{item.body}</p>
 													<p className="type-time mt-2 text-subtle">
 														{item.source} · {formatWhen(item.createdAt)}
 													</p>
@@ -99,7 +99,7 @@ export function WatchDialog() {
 						</TabsContent>
 						<TabsContent value="boards" className="mt-0">
 							{boards.length === 0 && workItems.length === 0 ? (
-								<p className="py-10 text-center text-sm text-muted">
+								<p className="py-10 text-center text-sm text-muted-foreground">
 									No projects yet. Connect Linear readonly or GitHub read in Settings → Sources, or ask {APP_NAME} to
 									start a board.
 								</p>
@@ -110,7 +110,7 @@ export function WatchDialog() {
 											{workItems.map((w) => (
 												<li key={`${w.source}-${w.id}`} className="rounded-xl bg-surface-2 p-3">
 													<p className="text-sm font-medium text-fg">{w.title}</p>
-													<p className="mt-1 text-xs text-muted">
+													<p className="mt-1 text-xs text-muted-foreground">
 														{w.source} · {w.state}
 													</p>
 												</li>
@@ -124,7 +124,7 @@ export function WatchDialog() {
 													<div className="flex items-start justify-between gap-2">
 														<div>
 															<h3 className="text-sm font-medium text-fg">{b.name}</h3>
-															<p className="mt-1 text-sm text-muted">{b.summary}</p>
+															<p className="mt-1 text-sm text-muted-foreground">{b.summary}</p>
 														</div>
 														<Button
 															size="icon"
@@ -132,14 +132,14 @@ export function WatchDialog() {
 															aria-label={`Delete ${b.name}`}
 															onClick={() => deleteBoard(b.id)}
 														>
-															<Trash2 className="size-4 text-muted" />
+															<Trash2 className="size-4 text-muted-foreground" />
 														</Button>
 													</div>
 													<ul className="mt-3 flex flex-col gap-1.5">
 														{(b.items ?? []).map((it) => (
 															<li key={it.id} className="flex items-baseline justify-between gap-3 text-sm">
 																<span className="text-fg">{it.label}</span>
-																<span className={it.needsInput ? "text-warn" : "text-muted"}>
+																<span className={it.needsInput ? "text-warn" : "text-muted-foreground"}>
 																	{it.state}
 																	{it.needsInput ? " · needs you" : ""}
 																</span>
@@ -155,36 +155,42 @@ export function WatchDialog() {
 						</TabsContent>
 						<TabsContent value="time" className="mt-0 space-y-4">
 							{calendar.length === 0 ? (
-								<p className="text-sm text-muted">No calendar source. Add an ICS feed in Settings → Sources.</p>
+								<p className="text-sm text-muted-foreground">
+									No calendar source. Add an ICS feed in Settings → Sources.
+								</p>
 							) : todayEvents.length === 0 ? (
-								<p className="text-sm text-muted">Calendar is connected. Nothing on today.</p>
+								<p className="text-sm text-muted-foreground">Calendar is connected. Nothing on today.</p>
 							) : (
 								<ul className="flex flex-col gap-2">
 									{todayEvents.map((e) => (
 										<li key={e.id} className="rounded-xl bg-surface-2 p-3">
 											<p className="text-sm font-medium text-fg">{e.title}</p>
-											<p className="mt-1 text-xs text-muted">
+											<p className="mt-1 text-xs text-muted-foreground">
 												{e.source} · {formatWhen(e.start)}
 											</p>
 										</li>
 									))}
 								</ul>
 							)}
-							{chart ? <ArtifactView artifact={chart} /> : <p className="text-sm text-muted">No time logged yet.</p>}
+							{chart ? (
+								<ArtifactView artifact={chart} />
+							) : (
+								<p className="text-sm text-muted-foreground">No time logged yet.</p>
+							)}
 							<ul className="flex flex-col gap-2">
 								{timeLogs.slice(0, 20).map((t) => (
 									<li key={t.id} className="flex items-baseline justify-between gap-3 text-sm">
 										<span className="text-fg">
 											{hoursBetween(t.startedAt, t.endedAt).toFixed(1)}h {t.category}
 										</span>
-										<span className="text-muted">{t.note || formatWhen(t.startedAt)}</span>
+										<span className="text-muted-foreground">{t.note || formatWhen(t.startedAt)}</span>
 									</li>
 								))}
 							</ul>
 							{insights[0] ? (
 								<div className="rounded-xl bg-surface-2 p-3">
 									<h3 className="text-sm font-medium text-fg">{insights[0].title}</h3>
-									<p className="mt-1 whitespace-pre-wrap text-sm text-muted">{insights[0].body}</p>
+									<p className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{insights[0].body}</p>
 								</div>
 							) : null}
 						</TabsContent>

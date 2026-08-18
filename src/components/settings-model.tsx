@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { Field } from "@/components/settings-field"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { listProviderModels } from "@/lib/llm"
 import { useApp } from "@/lib/store"
 import { PROVIDER_PRESETS, type ProviderId } from "@/lib/types"
@@ -15,19 +16,29 @@ export function ModelTab() {
 	return (
 		<div className="space-y-4">
 			<Field label="Provider" field="provider">
-				<select
-					className="h-11 w-full rounded-md border border-border bg-surface px-3 text-sm"
+				<Select
+					items={(Object.keys(PROVIDER_PRESETS) as ProviderId[]).map((id) => ({
+						value: id,
+						label: PROVIDER_PRESETS[id].label,
+					}))}
 					value={settings.provider.id}
-					onChange={(e) => applyProvider(e.target.value as ProviderId)}
+					onValueChange={(v) => {
+						if (v) applyProvider(v as ProviderId)
+					}}
 				>
-					{(Object.keys(PROVIDER_PRESETS) as ProviderId[]).map((id) => (
-						<option key={id} value={id}>
-							{PROVIDER_PRESETS[id].label}
-						</option>
-					))}
-				</select>
+					<SelectTrigger>
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						{(Object.keys(PROVIDER_PRESETS) as ProviderId[]).map((id) => (
+							<SelectItem key={id} value={id}>
+								{PROVIDER_PRESETS[id].label}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
 			</Field>
-			<p className="text-xs text-muted">{preset.hint}</p>
+			<p className="text-xs text-muted-foreground">{preset.hint}</p>
 			{settings.provider.id === "custom" || settings.provider.id === "ollama" || settings.provider.id === "llamacpp" ? (
 				<Field label="Base URL">
 					<Input value={settings.provider.baseUrl} onChange={(e) => setProviderField("baseUrl", e.target.value)} />
@@ -103,7 +114,7 @@ function ProviderModels() {
 	return (
 		<div className="space-y-3">
 			<div className="flex items-center justify-between gap-3">
-				<p className={error ? "text-xs text-alert" : "text-xs text-muted"}>
+				<p className={error ? "text-xs text-alert" : "text-xs text-muted-foreground"}>
 					{checking
 						? "Checking connection…"
 						: error
@@ -116,7 +127,7 @@ function ProviderModels() {
 				</p>
 				<button
 					type="button"
-					className="text-xs text-muted underline decoration-border underline-offset-4"
+					className="text-xs text-muted-foreground underline decoration-border underline-offset-4 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
 					onClick={() => {
 						setChecking(true)
 						void listProviderModels({
@@ -145,19 +156,29 @@ function ProviderModels() {
 			</div>
 			<label className="grid gap-2">
 				<Label>Model</Label>
-				<select
-					className="h-11 w-full rounded-md border border-border bg-surface px-3 text-sm"
+				<Select
+					items={[
+						{ value: "", label: checking ? "Checking…" : "Choose a model" },
+						...options.map((id) => ({ value: id, label: id })),
+					]}
 					value={options.includes(provider.model) ? provider.model : ""}
 					disabled={models === null || options.length === 0}
-					onChange={(e) => setProviderField("model", e.target.value)}
+					onValueChange={(v) => {
+						if (v != null) setProviderField("model", v)
+					}}
 				>
-					<option value="">{checking ? "Checking…" : "Choose a model"}</option>
-					{options.map((id) => (
-						<option key={id} value={id}>
-							{id}
-						</option>
-					))}
-				</select>
+					<SelectTrigger>
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						<SelectItem value="">{checking ? "Checking…" : "Choose a model"}</SelectItem>
+						{options.map((id) => (
+							<SelectItem key={id} value={id}>
+								{id}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
 			</label>
 		</div>
 	)
