@@ -219,12 +219,12 @@ Never set the same radius on parent and padded child.
 ### Setup (when the project can use React + Tailwind)
 
 ```bash
-npx shadcn@latest init -d --base radix
+npx shadcn@latest init -t start --base base --preset nova --no-reinstall --no-monorepo --yes
 npx shadcn@latest add button card dialog input label select sheet tabs badge tooltip dropdown-menu separator skeleton alert-dialog
 ```
 
-- Use non-interactive flags (`-d` / `--defaults`) so agents never block on prompts
-- Prefer **new-york** style and theme tokens (`bg-background`, `text-foreground`, `border-border`, `text-muted-foreground`, `bg-card`, `ring-ring`) over ad-hoc hex
+- Use non-interactive flags so agents never block on prompts. Do **not** use `-d` / `--defaults` here (that scaffolds Next.js).
+- Prefer **base-nova** primitives (`render`, not `asChild`) and theme tokens (`bg-primary`, `text-primary-foreground`, `text-muted-foreground`, `bg-background`, `border-border`, `bg-card`, `ring-ring`) over ad-hoc hex. Moya chrome may still use `bg-surface` / `text-fg`. Beige fill is `bg-primary`, not `bg-accent` (`accent` is the muted hover surface).
 - Theme variables may be mapped to the token block above; do not invent a second parallel component kit
 - Own the copied source under `components/ui` and restyle with tokens/anti-slop rules — still use the shadcn primitives and composition patterns
 
