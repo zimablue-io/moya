@@ -20,8 +20,8 @@ export function SpokenVoice({
 	baseUrl: string
 	apiKey: string
 	value: string
-	onChange: (v: string) => void
-	onCommit?: () => void
+	onChange: (v: string) => void | Promise<void>
+	onCommit?: () => void | Promise<void>
 }) {
 	const [speakers, setSpeakers] = useState<SpeakerOption[]>(() => speakersFor(id))
 	useEffect(() => {
@@ -60,8 +60,10 @@ export function SpokenVoice({
 				value={selected}
 				onChange={(e) => {
 					if (e.target.value === "__other__") return
-					onChange(e.target.value)
-					onCommit?.()
+					void (async () => {
+						await onChange(e.target.value)
+						await onCommit?.()
+					})()
 				}}
 			>
 				{groups.map((group) =>

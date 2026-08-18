@@ -271,10 +271,12 @@ export const MEMORY_KINDS: { id: MemoryKind; label: string }[] = [
 
 export { normalizeArtifact, normalizeArtifacts, normalizeSettings, normalizeSnapshot } from "./types-normalize.ts"
 export {
+	isKokoroVoice,
 	isProviderId,
 	isVoiceBackendId,
 	KOKORO_TTS_VOICES,
 	llamaCppBaseUrl,
+	localConversationVoice,
 	POCKET_TTS_VOICES,
 	PROVIDER_PRESETS,
 	REALTIME_VOICES,

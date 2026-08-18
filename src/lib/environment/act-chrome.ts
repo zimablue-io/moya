@@ -1,6 +1,7 @@
 import {
 	type Artifact,
 	type DialogId,
+	localConversationVoice,
 	type MemoryKind,
 	normalizeArtifact,
 	PROVIDER_PRESETS,
@@ -188,10 +189,10 @@ export function actChrome(ctx: ActCtx): ActResult | null {
 		}
 		const field = str(args, "field") as "model" | "baseUrl" | "apiKey" | "voice"
 		if (field === "model" || field === "baseUrl" || field === "apiKey" || field === "voice") {
-			snap.settings = {
-				...snap.settings,
-				voiceBackend: { ...snap.settings.voiceBackend, [field]: str(args, "value") },
-			}
+			const value = str(args, "value")
+			const nextVoice = { ...snap.settings.voiceBackend, [field]: value }
+			if (field === "voice" && nextVoice.id === "s2s") nextVoice.voice = localConversationVoice(value)
+			snap.settings = { ...snap.settings, voiceBackend: nextVoice }
 			return ok(command, `Voice ${field} updated.`, next)
 		}
 		return fail(command, "Voice id or field required.", env)

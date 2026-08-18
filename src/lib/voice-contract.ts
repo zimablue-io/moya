@@ -1,17 +1,24 @@
 import { buildSessionUpdate, type RealtimeTool, realtimeHttpBase } from "./realtime-protocol.ts"
-import { type PresenceState, type Settings, speakersFor, VOICE_PRESETS, type VoiceBackendId } from "./types.ts"
+import {
+	localConversationVoice,
+	type PresenceState,
+	type Settings,
+	speakersFor,
+	VOICE_PRESETS,
+	type VoiceBackendId,
+} from "./types.ts"
 
 /** Settings copy. Conversation speaker is Voice mode; Mac speaker is typed chat only. */
 export const VOICE_SETTINGS_COPY = {
 	conversationSpeaker: "Conversation speaker",
-	conversationTipLocal:
-		"Sent to the sidecar on session.update. Kokoro ids look like af_heart. Pocket names only work with Pocket TTS.",
+	conversationTipLocal: "Kokoro ids such as af_heart. Sent on session.update. The sidecar has no /v1/voices list.",
 	typedSpeaker: "Mac speaker",
 	typedTip: "Only for typed chat. Voice mode uses Conversation speaker above.",
 } as const
 
 export function conversationVoice(settings: Pick<Settings, "voiceBackend">): string {
 	const stored = settings.voiceBackend.voice.trim()
+	if (settings.voiceBackend.id === "s2s") return localConversationVoice(stored)
 	if (stored) return stored
 	return VOICE_PRESETS[settings.voiceBackend.id]?.voice || "af_heart"
 }

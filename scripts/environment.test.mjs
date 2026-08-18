@@ -166,6 +166,15 @@ test("what's on today with no calendar source opens empty and names how to add o
 	assert.ok(result.receipts.some((r) => r.command === "query" || r.command === "ui.open"))
 })
 
+test("settings.voice writes the Kokoro id the next read will send", async () => {
+	const started = emptyEnv()
+	assert.equal(started.snapshot.settings.voiceBackend.voice, "af_heart")
+	const { env } = await act(started, "settings.voice", { field: "voice", value: "af_bella" })
+	assert.equal(env.snapshot.settings.voiceBackend.voice, "af_bella")
+	const pocket = await act(env, "settings.voice", { field: "voice", value: "jean" })
+	assert.equal(pocket.env.snapshot.settings.voiceBackend.voice, "af_heart")
+})
+
 test("ui.focus opens settings on the API key", async () => {
 	const { env } = await act(emptyEnv(), "ui.focus", { field: "apiKey" })
 	assert.equal(env.ui.dialog, "settings")

@@ -48,8 +48,10 @@ export function VoiceTab({
 					className="h-11 w-full rounded-md border border-border bg-surface px-3 text-sm"
 					value={VOICE_CHOICES.includes(settings.voiceBackend.id) ? settings.voiceBackend.id : "s2s"}
 					onChange={(e) => {
-						applyVoiceBackend(e.target.value as VoiceBackendId)
-						if (useApp.getState().voiceMode) void restartVoiceIfNeeded()
+						void (async () => {
+							await applyVoiceBackend(e.target.value as VoiceBackendId)
+							if (useApp.getState().voiceMode) await restartVoiceIfNeeded()
+						})()
 					}}
 				>
 					{VOICE_CHOICES.map((id) => (
@@ -64,9 +66,11 @@ export function VoiceTab({
 				baseUrl={settings.voiceBackend.baseUrl}
 				apiKey={resolveVoiceApiKey(settings.voiceBackend, settings.provider)}
 				value={settings.voiceBackend.voice}
-				onChange={(v) => setVoiceBackendField("voice", v)}
-				onCommit={() => {
-					if (useApp.getState().voiceMode) void restartVoiceIfNeeded()
+				onChange={async (v) => {
+					await setVoiceBackendField("voice", v)
+				}}
+				onCommit={async () => {
+					if (useApp.getState().voiceMode) await restartVoiceIfNeeded()
 				}}
 			/>
 			{voiceBackendNeedsKey(settings.voiceBackend.id) ? (

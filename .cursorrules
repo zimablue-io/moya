@@ -1,0 +1,33 @@
+# Moya — project intelligence
+
+AGENTS.md wins on product/desktop/auth. This file is the living journal.
+
+## Voice (do not lie)
+
+- Local Conversation speaker = Kokoro ids (`af_heart`, `af_bella`, `bm_fable`, …). Not Pocket (jean, alba). Not Mac `voiceURI`.
+- `GET http://127.0.0.1:8765/v1/voices` is 404. Do not invent a Pocket+Kokoro list as fallback.
+- `conversationVoice` / `localConversationVoice` coerce unknown Local ids to `af_heart`.
+- Settings must `await` the `settings.voice` act before `restartVoiceIfNeeded()`.
+- Sending `session.audio.output.voice` is not proof the sidecar spoke it. Upstream Kokoro remaps STT `en` → British and used to force `bm_fable`. Handler on this machine was patched; running process must be restarted.
+- `scripts/voice-system.test.mjs` staying green is necessary, not sufficient. Hear Heart vs Fable or say you have not.
+
+## Environment
+
+- Store writes go through `act()` (`settings.voice`, `settings.provider`, `settings.patch`, `ui.*`). Do not add a second settings path.
+- Speech is compiled from receipts. No invented live status.
+
+## Auth / desktop
+
+- Packaged app: auth off, no Node server, identifier `africa.moya`.
+- `createAuthClient` needs `http(s)` baseURL. Never raw `tauri://`.
+
+## Type
+
+- Two sans faces only: display **Bricolage Grotesque**, UI **Ubuntu**. Self-host via `@fontsource`.
+- Do not bring back Instrument Serif, Source Serif, Figtree, Playfair, Fraunces, Newsreader, or a `serif` fallback on `--font-display`. If the face fails to load, Times must not appear.
+- `scripts/brand-ssot.test.mjs` must stay red if those families return. A token swap is not enough — check computed `font-family` on `.type-display` in the running app.
+
+## Owner preference
+
+- Do not claim Voice, Settings, or fonts work from tests or “should”. State evidence.
+- Memory bank is required. Read it at the start of every task. Update `activeContext.md` and `progress.md` after significant work.

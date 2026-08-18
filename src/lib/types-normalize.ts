@@ -26,7 +26,14 @@ import {
 	parseNodes,
 	parseStatusItems,
 } from "./types-parse.ts"
-import { isProviderId, isVoiceBackendId, llamaCppBaseUrl, PROVIDER_PRESETS, VOICE_PRESETS } from "./types-presets.ts"
+import {
+	isProviderId,
+	isVoiceBackendId,
+	llamaCppBaseUrl,
+	localConversationVoice,
+	PROVIDER_PRESETS,
+	VOICE_PRESETS,
+} from "./types-presets.ts"
 
 export function normalizeSettings(raw: unknown): Settings {
 	const s = (raw ?? {}) as Partial<Settings> & { engine?: { port?: number } }
@@ -50,12 +57,13 @@ export function normalizeSettings(raw: unknown): Settings {
 	const voiceId = isVoiceBackendId(rawVoiceId) ? rawVoiceId : DEFAULT_SETTINGS.voiceBackend.id
 	const voicePreset = VOICE_PRESETS[voiceId]
 	const keepStoredUrl = storedId === "s2s" || storedId === "custom" || storedId === "xai" || storedId === "openai"
+	const storedVoice = rawVoice.voice?.trim() || voicePreset.voice
 	const voiceBackend: VoiceConfig = {
 		id: voiceId,
 		model: rawVoice.model?.trim() || voicePreset.model,
 		baseUrl: (keepStoredUrl && rawVoice.baseUrl?.trim()) || voicePreset.baseUrl,
 		apiKey: rawVoice.apiKey ?? DEFAULT_SETTINGS.voiceBackend.apiKey,
-		voice: rawVoice.voice?.trim() || voicePreset.voice,
+		voice: voiceId === "s2s" ? localConversationVoice(storedVoice) : storedVoice,
 	}
 
 	return {

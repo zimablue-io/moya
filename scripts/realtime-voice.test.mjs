@@ -31,7 +31,7 @@ import {
 	transcriptFromEvent,
 	websocketProtocols,
 } from "../src/lib/realtime-protocol.ts"
-import { KOKORO_TTS_VOICES, POCKET_TTS_VOICES, speakersFor } from "../src/lib/types.ts"
+import { KOKORO_TTS_VOICES, speakersFor } from "../src/lib/types.ts"
 import { listRealtimeSpeakers, parsePocketVoiceTree, parseTtsVoices } from "../src/lib/voice-catalog.ts"
 
 test("http voice URLs become websocket realtime URLs", () => {
@@ -74,18 +74,14 @@ test("xAI browser sockets use the client-secret subprotocol", () => {
 	assert.equal(websocketProtocols("s2s", ""), undefined)
 })
 
-test("local realtime lists Kokoro speakers first, then Pocket", () => {
+test("local realtime lists Kokoro speakers only", () => {
 	const ids = speakersFor("s2s").map((v) => v.id)
 	assert.ok(ids.includes("af_heart"))
 	assert.ok(ids.includes("bm_fable"))
-	assert.ok(ids.includes("jean"))
+	assert.equal(ids.includes("jean"), false)
 	assert.deepEqual(
-		ids.slice(0, KOKORO_TTS_VOICES.length),
+		ids,
 		KOKORO_TTS_VOICES.map((v) => v.id),
-	)
-	assert.deepEqual(
-		ids.slice(KOKORO_TTS_VOICES.length),
-		POCKET_TTS_VOICES.map((v) => v.id),
 	)
 	assert.deepEqual(speakersFor("custom"), [])
 	assert.deepEqual(
@@ -146,7 +142,7 @@ test("local session.update is GA shaped and does not set a cloud transcription m
 	const event = buildSessionUpdate({
 		backend: "s2s",
 		instructions: "You are Moya.",
-		voice: "jean",
+		voice: "af_bella",
 		tools: [
 			{
 				type: "function",
@@ -160,7 +156,7 @@ test("local session.update is GA shaped and does not set a cloud transcription m
 	assert.equal(event.type, "session.update")
 	assert.equal(session.type, "realtime")
 	assert.equal(session.audio.input.format.rate, 24_000)
-	assert.equal(session.audio.output.voice, "jean")
+	assert.equal(session.audio.output.voice, "af_bella")
 	assert.equal(session.tools[0].name, "memory_write")
 	assert.equal(session.audio.input.turn_detection.interrupt_response, true)
 	assert.equal(session.audio.input.turn_detection.create_response, true)
@@ -286,7 +282,7 @@ test("Grok speakers prefer the live /v1/tts/voices list", async () => {
 	)
 })
 
-test("Local speakers prefer sidecar /v1/voices, then the Kokoro and Pocket catalog", async () => {
+test("Local speakers prefer sidecar /v1/voices, then Kokoro only", async () => {
 	const fromSidecar = await listRealtimeSpeakers(
 		{ id: "s2s", baseUrl: "http://127.0.0.1:8765/v1", apiKey: "" },
 		{
@@ -312,7 +308,10 @@ test("Local speakers prefer sidecar /v1/voices, then the Kokoro and Pocket catal
 		},
 	)
 	assert.ok(fromCatalog.some((v) => v.id === "af_heart"))
-	assert.ok(fromCatalog.some((v) => v.id === "jean"))
+	assert.equal(
+		fromCatalog.some((v) => v.id === "jean"),
+		false,
+	)
 })
 
 test("played audio is the heard prefix, not the queued tail", () => {

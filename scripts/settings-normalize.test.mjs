@@ -108,7 +108,7 @@ test("Custom voice settings that pointed at local s2s become Local", () => {
 		},
 	})
 	assert.equal(settings.voiceBackend.id, "s2s")
-	assert.equal(settings.voiceBackend.voice, "Ryan")
+	assert.equal(settings.voiceBackend.voice, "af_heart")
 	assert.equal(settings.voiceBackend.baseUrl, "http://127.0.0.1:8765/v1")
 })
 

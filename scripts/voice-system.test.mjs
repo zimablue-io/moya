@@ -78,32 +78,38 @@ test("empty Local voice still sends Kokoro Heart so the sidecar cannot stay on b
 	assert.equal(sessionOutputVoice(sessionUpdateFromSettings(empty)), "af_heart")
 })
 
-test("a stored Pocket id is sent honestly; Kokoro ids stay Kokoro", () => {
+test("Local never sends a Pocket name; unknown ids fall back to Heart", () => {
 	const pocket = settings({
 		voiceBackend: { ...DEFAULT_SETTINGS.voiceBackend, voice: "jean" },
 	})
-	assert.equal(sessionOutputVoice(sessionUpdateFromSettings(pocket)), "jean")
+	assert.equal(pocket.voiceBackend.voice, "af_heart")
+	assert.equal(conversationVoice(pocket), "af_heart")
+	assert.equal(sessionOutputVoice(sessionUpdateFromSettings(pocket)), "af_heart")
 	assert.ok(POCKET_TTS_VOICES.some((v) => v.id === "jean"))
 	assert.ok(KOKORO_TTS_VOICES.some((v) => v.id === "af_heart"))
 	assert.equal(
 		sessionOutputVoice(
-			sessionUpdateFromSettings(settings({ voiceBackend: { ...DEFAULT_SETTINGS.voiceBackend, voice: "af_heart" } })),
+			sessionUpdateFromSettings(settings({ voiceBackend: { ...DEFAULT_SETTINGS.voiceBackend, voice: "af_bella" } })),
 		),
-		"af_heart",
+		"af_bella",
 	)
 })
 
-test("Local catalog lists Kokoro first so Heart is pickable without a sidecar /v1/voices", () => {
+test("Local catalog is Kokoro only — Pocket names are not pickable", () => {
 	const ids = conversationSpeakerOptions("s2s").map((v) => v.id)
 	assert.ok(ids.includes("af_heart"))
 	assert.ok(ids.includes("af_bella"))
 	assert.ok(ids.includes("bm_fable"))
+	assert.equal(ids.includes("jean"), false)
+	assert.equal(ids.includes("alba"), false)
 	assert.deepEqual(
-		ids.slice(0, KOKORO_TTS_VOICES.length),
+		ids,
 		KOKORO_TTS_VOICES.map((v) => v.id),
 	)
 	assert.equal(VOICE_PRESETS.s2s.voice, "af_heart")
 	assert.equal(DEFAULT_SETTINGS.voiceBackend.voice, "af_heart")
+	assert.match(VOICE_SETTINGS_COPY.conversationTipLocal, /Kokoro/)
+	assert.equal(/Pocket/i.test(VOICE_SETTINGS_COPY.conversationTipLocal), false)
 })
 
 test("switching provider to Local resets Conversation speaker to Heart", () => {
@@ -125,7 +131,10 @@ test("silent sidecar /v1/voices must not wipe Kokoro or fetch the Pocket Hugging
 		},
 	)
 	assert.ok(listed.some((v) => v.id === "af_heart"))
-	assert.ok(listed.some((v) => v.id === "jean"))
+	assert.equal(
+		listed.some((v) => v.id === "jean"),
+		false,
+	)
 	assert.ok(urls.every((url) => !/huggingface|pocket-tts/i.test(url)))
 	assert.equal(
 		urls.some((url) => url === POCKET_VOICE_TREE_URL),
@@ -203,8 +212,11 @@ test("Settings and Voice mode stay wired to the contract, not a second Speaker f
 	assert.match(settingsSrc, /typedSpeaker/)
 	assert.match(settingsSrc, /voiceBackend\.voice/)
 	assert.match(settingsSrc, /settings\.voiceURI/)
+	assert.match(settingsSrc, /await setVoiceBackendField/)
+	assert.match(settingsSrc, /await applyVoiceBackend/)
 	assert.equal(settingsSrc.includes('label="Speaker"'), false)
 	assert.equal(settingsSrc.includes("Sidecar launch default"), false)
+	assert.equal(/Pocket/i.test(settingsSrc), false)
 
 	assert.match(shellSrc, /displayVoiceCaption/)
 	assert.match(shellSrc, /browserSpeechFinalSink/)
@@ -216,8 +228,16 @@ test("Settings and Voice mode stay wired to the contract, not a second Speaker f
 	assert.match(modeSrc, /realtimeConnectFromSettings/)
 	assert.match(modeSrc, /voiceUiAfterConnectError/)
 	assert.match(storeSrc, /shouldSpeakTypedReply/)
+	assert.equal(/void run\("settings\.voice"/.test(storeSrc), false)
+	assert.match(storeSrc, /run\("settings\.voice"/)
 	assert.equal(VOICE_SETTINGS_COPY.conversationSpeaker, "Conversation speaker")
 	assert.equal(VOICE_SETTINGS_COPY.typedSpeaker, "Mac speaker")
+})
+
+test("SpokenVoice waits for the store write before restarting Voice", () => {
+	const speakersSrc = readFileSync(join(root, "src/components/settings-speakers.tsx"), "utf8")
+	assert.match(speakersSrc, /await onChange/)
+	assert.match(speakersSrc, /await onCommit/)
 })
 
 test("leftover audio and captions from a cancelled reply never play or commit", () => {

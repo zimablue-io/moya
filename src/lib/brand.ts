@@ -15,10 +15,10 @@ export const COLOR = {
 	alert: "#c46b5a",
 } as const
 
-/** Two faces only. Clock and times use sans + tabular-nums — no third family. */
+/** Two sans faces only. Display is not a serif. Clock uses sans + tabular-nums. */
 export const FONT = {
-	sans: "Source Sans 3",
-	display: "Source Serif 4",
+	sans: "Ubuntu",
+	display: "Bricolage Grotesque",
 } as const
 
 export function displayName(name?: string | null): string {

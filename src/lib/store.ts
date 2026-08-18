@@ -29,8 +29,8 @@ type Actions = {
 	patchSettings: (partial: Partial<Settings>) => void
 	applyProvider: (id: Settings["provider"]["id"]) => void
 	setProviderField: (field: Exclude<keyof Settings["provider"], "id">, value: string) => void
-	applyVoiceBackend: (id: Settings["voiceBackend"]["id"]) => void
-	setVoiceBackendField: (field: Exclude<keyof Settings["voiceBackend"], "id">, value: string) => void
+	applyVoiceBackend: (id: Settings["voiceBackend"]["id"]) => Promise<void>
+	setVoiceBackendField: (field: Exclude<keyof Settings["voiceBackend"], "id">, value: string) => Promise<void>
 	commitVoiceUser: (text: string) => Message | null
 	commitVoiceAssistant: (text: string) => void
 	executeVoiceTool: (name: string, args: string) => Promise<{ content: string; artifact?: Artifact }>
@@ -133,12 +133,8 @@ export const useApp = create<AppStore>((set, get) => {
 		setProviderField: (field, value) => {
 			void run("settings.provider", { field, value })
 		},
-		applyVoiceBackend: (id) => {
-			void run("settings.voice", { id })
-		},
-		setVoiceBackendField: (field, value) => {
-			void run("settings.voice", { field, value })
-		},
+		applyVoiceBackend: (id) => run("settings.voice", { id }),
+		setVoiceBackendField: (field, value) => run("settings.voice", { field, value }),
 
 		realtimeTools: () => toolsFor(envFromStore(get())),
 		setPresence: (p) => set(p),

@@ -106,7 +106,7 @@ export const KOKORO_TTS_VOICES: { id: string; label: string; group?: string }[] 
 ]
 
 export const REALTIME_VOICES: Record<VoiceBackendId, { id: string; label: string; group?: string }[]> = {
-	s2s: [...KOKORO_TTS_VOICES, ...POCKET_TTS_VOICES],
+	s2s: [...KOKORO_TTS_VOICES],
 	xai: [
 		{ id: "eve", label: "Eve" },
 		{ id: "ara", label: "Ara" },
@@ -136,6 +136,14 @@ const VOICE_BACKEND_IDS = new Set<string>(Object.keys(VOICE_PRESETS))
 
 export function speakersFor(id: VoiceBackendId): { id: string; label: string }[] {
 	return REALTIME_VOICES[id]
+}
+
+export function isKokoroVoice(id: string): boolean {
+	return KOKORO_TTS_VOICES.some((v) => v.id === id)
+}
+
+export function localConversationVoice(id: string): string {
+	return isKokoroVoice(id) ? id : VOICE_PRESETS.s2s.voice
 }
 
 export function llamaCppBaseUrl(port: number): string {

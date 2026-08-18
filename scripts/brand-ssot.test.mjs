@@ -28,10 +28,14 @@ test("styles.css tokens match brand.ts", () => {
 	}
 	assert.match(css, new RegExp(`--font-sans:\\s*"${FONT.sans}"`))
 	assert.match(css, new RegExp(`--font-display:\\s*"${FONT.display}"`))
-	assert.match(css, /@import "@fontsource\/source-sans-3\/400\.css"/)
-	assert.match(css, /@import "@fontsource\/source-serif-4\/400\.css"/)
+	assert.match(css, /@import "@fontsource\/ubuntu\/400\.css"/)
+	assert.match(css, /@import "@fontsource\/bricolage-grotesque\/400\.css"/)
 	assert.doesNotMatch(css, /--font-mono/)
 	assert.doesNotMatch(css, /fonts\.googleapis\.com/)
+	assert.doesNotMatch(css, /Source Serif|Instrument Serif|Figtree|Playfair|Fraunces|Newsreader|Times New Roman/)
+	assert.doesNotMatch(css, /--font-display:[^;]*,\s*serif\s*;/)
+	assert.doesNotMatch(FONT.display, /serif/i)
+	assert.doesNotMatch(FONT.sans, /serif/i)
 	assert.equal(Object.keys(FONT).length, 2)
 })
 
