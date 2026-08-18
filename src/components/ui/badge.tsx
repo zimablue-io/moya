@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 const badgeVariants = cva("type-chip inline-flex items-center rounded-full px-2 py-0.5", {
 	variants: {
 		variant: {
-			default: "bg-surface-2 text-muted",
+			default: "bg-surface-2 text-muted-foreground",
 			need: "bg-warn/15 text-warn",
 			urgent: "bg-alert/15 text-alert",
 			ok: "bg-ok/15 text-ok",

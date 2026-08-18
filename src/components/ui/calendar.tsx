@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 export type CalendarProps = DayPickerProps
 
 export const calendarNavBtn =
-	"grid size-9 shrink-0 place-items-center rounded-md text-muted transition-colors hover:bg-surface-2 hover:text-fg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-40"
+	"grid size-9 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors outline-none hover:bg-surface-2 hover:text-fg focus-visible:ring-3 focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-40"
 
 export function Calendar({ className, classNames, showOutsideDays = true, components, ...props }: CalendarProps) {
 	return (
@@ -23,13 +23,13 @@ export function Calendar({ className, classNames, showOutsideDays = true, compon
 				button_next: calendarNavBtn,
 				month_grid: "w-full border-collapse",
 				weekdays: "flex",
-				weekday: "type-chip size-8 text-center text-muted",
+				weekday: "type-chip size-8 text-center text-muted-foreground",
 				weeks: "flex flex-col gap-1",
 				week: "flex w-full",
 				day: "p-0 text-center",
 				day_button:
-					"type-chip grid size-8 place-items-center rounded-md text-fg transition-colors hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-				selected: "[&>button]:bg-accent [&>button]:text-accent-fg [&>button]:hover:bg-accent",
+					"type-chip grid size-8 place-items-center rounded-md text-fg transition-colors outline-none hover:bg-surface-2 focus-visible:ring-3 focus-visible:ring-ring/50",
+				selected: "[&>button]:bg-primary [&>button]:text-primary-foreground [&>button]:hover:bg-primary",
 				today: "[&>button]:border [&>button]:border-border-strong",
 				outside: "[&>button]:text-subtle",
 				disabled: "[&>button]:text-subtle [&>button]:opacity-40",

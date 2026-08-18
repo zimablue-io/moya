@@ -1,26 +1,44 @@
-import * as PopoverPrimitive from "@radix-ui/react-popover"
-import * as React from "react"
+import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
 import { cn } from "@/lib/utils"
 
-export const Popover = PopoverPrimitive.Root
-export const PopoverTrigger = PopoverPrimitive.Trigger
+function Popover({ ...props }: PopoverPrimitive.Root.Props) {
+	return <PopoverPrimitive.Root data-slot="popover" {...props} />
+}
 
-export const PopoverContent = React.forwardRef<
-	React.ComponentRef<typeof PopoverPrimitive.Content>,
-	React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content>
->(({ className, align = "start", sideOffset = 6, ...props }, ref) => (
-	<PopoverPrimitive.Portal>
-		<PopoverPrimitive.Content
-			ref={ref}
-			align={align}
-			sideOffset={sideOffset}
-			className={cn(
-				"z-[80] w-56 rounded-lg border border-border bg-surface p-3 text-xs leading-relaxed text-muted shadow-xl outline-none",
-				"data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
-				className,
-			)}
-			{...props}
-		/>
-	</PopoverPrimitive.Portal>
-))
-PopoverContent.displayName = PopoverPrimitive.Content.displayName
+function PopoverTrigger({ ...props }: PopoverPrimitive.Trigger.Props) {
+	return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />
+}
+
+function PopoverContent({
+	className,
+	align = "start",
+	alignOffset = 0,
+	side = "bottom",
+	sideOffset = 6,
+	...props
+}: PopoverPrimitive.Popup.Props &
+	Pick<PopoverPrimitive.Positioner.Props, "align" | "alignOffset" | "side" | "sideOffset">) {
+	return (
+		<PopoverPrimitive.Portal>
+			<PopoverPrimitive.Positioner
+				align={align}
+				alignOffset={alignOffset}
+				side={side}
+				sideOffset={sideOffset}
+				className="isolate z-[80]"
+			>
+				<PopoverPrimitive.Popup
+					data-slot="popover-content"
+					className={cn(
+						"z-[80] w-56 origin-(--transform-origin) rounded-lg border border-border bg-surface p-3 text-xs leading-relaxed text-muted-foreground shadow-xl outline-none",
+						"data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+						className,
+					)}
+					{...props}
+				/>
+			</PopoverPrimitive.Positioner>
+		</PopoverPrimitive.Portal>
+	)
+}
+
+export { Popover, PopoverContent, PopoverTrigger }
