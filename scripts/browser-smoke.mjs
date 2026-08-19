@@ -4,11 +4,11 @@
  * Does not try to "play" the app — just proves the page loads and captures a PNG
  * the agent can Read. Exit 0 on success, 1 on navigation failure, 2 if console errors.
  *
- * Screenshots default under /workspace/screenshots/ (never /tmp) so they live on
- * the workspace volume and stay readable by agent tools.
+ * Screenshots default to screenshots/moya-preview.png in this repo (gitignored).
+ * /workspace is still allowed for hosted agent volumes.
  *
  * Targets are restricted (browser-guard.mjs): http/https loopback, PNG under
- * /workspace. A rejected target exits 1.
+ * cwd or /workspace. A rejected target exits 1.
  */
 import { mkdirSync } from "node:fs"
 import { dirname } from "node:path"
@@ -17,7 +17,7 @@ import { computeBrandWarnings } from "./brand-check.mjs"
 import { checkedOutputPath, checkedUrl } from "./browser-guard.mjs"
 
 const url = checkedUrl(process.argv[2] || "http://127.0.0.1:5173/")
-const outPng = checkedOutputPath(process.argv[3] || "/workspace/screenshots/app-builder-preview.png", ["/workspace"])
+const outPng = checkedOutputPath(process.argv[3] || "screenshots/moya-preview.png", ["/workspace", process.cwd()])
 const timeoutMs = Number(process.env.BROWSER_SMOKE_TIMEOUT_MS || 45000)
 
 mkdirSync(dirname(outPng), { recursive: true })

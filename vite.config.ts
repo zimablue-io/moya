@@ -24,7 +24,7 @@ function pgliteBootstrapPlugin(): Plugin {
 					await mod.ensureDbReady()
 				}
 			} catch (err) {
-				console.error("[app-builder] DB bootstrap failed:", err)
+				console.error("[moya] DB bootstrap failed:", err)
 				throw err
 			}
 		},
@@ -105,7 +105,7 @@ function authPopupPlugin(): Plugin {
 					const body = Buffer.from(await response.arrayBuffer())
 					res.end(body)
 				} catch (err) {
-					console.error("[app-builder] /auth/popup handler failed:", err)
+					console.error("[moya] /auth/popup handler failed:", err)
 					if (!res.headersSent) {
 						res.statusCode = 500
 						res.setHeader("content-type", "text/plain; charset=utf-8")

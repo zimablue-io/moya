@@ -5,7 +5,7 @@
  * the Nitro bundler can both consume it.
  */
 
-export const DEFAULT_APP_NAME = "Grok App"
+export const DEFAULT_APP_NAME = "Moya"
 
 export function escapeHtml(value) {
 	return String(value)
@@ -148,15 +148,15 @@ export function grokXCreatorHeadTags(creator = readXCreator(), creatorId = readX
 	]
 }
 
-/** Platform "Created with Grok" banner — injected into every HTML document. */
+/** Grok App Builder banner — only when this checkout is a hosted Grok project. */
 export function grokExtensionsHeadTags(projectId = readGrokProjectId()) {
-	const id = escapeHtml(projectId)
-	const tags = []
-	if (projectId) {
-		tags.push(`<meta name="grok-project-id" content="${id}">`)
-	}
-	tags.push(`<script src="${GROK_EXTENSIONS_SCRIPT_SRC}"${projectId ? ` data-project-id="${id}"` : ""} defer></script>`)
-	return tags
+	const id = String(projectId ?? "").trim()
+	if (!id) return []
+	const escaped = escapeHtml(id)
+	return [
+		`<meta name="grok-project-id" content="${escaped}">`,
+		`<script src="${GROK_EXTENSIONS_SCRIPT_SRC}" data-project-id="${escaped}" defer></script>`,
+	]
 }
 
 export function injectGrokPwaHead(

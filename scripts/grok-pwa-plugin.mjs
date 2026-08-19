@@ -64,7 +64,7 @@ function serveGrokPwa(middlewares) {
 			try {
 				sendHtml(res, renderInstallPage(requestHost(req), rawUrl))
 			} catch (err) {
-				console.error("[app-builder] install page missing:", err)
+				console.error("[moya] install page missing:", err)
 				res.statusCode = 500
 				res.end("install page unavailable")
 			}
