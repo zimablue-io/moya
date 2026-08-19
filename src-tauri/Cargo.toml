@@ -2,7 +2,9 @@
 name = "moya"
 version = "0.1.0"
 description = "Moya — one local-first assistant"
-authors = ["Moya"]
+authors = ["Lefa Moffat"]
+license = "MIT"
+repository = "https://github.com/zimablue-io/moya"
 edition = "2021"
 rust-version = "1.77"
 

@@ -1,0 +1,22 @@
+Moya
+Copyright (c) 2026 Lefa Moffat
+
+This product is licensed under the MIT License. See LICENSE.
+
+Third-party notices
+-------------------
+
+Fonts (self-hosted via @fontsource, not loaded from Google Fonts):
+
+- Bricolage Grotesque — Copyright (c) 2022 The Bricolage Grotesque Project
+  Authors, licensed under the SIL Open Font License 1.1.
+- Ubuntu — Copyright (c) 2010-2011 Canonical Ltd, licensed under the Ubuntu
+  Font Licence 1.0.
+
+Other npm packages and Rust crates keep their own licenses. See
+`pnpm-lock.yaml` and `src-tauri/Cargo.lock`.
+
+The Grok auth broker (`auth.grok.me`) and optional `*.grok-sandbox.com`
+preview client in `src/lib/auth/preview.ts` are xAI platform services used
+only for optional web Google / X sign-in. They are not part of this MIT
+grant. The packaged desktop app does not call them.

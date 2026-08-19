@@ -42,8 +42,8 @@ speech-to-speech --mode realtime --stt parakeet-tdt \
   --responses_api_stream --enable_live_transcription
 ```
 
-Installed handler (this machine):  
-`/Users/lefamoffat/Documents/models/llms/lib/python3.12/site-packages/speech_to_speech/TTS/kokoro_handler.py`
+Installed handler (owner machine, not in this repo): the site-packages
+`speech_to_speech/TTS/kokoro_handler.py` next to the sidecar install.
 
 Upstream Kokoro maps STT `"en"` → British and overwrites the session voice with `bm_fable`. That file was patched so session voice wins and lang follows the voice prefix. **A running process does not pick up the patch until speech-to-speech is restarted.**
 
@@ -51,7 +51,7 @@ Upstream Kokoro maps STT `"en"` → British and overwrites the session voice wit
 
 ## Constraints
 
-- Node 22+, pnpm, Rust for desktop.
+- Node 24+, pnpm, Rust for desktop.
 - No `.env` for preview auth. No non-`VITE_` secrets on the client.
 - Format/lint: Biome. After code changes: format, lint, tests before claiming done.
 - Desktop/runtime claims require booting the artifact, not path-exists.

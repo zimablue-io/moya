@@ -1,20 +1,27 @@
 # Moya
 
-One local-first personal assistant. Memory, routines, and models stay on this machine.
+One assistant. Local first. Voice first.
+
+Moya is a personal assistant that runs on this machine. Memory, transcript, routines, inbox, and API keys stay on-device. You bring the model — a local server or your own cloud key.
+
+[Download the latest Mac build](https://github.com/zimablue-io/moya/releases/latest) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
 ## What it does
 
 - Voice- and text-first chat with a presence UI
 - On-device memory, transcript (list + calendar), routines, and inbox
 - OpenAI-compatible providers (xAI, OpenAI, Groq, OpenRouter, Ollama, llama.cpp). You run local servers; Moya connects to them.
-- Optional Google / X sign-in on the **web** preview and `pnpm desktop` (Vite on port 5173)
+- Voice backends: Local (`huggingface/speech-to-speech` on `:8765`), Grok, OpenAI, or this device’s System voices
+- Optional Google / X sign-in on the **web** preview and `pnpm desktop` only
 
-The home screen is not gated. Sign-in is optional. Chat, memory, and settings persist locally (embedded PGLite / IndexedDB).
+The home screen is not gated. Sign-in is optional. The packaged Mac app has no Node server and no account wall.
+
+Moya does not start speech-to-speech or llama-server. Start those yourself if you want Local voice or a local LLM.
 
 ## Requirements
 
-- Node 22+
-- pnpm
+- Node 24+
+- [pnpm](https://pnpm.io/)
 - For desktop: [Rust](https://rustup.rs/) and the Tauri 2 system deps for your OS
 
 ## Commands
@@ -52,7 +59,7 @@ Chat in the packaged app talks to the provider from the window (`fetch`). Add a 
 
 ## Auth (web)
 
-Better Auth is mounted at `/api/auth/*` (`src/routes/api/auth/$.ts`). It federates to the Grok broker (`auth.grok.me`) for Google and X. Email/password is off (`src/lib/auth/email-password.ts`).
+Better Auth is mounted at `/api/auth/*`. It federates to the Grok broker (`auth.grok.me`) for Google and X. Email/password is off.
 
 Do not add `src/routes/auth/popup.tsx`. The live-preview popup is served by the Vite plugin.
 
@@ -63,3 +70,11 @@ React 19, TanStack Start, Tailwind v4, Better Auth, PGLite (or Neon when `DATABA
 ## Tests
 
 `pnpm test` runs `scripts/**/*.test.mjs` (brand assets, PWA injector, desktop bundle contracts, packaged-origin auth, transcript day/stats, realtime barge-in playback).
+
+A green Voice test suite proves Moya’s contract, not that a sidecar spoke the selected voice.
+
+## License
+
+[MIT](LICENSE) © 2026 Lefa Moffat. See [NOTICE](NOTICE) for fonts and third-party services.
+
+Sponsors: [github.com/sponsors/lefamoffat](https://github.com/sponsors/lefamoffat)

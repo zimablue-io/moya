@@ -11,3 +11,7 @@ screenshots/
 *.log
 .DS_Store
 package-lock.json
+.env
+.env.*
+!.env.example
+.grok/

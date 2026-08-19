@@ -1,11 +1,7 @@
 /**
  * Brand-asset gate shared by browser-smoke.mjs (and unit-testable without a
- * browser): a canvas app is almost always a game / visually rich app, and
- * those must ship a custom share card — the default og.grok.me placeholder is
- * not acceptable for them (see .grok/skills/og/SKILL.md).
- *
- * Games must also emit og:type="x:game" in the root head so X can present the
- * unfurl as a game card (see og skill § "og:type for games").
+ * browser). Moya is not a game; this still flags leftover og.grok.me
+ * placeholders and oversized share cards.
  *
  * Checked on the filesystem (not the served head) because live preview has no
  * VITE_PUBLIC_HOSTNAME and renders no og:image tag at all, so the page alone
@@ -46,7 +42,6 @@ export function rootDeclaresOgTypeGame(rootTsx) {
 }
 
 export function computeBrandWarnings({ hasCanvas, workspaceRoot = "/workspace" }) {
-	const skillPath = join(workspaceRoot, ".grok/skills/og/SKILL.md")
 	const rootTsxPath = join(workspaceRoot, "src/routes/__root.tsx")
 	const rootTsx = existsSync(rootTsxPath) ? readFileSync(rootTsxPath, "utf8") : ""
 	const cardPath = [join(workspaceRoot, "public/og.jpg"), join(workspaceRoot, "public/og.png")].find(existsSync)
@@ -57,14 +52,13 @@ export function computeBrandWarnings({ hasCanvas, workspaceRoot = "/workspace" }
 		if (rootTsx.includes("og.grok.me")) {
 			warnings.push(
 				`BRAND WARNING: ${cardPath} exists but src/routes/__root.tsx still points og:image ` +
-					'at the og.grok.me placeholder. Wire og:image to "https://${host}/og.jpg" per ' +
-					`${skillPath}.`,
+					'at the og.grok.me placeholder. Wire og:image to "https://${host}/og.jpg".',
 			)
 		} else if (statSync(cardPath).size > MAX_CARD_BYTES) {
 			warnings.push(
 				`BRAND WARNING: ${cardPath} is over 600 KB — link scrapers (X card previews included) ` +
 					"time out or skip images this heavy, so the card silently fails to unfurl. " +
-					`Re-encode as JPEG (public/og.jpg, ffmpeg -q:v 4) per ${skillPath}.`,
+					"Re-encode as JPEG (public/og.jpg, ffmpeg -q:v 4).",
 			)
 		}
 	} else if (hasCanvas) {
@@ -73,7 +67,7 @@ export function computeBrandWarnings({ hasCanvas, workspaceRoot = "/workspace" }
 			`BRAND WARNING: this looks like a game/canvas app but ${workspaceRoot}/public/og.jpg ` +
 				"is missing. Games and visually rich apps must ship a custom 1200x630 share card " +
 				"built from the app's own art — the default og.grok.me placeholder card is not " +
-				`acceptable for them. You are not done: open ${skillPath} and finish the ` +
+				"acceptable for them. You are not done: add public/og.jpg and finish the " +
 				"brand-asset pass.",
 		)
 	} else if (rootTsx.includes("og.grok.me")) {
@@ -86,7 +80,7 @@ export function computeBrandWarnings({ hasCanvas, workspaceRoot = "/workspace" }
 				"cards are the default for games of every kind (DOM board/word games included), " +
 				"whimsical apps, creative tools, and brand-forward pages — only plain utilities " +
 				"(converters, CRUD trackers, admin dashboards) keep the placeholder. If this app " +
-				`is not a plain utility, finish the brand-asset pass per ${skillPath}.`,
+				"is not a plain utility, add public/og.jpg and finish the brand-asset pass.",
 		)
 	}
 
@@ -98,7 +92,7 @@ export function computeBrandWarnings({ hasCanvas, workspaceRoot = "/workspace" }
 			"BRAND WARNING: this looks like a game/canvas app but src/routes/__root.tsx is missing " +
 				'og:type="x:game". X uses this meta tag to present the unfurl as a game card — set ' +
 				`{ property: "og:type", content: "x:game" } in the root head meta (always, not only ` +
-				`when a host exists) per ${skillPath}. Do not invent x:type or overload twitter:card ` +
+				"when a host exists). Do not invent x:type or overload twitter:card " +
 				"as the game signal.",
 		)
 	}

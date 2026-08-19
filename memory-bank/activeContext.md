@@ -2,6 +2,10 @@
 
 ## Current focus
 
+Connector catalog UX (not implemented). Many connections at once — not a Model Select. Live Claude directory is 2-col cards with in-card 2-line descriptions (fixed height, still too tall for Settings). Linear Integrations is a full-width list. Raycast Grid is the match: icon + one-line label, tooltip for copy. Moya: equal-cell grid, portaled Tooltip (not yet in the kit; InfoTip Popover is click-only), instance list stays below. Do not expand cards on hover.
+
+## Current focus (voice / UI)
+
 Voice Settings matches Model: one Provider select, then only that provider’s fields. System is the built-in-voices choice (not a Mac option). Local Base URL is a field, not a hidden Connection drawer.
 
 ## What just changed
@@ -26,5 +30,8 @@ Voice Settings matches Model: one Provider select, then only that provider’s f
 
 ## Next
 
-1. Add new UI with `pnpm dlx shadcn@latest add <name>` (Base UI). Replay Moya classes; do not overwrite.
-2. Owner restarts the sidecar to hear Local voice.
+1. Public MIT (2026-08-19): LICENSE, NOTICE, CONTRIBUTING, SECURITY, CoC, FUNDING.yml. Package name is `moya`, not `app-builder-workspace`. xAI App Builder skills removed from git. Grok `extensions.js` injects only when `VITE_PROJECT_ID` is set.
+2. First-run on `/`: idle copy + verbs, setup sheet on first send, web-only Download. Conversion is first successful turn, not login.
+3. GitHub Releases / updater still not shipped. `DOWNLOAD_APP_URL` points at `releases/latest` (empty until a signed build is published).
+4. Add new UI with `pnpm dlx shadcn@latest add <name>` (Base UI). Replay Moya classes; do not overwrite.
+5. Owner restarts the sidecar to hear Local voice.

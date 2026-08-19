@@ -23,4 +23,12 @@
 
 ## Status
 
-Radix → Base UI + shadcn token pass: **done**. Spoken Local voice: **unverified** until sidecar restart + listen.
+Repo is **public** (`zimablue-io/moya`). MIT © 2026 Lefa Moffat. First-run landing on `/` is in tree. Spoken Local voice: **unverified** until sidecar restart + listen. No GitHub Release artifact yet.
+
+## Connector presets (investigated, not shipped)
+
+- Sources already sync calendar ICS and Linear/GitHub read into the Environment.
+- Tools MCP is URL + Authorization header only. No OAuth.
+- Official Google MCP (`gmailmcp.googleapis.com`, `calendarmcp.googleapis.com`) needs a GCP OAuth client. Packaged `.app` has no Node server.
+- Browser `fetch` for Google ICS / Google MCP will likely hit CORS; attach-file ICS already works.
+- Recommended ship-first tiles: Google Calendar, Apple Calendar, Outlook Calendar, Linear, GitHub. Hold Gmail until OAuth + mail-scope decision.

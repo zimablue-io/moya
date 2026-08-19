@@ -68,4 +68,4 @@ Better Auth at `/api/auth/*` federates to the Grok broker (Google, X only). Do *
 
 ## Skills in this repo
 
-`.grok/skills/` is platform guidance (auth, og, xai-api, design-ui). This file wins when it conflicts — especially packaged-desktop auth.
+`.agents/skills/` is Moya’s own agent guidance (shadcn, Radix → Base UI). This file wins on product, desktop, and auth. Do not add xAI App Builder skills back into git.
