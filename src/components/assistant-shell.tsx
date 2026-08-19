@@ -9,12 +9,14 @@ import { MemoryDialog } from "@/components/memory-dialog"
 import { PresenceCanvas } from "@/components/presence-canvas"
 import { RoutinesDialog } from "@/components/routines-dialog"
 import { SettingsDialog } from "@/components/settings-dialog"
+import { SetupSheet } from "@/components/setup-sheet"
+import { useFirstRunGate } from "@/components/use-first-run"
 import { WatchDialog } from "@/components/watch-dialog"
+import { isFirstRun } from "@/lib/first-run"
 import { speech } from "@/lib/speech"
 import { pendingInboxCount, useApp } from "@/lib/store"
 import { formatClock } from "@/lib/utils"
 import { browserSpeechFinalSink, shouldExitVoiceForComposer, shouldStartHoldListen } from "@/lib/voice-contract"
-import { enterVoiceMode, exitVoiceMode } from "@/lib/voice-mode"
 
 export function AssistantShell() {
 	const hydrate = useApp((s) => s.hydrate)
@@ -28,12 +30,13 @@ export function AssistantShell() {
 	const composerOpen = useApp((s) => s.composerOpen)
 	const inbox = useApp((s) => s.inbox)
 	const error = useApp((s) => s.error)
-	const send = useApp((s) => s.send)
 	const setPresence = useApp((s) => s.setPresence)
 	const setComposerOpen = useApp((s) => s.setComposerOpen)
 	const closeUi = useApp((s) => s.closeUi)
 	const dialog = useApp((s) => s.dialog)
 	const menuOpen = useApp((s) => s.menuOpen)
+	const messages = useApp((s) => s.messages)
+	const firstRun = useFirstRunGate()
 
 	const [draft, setDraft] = useState("")
 	const [clock, setClock] = useState("")
@@ -42,8 +45,10 @@ export function AssistantShell() {
 	const holding = useRef(false)
 	const holdBits = useRef("")
 	const noteListenRef = useRef(false)
+	const requestSendRef = useRef<(text: string) => void>(() => {})
 	const pending = pendingInboxCount(inbox)
 	noteListenRef.current = noteListen
+	requestSendRef.current = firstRun.requestSend
 
 	useEffect(() => {
 		void hydrate()
@@ -93,7 +98,7 @@ export function AssistantShell() {
 				}
 				if (sink === "ignore") return
 				if (sink === "send") {
-					void useApp.getState().send(text)
+					requestSendRef.current(text)
 					return
 				}
 				if (holding.current) {
@@ -122,15 +127,17 @@ export function AssistantShell() {
 		return () => speech.dispose()
 	}, [])
 
+	useEffect(() => {
+		if (firstRun.draftSeed == null) return
+		setDraft(firstRun.draftSeed)
+		firstRun.clearDraftSeed()
+	}, [firstRun])
+
 	const enterVoice = useCallback(() => {
 		setNoteListen(false)
 		setMicFix(null)
-		void enterVoiceMode()
-	}, [])
-
-	const exitVoice = useCallback(() => {
-		exitVoiceMode()
-	}, [])
+		firstRun.enterVoice()
+	}, [firstRun])
 
 	const startHold = useCallback(() => {
 		if (!shouldStartHoldListen({ voiceMode, presence, noteListen })) return
@@ -149,8 +156,8 @@ export function AssistantShell() {
 		const text = (holdBits.current || useApp.getState().interim).trim()
 		holdBits.current = ""
 		setPresence({ presence: "idle", interim: "" })
-		if (text) void send(text)
-	}, [send, setPresence])
+		if (text) firstRun.requestSend(text)
+	}, [firstRun, setPresence])
 
 	const toggleTranscribe = useCallback(() => {
 		if (noteListen) {
@@ -159,13 +166,13 @@ export function AssistantShell() {
 			setPresence({ presence: "idle" })
 			return
 		}
-		if (shouldExitVoiceForComposer(useApp.getState().voiceMode)) exitVoice()
+		if (shouldExitVoiceForComposer(useApp.getState().voiceMode)) firstRun.exitVoice()
 		setNoteListen(true)
 		setComposerOpen(true)
 		setMicFix(null)
 		setPresence({ presence: "listening", error: null })
 		void speech.startListen({ continuous: true })
-	}, [exitVoice, noteListen, setComposerOpen, setPresence])
+	}, [firstRun, noteListen, setComposerOpen, setPresence])
 
 	useEffect(() => {
 		const onKey = (e: KeyboardEvent) => {
@@ -176,20 +183,20 @@ export function AssistantShell() {
 				speech.stopListen()
 				holding.current = false
 				setNoteListen(false)
-				exitVoice()
+				firstRun.exitVoice()
 				setComposerOpen(false)
 				closeUi(true)
 				return
 			}
-			if (typing) return
+			if (typing || firstRun.setupOpen) return
 			if (e.key === "v" || e.key === "V") {
 				e.preventDefault()
-				if (voiceMode && !error) exitVoice()
+				if (voiceMode && !error) firstRun.exitVoice()
 				else enterVoice()
 			}
 			if (e.key === "t" || e.key === "T" || e.key === "/") {
 				e.preventDefault()
-				if (shouldExitVoiceForComposer(voiceMode)) exitVoice()
+				if (shouldExitVoiceForComposer(voiceMode)) firstRun.exitVoice()
 				setComposerOpen(true)
 			}
 			if (e.key === " " && !composerOpen && !voiceMode) {
@@ -209,7 +216,7 @@ export function AssistantShell() {
 			window.removeEventListener("keydown", onKey)
 			window.removeEventListener("keyup", onUp)
 		}
-	}, [closeUi, composerOpen, enterVoice, error, exitVoice, setComposerOpen, startHold, endHold, voiceMode])
+	}, [closeUi, composerOpen, enterVoice, error, firstRun, setComposerOpen, startHold, endHold, voiceMode])
 
 	const status =
 		presence === "listening"
@@ -226,11 +233,13 @@ export function AssistantShell() {
 						? "Voice"
 						: "Idle"
 
+	const empty = ready && isFirstRun(messages)
+
 	return (
 		<main className="relative isolate min-h-dvh overflow-hidden bg-bg text-fg">
 			<div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_center,color-mix(in_oklab,var(--primary)_5%,transparent),transparent_55%)]" />
 
-			<AssistantHeader clock={clock} pending={pending} />
+			<AssistantHeader clock={clock} pending={pending} firstRun={empty} />
 
 			<PresenceCanvas
 				state={presence}
@@ -242,7 +251,7 @@ export function AssistantShell() {
 				onHoldStart={startHold}
 				onHoldEnd={endHold}
 				onTap={() => {
-					if (voiceMode && !error) exitVoice()
+					if (voiceMode && !error) firstRun.exitVoice()
 					else enterVoice()
 				}}
 			/>
@@ -254,6 +263,8 @@ export function AssistantShell() {
 				error={error}
 				micFix={micFix}
 				onMicFix={setMicFix}
+				firstRun={empty}
+				onVerb={firstRun.onVerb}
 			/>
 
 			<AssistantDock
@@ -270,21 +281,27 @@ export function AssistantShell() {
 					setDraft("")
 					setNoteListen(false)
 					speech.stopListen()
-					void send(text)
+					firstRun.requestSend(text)
 				}}
 				onToggleListen={toggleTranscribe}
 				onVoice={() => {
-					if (voiceMode && !error) exitVoice()
+					if (voiceMode && !error) firstRun.exitVoice()
 					else enterVoice()
 				}}
 				onType={() => {
-					if (voiceMode) exitVoice()
+					if (voiceMode) firstRun.exitVoice()
 					setComposerOpen(true)
 					setPresence({ error: null })
 				}}
 			/>
 
 			<AssistantMenu pending={pending} />
+			<SetupSheet
+				open={firstRun.setupOpen}
+				pending={firstRun.setupPending}
+				onOpenChange={firstRun.closeSetup}
+				onReady={firstRun.onSetupReady}
+			/>
 			<HistoryDialog />
 			<MemoryDialog />
 			<RoutinesDialog />

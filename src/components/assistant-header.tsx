@@ -1,9 +1,10 @@
 import { LayoutGrid, X } from "lucide-react"
 import { displayName } from "@/lib/brand"
+import { FIRST_RUN_LINE } from "@/lib/first-run"
 import { useApp } from "@/lib/store"
 import { cn } from "@/lib/utils"
 
-export function AssistantHeader({ clock, pending }: { clock: string; pending: number }) {
+export function AssistantHeader({ clock, pending, firstRun }: { clock: string; pending: number; firstRun: boolean }) {
 	const agentName = useApp((s) => s.settings.agentName)
 	const menuOpen = useApp((s) => s.menuOpen)
 	const setMenuOpen = useApp((s) => s.setMenuOpen)
@@ -12,6 +13,7 @@ export function AssistantHeader({ clock, pending }: { clock: string; pending: nu
 		<header className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-start justify-between px-4 pt-[max(1rem,env(safe-area-inset-top))] sm:px-6">
 			<div>
 				<p className="type-display text-2xl text-fg">{displayName(agentName)}</p>
+				{firstRun ? <p className="mt-1 max-w-xs text-sm text-muted-foreground">{FIRST_RUN_LINE}</p> : null}
 				<p className="type-clock mt-1 text-muted-foreground">{clock}</p>
 			</div>
 			<button

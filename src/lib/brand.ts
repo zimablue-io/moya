@@ -2,6 +2,9 @@ export const APP_NAME = "Moya"
 
 export const TAGLINE = "One assistant. Local first. Voice first."
 
+/** Public Mac build. Hidden in the desktop app; shown on the web menu. */
+export const DOWNLOAD_APP_URL = "https://github.com/zimablue-io/moya/releases/latest"
+
 export const COLOR = {
 	bg: "#0b0b0a",
 	surface: "#141413",
