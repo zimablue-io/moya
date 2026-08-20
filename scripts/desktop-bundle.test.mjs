@@ -1,10 +1,16 @@
 import assert from "node:assert/strict"
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { test } from "node:test"
 import { fileURLToPath } from "node:url"
-import { assertDesktopFrontend, desktopFrontendIndex } from "./desktop-frontend.mjs"
+import {
+	assertDesktopFrontend,
+	clearStaleDmgWork,
+	desktopFrontendIndex,
+	isStaleRwDmg,
+	shouldEjectDmgVolume,
+} from "./desktop-frontend.mjs"
 import { DMG_APP, DMG_APPLICATIONS, DMG_BACKGROUND, DMG_WINDOW } from "./write-dmg-background.mjs"
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..")
@@ -68,6 +74,45 @@ test("assertDesktopFrontend accepts a bootable index.html", () => {
 test("build:desktop validates the frontend after vite", () => {
 	const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"))
 	assert.match(pkg.scripts["build:desktop"], /desktop-frontend\.mjs/)
+})
+
+test("leftover create-dmg RW images next to Moya.app are stale", () => {
+	assert.equal(isStaleRwDmg("rw.37179.Moya_0.1.6_aarch64.dmg"), true)
+	assert.equal(isStaleRwDmg("Moya.app"), false)
+	assert.equal(isStaleRwDmg("Moya_0.1.6_aarch64.dmg"), false)
+	assert.equal(shouldEjectDmgVolume("Moya"), true)
+	assert.equal(shouldEjectDmgVolume("Moya 1"), true)
+	assert.equal(shouldEjectDmgVolume("dmg.j87AM9"), true)
+	assert.equal(shouldEjectDmgVolume("Kabu Installer"), false)
+	assert.equal(shouldEjectDmgVolume("Macintosh HD"), false)
+})
+
+test("clearStaleDmgWork deletes leftover RW images and ejects Moya volumes", () => {
+	const workspace = mkdtempSync(join(tmpdir(), "moya-dmg-stale-"))
+	const macos = join(workspace, "src-tauri/target/release/bundle/macos")
+	mkdirSync(macos, { recursive: true })
+	writeFileSync(join(macos, "rw.37179.Moya_0.1.6_aarch64.dmg"), "stale")
+	writeFileSync(join(macos, "keep.txt"), "ok")
+	const removed = []
+	const detached = []
+	const result = clearStaleDmgWork(workspace, {
+		readdir: (dir) => (dir === "/Volumes" ? ["Macintosh HD", "Moya 1", "Kabu Installer"] : readdirSync(dir)),
+		unlink: (path) => {
+			removed.push(path)
+			unlinkSync(path)
+		},
+		run: (cmd, args) => {
+			assert.equal(cmd, "hdiutil")
+			detached.push(args[1])
+			return { status: 0, stdout: "", stderr: "" }
+		},
+	})
+	assert.deepEqual(result.removed, ["rw.37179.Moya_0.1.6_aarch64.dmg"])
+	assert.deepEqual(result.ejected, ["Moya 1"])
+	assert.equal(existsSync(join(macos, "keep.txt")), true)
+	assert.equal(existsSync(join(macos, "rw.37179.Moya_0.1.6_aarch64.dmg")), false)
+	assert.deepEqual(detached, ["/Volumes/Moya 1"])
+	assert.equal(removed.length, 1)
 })
 
 test("package:mac does not force CI so a local DMG can be a drag-to-Applications window", () => {

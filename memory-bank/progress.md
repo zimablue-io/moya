@@ -27,7 +27,7 @@
 - CI `latest-release` on `main` stays red until `v0.1.0` publishes a `.dmg`. First DMGs are unsigned until Apple Developer ID secrets are set.
 - Prebuilt GitHub DMG is optional and Gatekeeper-blocked until notarized. Install path is clone + `pnpm package:mac` on this Mac. Menu/README point at `#mac-app`, not the DMG.
 - DMG background is one full-bleed light fill (no inset card). An earlier 36px “card” sat on Finder’s own window fill and looked like two backgrounds.
-- Leftover `/Volumes/Moya*` or `dmg.*` mounts make `bundle_dmg.sh` fail. Closing the Finder window does not unmount. Eject them; do not add a helper script.
+- Failed `bundle_dmg.sh` runs leave `rw.*.dmg` next to `Moya.app` and can leave `/Volumes/Moya` mounted. `desktop-frontend.mjs` clears those before the next Tauri bundle.
 
 ## Status
 
