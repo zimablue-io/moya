@@ -64,9 +64,11 @@ jobs:
             echo "package:mac wrote no .dmg under src-tauri/target/release/bundle/dmg" >&2
             exit 1
           fi
+          STABLE="Moya_aarch64.dmg"
+          cp "${DMGS[0]}" "${STABLE}"
           NOTES="Mac DMG for ${TAG}. Unsigned until Apple Developer ID secrets are set; Gatekeeper will warn (right-click → Open)."
           if gh release view "${TAG}" >/dev/null 2>&1; then
-            gh release upload "${TAG}" "${DMGS[@]}" --clobber
+            gh release upload "${TAG}" "${DMGS[@]}" "${STABLE}" --clobber
           else
-            gh release create "${TAG}" --title "Moya ${VERSION}" --notes "${NOTES}" --latest "${DMGS[@]}"
+            gh release create "${TAG}" --title "Moya ${VERSION}" --notes "${NOTES}" --latest "${DMGS[@]}" "${STABLE}"
           fi

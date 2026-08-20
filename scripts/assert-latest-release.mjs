@@ -19,9 +19,11 @@ if (!response.ok) {
 }
 
 const release = await response.json()
-const dmgs = (release.assets ?? []).filter((asset) => String(asset.name).endsWith(".dmg"))
-if (dmgs.length === 0) {
-	throw new Error(`Latest release ${release.tag_name} has no .dmg asset`)
+const names = (release.assets ?? []).map((asset) => String(asset.name))
+if (!names.includes("Moya_aarch64.dmg")) {
+	throw new Error(
+		`Latest release ${release.tag_name} has no Moya_aarch64.dmg — Download uses releases/latest/download/Moya_aarch64.dmg (assets: ${names.join(", ") || "none"})`,
+	)
 }
 
-console.log(`latest release ${release.tag_name}: ${dmgs.map((asset) => asset.name).join(", ")}`)
+console.log(`latest release ${release.tag_name}: ${names.join(", ")}`)

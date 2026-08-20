@@ -63,6 +63,13 @@ test("a URL-shaped Download link is not enough without CI and a Mac release job"
 		() => assertReleaseWorkflow("on:\n  push:\n    tags:\n      - v*\nruns-on: macos-latest\nrun: pnpm package:mac\n"),
 		/gh release create/,
 	)
+	assert.throws(
+		() =>
+			assertReleaseWorkflow(
+				"on:\n  push:\n    tags:\n      - v*\nruns-on: macos-latest\nrun: pnpm package:mac\ngh release create\ncontents: write\n*.dmg\n",
+			),
+		/Moya_aarch64\.dmg/,
+	)
 	assert.throws(() => assertBumpWorkflow("on: push\n"), /workflow_dispatch/)
 	assert.throws(() => assertTagWorkflow("on: push\n"), /main/)
 })

@@ -1,9 +1,10 @@
 import { existsSync, readdirSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { fileURLToPath } from "node:url"
-import { DOWNLOAD_APP_URL } from "../src/lib/brand.ts"
+import { DOWNLOAD_APP_ASSET, DOWNLOAD_APP_URL } from "../src/lib/brand.ts"
 
-export const EXPECTED_DOWNLOAD_URL = "https://github.com/zimablue-io/moya/releases/latest"
+export const EXPECTED_DOWNLOAD_ASSET = "Moya_aarch64.dmg"
+export const EXPECTED_DOWNLOAD_URL = `https://github.com/zimablue-io/moya/releases/latest/download/${EXPECTED_DOWNLOAD_ASSET}`
 export const CI_WORKFLOW = ".github/workflows/ci.yml"
 export const RELEASE_WORKFLOW = ".github/workflows/release.yml"
 export const BUMP_WORKFLOW = ".github/workflows/bump.yml"
@@ -77,6 +78,11 @@ export function assertReleaseWorkflow(yaml) {
 	if (!/\.dmg/.test(yaml)) {
 		throw new Error("Release must upload a .dmg — that is what Download and README point at")
 	}
+	if (!yaml.includes(EXPECTED_DOWNLOAD_ASSET)) {
+		throw new Error(
+			`Release must upload the stable ${EXPECTED_DOWNLOAD_ASSET} so Download can use releases/latest/download`,
+		)
+	}
 	if (!/contents:\s*write/.test(yaml)) {
 		throw new Error("Release needs contents: write to publish the GitHub Release")
 	}
@@ -107,6 +113,9 @@ export function assertTagWorkflow(yaml) {
 }
 
 export function assertShippingContract(root) {
+	if (DOWNLOAD_APP_ASSET !== EXPECTED_DOWNLOAD_ASSET) {
+		throw new Error(`DOWNLOAD_APP_ASSET must stay ${EXPECTED_DOWNLOAD_ASSET} (got ${DOWNLOAD_APP_ASSET})`)
+	}
 	if (DOWNLOAD_APP_URL !== EXPECTED_DOWNLOAD_URL) {
 		throw new Error(`DOWNLOAD_APP_URL must stay ${EXPECTED_DOWNLOAD_URL} (got ${DOWNLOAD_APP_URL})`)
 	}

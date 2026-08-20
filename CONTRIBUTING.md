@@ -32,7 +32,7 @@ pnpm bump 0.2.0    # explicit
 
 Open a PR with those files (or run **Actions → Bump**). After it merges, the Tag workflow creates `vX.Y.Z` and Release publishes the DMG. Do not hand-edit one version file, and do not push a tag that does not match `package.json`.
 
-`DOWNLOAD_APP_URL` is `https://github.com/zimablue-io/moya/releases/latest`.
+`DOWNLOAD_APP_URL` is `https://github.com/zimablue-io/moya/releases/latest/download/Moya_aarch64.dmg` so the browser fetches the file instead of the releases page. Release also uploads the versioned Tauri DMG.
 
 First builds are unsigned until Apple Developer ID secrets (`APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID`) are set on the repo. Gatekeeper will warn; right-click → Open.
 

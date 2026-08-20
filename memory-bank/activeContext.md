@@ -2,7 +2,7 @@
 
 ## Current focus
 
-GitHub Releases were advertised (README + web Download → `releases/latest`) with no workflow, no tags, and no branch protection. Tests only checked the URL shape. Shipping contract + CI + tag-triggered Mac release + main ruleset are the fix.
+Download is `releases/latest/download/Moya_aarch64.dmg` so the browser fetches the file. Release uploads that stable name plus the versioned Tauri DMG.
 
 ## Current focus (voice / UI)
 

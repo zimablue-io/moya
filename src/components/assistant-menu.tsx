@@ -1,5 +1,5 @@
 import { Brain, Download, History, MessageSquare, Repeat, Settings } from "lucide-react"
-import { DOWNLOAD_APP_URL } from "@/lib/brand"
+import { DOWNLOAD_APP_ASSET, DOWNLOAD_APP_URL } from "@/lib/brand"
 import { menuToolsForHost, showDownloadApp } from "@/lib/first-run"
 import { isDesktop } from "@/lib/host"
 import { useApp } from "@/lib/store"
@@ -70,8 +70,7 @@ export function AssistantMenu({ pending }: { pending: number }) {
 				{showDownloadApp(desktop) ? (
 					<a
 						href={DOWNLOAD_APP_URL}
-						target="_blank"
-						rel="noreferrer"
+						download={DOWNLOAD_APP_ASSET}
 						onClick={() => setMenuOpen(false)}
 						style={{ transitionDelay: menuOpen ? `${tools.length * 45}ms` : "0ms" }}
 						className={cn(
