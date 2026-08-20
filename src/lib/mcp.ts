@@ -1,3 +1,4 @@
+import { APP_VERSION } from "./brand.ts"
 import { mcpCall } from "./llm.ts"
 import type { McpServer, McpTool } from "./types.ts"
 
@@ -47,7 +48,7 @@ export async function handshakeMcp(server: McpServer): Promise<{ server: McpServ
 	const init = await rpc(server, "initialize", {
 		protocolVersion: "2025-03-26",
 		capabilities: { tools: {} },
-		clientInfo: { name: "moya", version: "0.1.0" },
+		clientInfo: { name: "moya", version: APP_VERSION },
 	})
 	if (!init.ok) return { server: { ...server, lastError: init.error }, error: init.error }
 	const next = {

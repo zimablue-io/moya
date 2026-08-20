@@ -2,7 +2,7 @@
 
 ## Current focus
 
-Connector catalog UX (not implemented). Many connections at once — not a Model Select. Live Claude directory is 2-col cards with in-card 2-line descriptions (fixed height, still too tall for Settings). Linear Integrations is a full-width list. Raycast Grid is the match: icon + one-line label, tooltip for copy. Moya: equal-cell grid, portaled Tooltip (not yet in the kit; InfoTip Popover is click-only), instance list stays below. Do not expand cards on hover.
+GitHub Releases were advertised (README + web Download → `releases/latest`) with no workflow, no tags, and no branch protection. Tests only checked the URL shape. Shipping contract + CI + tag-triggered Mac release + main ruleset are the fix.
 
 ## Current focus (voice / UI)
 
@@ -10,7 +10,8 @@ Voice Settings matches Model: one Provider select, then only that provider’s f
 
 ## What just changed
 
-1. Product classes moved off colliding Moya names: `bg-accent` / `text-accent-fg` → `bg-primary` / `text-primary-foreground`; `text-muted` → `text-muted-foreground`.
+1. Shipping contract + CI + tag-triggered Mac Release workflow. Version increment is `pnpm bump <patch|minor|major|X.Y.Z>` (lockstep). Actions → Bump opens a PR; merge tags `vX.Y.Z`. Main is a GitHub ruleset: PR required, `check` must pass. No DMG on GitHub until this lands and Tag creates `v0.1.0`.
+2. Product classes moved off colliding Moya names: `bg-accent` / `text-accent-fg` → `bg-primary` / `text-primary-foreground`; `text-muted` → `text-muted-foreground`.
 2. Brand palette SSOT: beige is `--color-brand` / `COLOR.brand`; gray text is `--color-quiet` / `COLOR.quiet`. `:root --primary` still points at beige.
 3. Unused `cmdk` and `vaul` removed so `@radix-ui/*` is gone from the lockfile.
 4. `Input` / `Textarea` dropped `forwardRef` (React 19 props refs).
@@ -30,8 +31,7 @@ Voice Settings matches Model: one Provider select, then only that provider’s f
 
 ## Next
 
-1. Public MIT (2026-08-19): LICENSE, NOTICE, CONTRIBUTING, SECURITY, CoC, FUNDING.yml. Package name is `moya`, not `app-builder-workspace`. xAI App Builder skills removed from git. Grok `extensions.js` injects only when `VITE_PROJECT_ID` is set.
-2. First-run on `/`: idle copy + verbs, setup sheet on first send, web-only Download. Conversion is first successful turn, not login.
-3. GitHub Releases / updater still not shipped. `DOWNLOAD_APP_URL` points at `releases/latest` (empty until a signed build is published).
+1. Merge this onto `main` via PR so CI can run. The Tag workflow will create `v0.1.0` and Release will publish the first DMG. Later cuts: `pnpm bump patch` (or Actions → Bump).
+2. Apple Developer ID signing/notarization still needs human secrets. Unsigned DMGs will Gatekeeper-warn until those are set.
+3. Spoken Local Kokoro voice still needs a sidecar restart + listen (unchanged).
 4. Add new UI with `pnpm dlx shadcn@latest add <name>` (Base UI). Replay Moya classes; do not overwrite.
-5. Owner restarts the sidecar to hear Local voice.

@@ -29,6 +29,8 @@
 		"package:mac": "CI=true tauri build",
 		"typecheck": "tsc --noEmit",
 		"test": "node --experimental-strip-types --test 'scripts/**/*.test.mjs'",
+		"shipping": "node --experimental-strip-types scripts/shipping-contract.mjs",
+		"bump": "node --experimental-strip-types scripts/bump-version.mjs",
 		"lint": "biome lint .",
 		"format": "biome format --write .",
 		"format:check": "biome format .",

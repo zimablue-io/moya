@@ -73,6 +73,16 @@ React 19, TanStack Start, Tailwind v4, Better Auth, PGLite (or Neon when `DATABA
 
 A green Voice test suite proves Moya’s contract, not that a sidecar spoke the selected voice.
 
+`pnpm test` also checks the shipping contract: the Download link above is only honest if CI gates pull requests and a Release workflow publishes a `.dmg` when you tag `v*`.
+
+## Releases
+
+```sh
+pnpm bump patch    # lockstep SemVer bump → open a PR
+```
+
+Or **Actions → Bump**. After merge, Tag creates `vX.Y.Z` and Release publishes the Mac DMG to [the latest release](https://github.com/zimablue-io/moya/releases/latest). Until Apple Developer ID secrets are set, Gatekeeper will warn; right-click the app → Open.
+
 ## License
 
 [MIT](LICENSE) © 2026 Lefa Moffat. See [NOTICE](NOTICE) for fonts and third-party services.

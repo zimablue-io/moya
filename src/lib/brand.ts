@@ -1,5 +1,7 @@
 export const APP_NAME = "Moya"
 
+export const APP_VERSION = "0.1.0"
+
 export const TAGLINE = "One assistant. Local first. Voice first."
 
 /** Public Mac build. Hidden in the desktop app; shown on the web menu. */

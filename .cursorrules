@@ -28,6 +28,13 @@ AGENTS.md wins on product/desktop/auth. This file is the living journal. The pub
 - Do not bring back Instrument Serif, Source Serif, Figtree, Playfair, Fraunces, Newsreader, or a `serif` fallback on `--font-display`. If the face fails to load, Times must not appear.
 - `scripts/brand-ssot.test.mjs` must stay red if those families return. A token swap is not enough — check computed `font-family` on `.type-display` in the running app.
 
+## Shipping surfaces
+
+- If the product or README advertises Download / `releases/latest`, `.github/workflows/release.yml` must publish a `.dmg` on `v*` tags. A URL-shaped test is not enough.
+- Pull requests are the path onto `main`. `.github/workflows/ci.yml` must run `pnpm lint`, `pnpm typecheck`, and `pnpm test`.
+- `scripts/shipping-contract.test.mjs` must stay red if those workflows disappear or stop publishing.
+- Version increment is `pnpm bump <patch|minor|major|X.Y.Z>` only. It writes package.json, tauri.conf.json, Cargo.toml, Cargo.lock, and `APP_VERSION`. Do not hand-edit one file.
+
 ## Owner preference
 
 - Do not claim Voice, Settings, or fonts work from tests or “should”. State evidence.

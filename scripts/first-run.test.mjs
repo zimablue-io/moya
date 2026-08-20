@@ -16,6 +16,7 @@ import {
 	voiceCloudSetupNeeded,
 } from "../src/lib/first-run.ts"
 import { DEFAULT_SETTINGS } from "../src/lib/types.ts"
+import { EXPECTED_DOWNLOAD_URL } from "./shipping-contract.mjs"
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..")
 
@@ -73,7 +74,7 @@ test("Download is a web menu item, never desktop chrome", () => {
 	assert.equal(showDownloadApp(true), false)
 	assert.deepEqual(menuToolsForHost(true), ["history", "memory", "routines", "watch", "settings"])
 	assert.ok(menuToolsForHost(false).includes("download"))
-	assert.match(DOWNLOAD_APP_URL, /^https:\/\/github.com\/zimablue-io\/moya\/releases/)
+	assert.equal(DOWNLOAD_APP_URL, EXPECTED_DOWNLOAD_URL)
 })
 
 test("first-run copy names the product and the local-first tax", () => {

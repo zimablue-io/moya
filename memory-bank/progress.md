@@ -20,15 +20,17 @@
 - Upstream `kokoro_handler.py` overwrites session voice when STT language is `en` (maps to British `bm_fable`). Patched on this machine; **restart required**.
 - Settings Model can auto-select the first listed model if the stored id is missing from `/models`.
 - Canvas overlay intercepts pointer events; Playwright menu clicks need `{ force: true }`. First Escape closes a popover before its parent dialog.
+- CI `latest-release` on `main` stays red until `v0.1.0` publishes a `.dmg`. First DMGs are unsigned until Apple Developer ID secrets are set.
 
 ## Status
 
-Repo is **public** (`zimablue-io/moya`). MIT © 2026 Lefa Moffat. First-run landing on `/` is in tree. Spoken Local voice: **unverified** until sidecar restart + listen. No GitHub Release artifact yet.
+Repo is **public** (`zimablue-io/moya`). MIT © 2026 Lefa Moffat. First-run landing on `/` is in tree. Spoken Local voice: **unverified** until sidecar restart + listen. Release pipeline is in tree (CI + `pnpm bump` → PR → Tag `vX.Y.Z` → Mac DMG). No GitHub Release artifact until this lands on `main` and Tag creates `v0.1.0`.
 
-## Connector presets (investigated, not shipped)
+## Connector presets (shipped in Settings → Sources)
 
-- Sources already sync calendar ICS and Linear/GitHub read into the Environment.
-- Tools MCP is URL + Authorization header only. No OAuth.
-- Official Google MCP (`gmailmcp.googleapis.com`, `calendarmcp.googleapis.com`) needs a GCP OAuth client. Packaged `.app` has no Node server.
-- Browser `fetch` for Google ICS / Google MCP will likely hit CORS; attach-file ICS already works.
-- Recommended ship-first tiles: Google Calendar, Apple Calendar, Outlook Calendar, Linear, GitHub. Hold Gmail until OAuth + mail-scope decision.
+- Catalog grid: Google Calendar, Apple Calendar, Outlook Calendar, Linear, GitHub, Attach files.
+- Contract in `src/lib/source-contract.ts`. Tests in `scripts/source-presets.test.mjs`.
+- Hover description is shadcn Tooltip (portaled). No kind Select.
+- Clicking a tile starts another draft. Linear/GitHub only ask for a token.
+- Booted `http://127.0.0.1:5173` Settings → Sources: 3×2 grid, Google ICS form, Linear token form.
+- Gmail / official Google MCP still not in the catalog. CORS on live Google ICS is unchanged.
