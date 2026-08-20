@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { Field } from "@/components/settings-field"
+import { OnDeviceModels } from "@/components/settings-ondevice"
 import { Button } from "@/components/ui/button"
 import {
 	Dialog,
@@ -12,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { providerSetupNeeded } from "@/lib/first-run"
-import { isDesktop } from "@/lib/host"
+import { hostCaps } from "@/lib/host"
 import { useApp } from "@/lib/store"
 import {
 	PROVIDER_PRESETS,
@@ -37,13 +38,13 @@ export function SetupSheet({
 }) {
 	const settings = useApp((s) => s.settings)
 	const dispatch = useApp((s) => s.dispatch)
-	const desktop = isDesktop()
-	const choices = providerChoicesForHost(desktop)
-	const [draft, setDraft] = useState<ProviderConfig>(() => providerForHost(settings.provider, desktop))
+	const caps = hostCaps()
+	const choices = providerChoicesForHost(caps)
+	const [draft, setDraft] = useState<ProviderConfig>(() => providerForHost(settings.provider, caps))
 	const [busy, setBusy] = useState(false)
 
 	useEffect(() => {
-		if (open) setDraft(providerForHost(useApp.getState().settings.provider, isDesktop()))
+		if (open) setDraft(providerForHost(useApp.getState().settings.provider, hostCaps()))
 	}, [open])
 
 	const needs = providerSetupNeeded(draft)
@@ -110,6 +111,9 @@ export function SetupSheet({
 						<Field label="Model">
 							<Input value={draft.model} onChange={(e) => setDraft((d) => ({ ...d, model: e.target.value }))} />
 						</Field>
+					) : null}
+					{draft.id === "ondevice" ? (
+						<OnDeviceModels model={draft.model} onPicked={(filename) => setDraft((d) => ({ ...d, model: filename }))} />
 					) : null}
 				</div>
 				<DialogFooter>

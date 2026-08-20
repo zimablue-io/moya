@@ -28,6 +28,10 @@ export function isFirstRun(messages: { role: string; hidden?: boolean }[]): bool
 export function providerSetupNeeded(provider: ProviderConfig): string | null {
 	const preset = PROVIDER_PRESETS[provider.id]
 	if (!preset) return "Unknown provider."
+	if (provider.id === "ondevice") {
+		if (!provider.model.trim()) return "Download or pick a GGUF."
+		return null
+	}
 	if (!provider.baseUrl.trim()) return "Set a provider endpoint."
 	if (!provider.model.trim()) return "Set a model."
 	if (providerNeedsKey(provider.id) && !provider.apiKey.trim()) {

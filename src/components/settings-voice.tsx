@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider"
 import { Switch } from "@/components/ui/switch"
 import { openSettingsToAllow } from "@/lib/brand"
-import { isDesktop, systemSettingsLabel, thisDeviceLabel } from "@/lib/host"
+import { hostCaps, isDesktop, systemSettingsLabel, thisDeviceLabel } from "@/lib/host"
 import { allowMicrophone, type MediaAuth, mediaPermissionStatus } from "@/lib/media-permission"
 import { useApp } from "@/lib/store"
 import {
@@ -36,9 +36,9 @@ export function VoiceTab({
 	const patch = useApp((s) => s.patchSettings)
 	const applyVoiceBackend = useApp((s) => s.applyVoiceBackend)
 	const setVoiceBackendField = useApp((s) => s.setVoiceBackendField)
-	const desktop = isDesktop()
-	const choices = voiceChoicesForHost(desktop)
-	const live = voiceBackendForHost(settings.voiceBackend, desktop)
+	const caps = hostCaps()
+	const choices = voiceChoicesForHost(caps)
+	const live = voiceBackendForHost(settings.voiceBackend, caps)
 	const id = choices.includes(live.id) ? live.id : (choices[0] ?? "browser")
 	const preset = VOICE_PRESETS[id]
 

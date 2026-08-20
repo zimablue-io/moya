@@ -26,5 +26,5 @@ export function parseOpenAiModelIds(json: unknown): string[] {
 }
 
 export function providerNeedsKey(id: string): boolean {
-	return id !== "ollama" && id !== "llamacpp" && id !== "custom"
+	return id !== "ollama" && id !== "llamacpp" && id !== "ondevice" && id !== "custom"
 }

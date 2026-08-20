@@ -1,22 +1,60 @@
 import type { Settings } from "./types.ts"
-import { settingsForHost } from "./types-presets.ts"
+import { type HostCaps, settingsForHost } from "./types-presets.ts"
 
-export type HostOs = "mac" | "windows" | "linux" | "other"
+export type HostOs = "mac" | "windows" | "linux" | "ios" | "android" | "other"
 
-export function isDesktop(): boolean {
+/** Native Tauri webview (Mac .app, Android APK, iOS IPA). Not the same as a desktop OS. */
+export function isTauri(): boolean {
 	return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window
 }
 
-/** Settings as this host should use them. Does not write. Desktop keeps Local / Ollama / llama.cpp. */
+/**
+ * Native shell. Mic, notifications, and “download the Mac app” use this.
+ * Sidecar pickers must use `isDesktopOs()` / `hostCaps()` instead — a phone
+ * webview is Tauri but must not offer Ollama or llama.cpp-as-localhost.
+ */
+export function isDesktop(): boolean {
+	return isTauri()
+}
+
+export function isDesktopOs(os: HostOs = detectHostOs()): boolean {
+	return os === "mac" || os === "windows" || os === "linux"
+}
+
+let onDeviceOverride: boolean | null = null
+
+/** Test/native hook. `llm_status.available` writes this; tests may reset it. */
+export function setOnDeviceLlmAvailable(value: boolean | null) {
+	onDeviceOverride = value
+}
+
+/** True when this native app can run in-process llama.cpp (phone/tablet). Never web or Mac. */
+export function hasOnDeviceLlm(): boolean {
+	if (onDeviceOverride != null) return onDeviceOverride
+	return isTauri() && !isDesktopOs()
+}
+
+export function hostCaps(): HostCaps {
+	const tauri = isTauri()
+	const desktopOs = isDesktopOs()
+	return {
+		desktopOs: tauri && desktopOs,
+		onDeviceLlm: hasOnDeviceLlm(),
+	}
+}
+
+/** Settings as this host should use them. Does not write. Desktop OS keeps Local / Ollama / llama.cpp. */
 export function liveSettings(settings: Settings): Settings {
-	return settingsForHost(settings, isDesktop())
+	return settingsForHost(settings, hostCaps())
 }
 
 export function hostOsFrom(userAgent: string, platform = ""): HostOs {
 	const blob = `${platform} ${userAgent}`.toLowerCase()
-	if (/iphone|ipad|ipod|mac|darwin/.test(blob)) return "mac"
+	if (/iphone|ipad|ipod/.test(blob)) return "ios"
+	if (/android/.test(blob)) return "android"
+	if (/mac|darwin/.test(blob)) return "mac"
 	if (/windows|win32|win64/.test(blob)) return "windows"
-	if (/android|linux/.test(blob)) return "linux"
+	if (/linux/.test(blob)) return "linux"
 	return "other"
 }
 
@@ -50,7 +88,7 @@ export function deviceNoun(os: HostOs = detectHostOs()): string {
 
 export async function notify(title: string, body: string) {
 	try {
-		if (isDesktop()) {
+		if (isTauri()) {
 			const mod = await import("@tauri-apps/plugin-notification")
 			const granted = await mod.isPermissionGranted()
 			if (!granted) {

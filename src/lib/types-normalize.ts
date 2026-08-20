@@ -46,8 +46,11 @@ export function normalizeSettings(raw: unknown): Settings {
 	const legacyPort = Number(rawEngine.port) || 0
 	const provider: ProviderConfig = {
 		id,
-		model: rawProvider.model?.trim() || (id === "llamacpp" ? "" : preset.model),
-		baseUrl: storedUrl || (id === "llamacpp" && legacyPort ? llamaCppBaseUrl(legacyPort) : preset.baseUrl),
+		model: rawProvider.model?.trim() || (id === "llamacpp" || id === "ondevice" ? "" : preset.model),
+		baseUrl:
+			id === "ondevice"
+				? ""
+				: storedUrl || (id === "llamacpp" && legacyPort ? llamaCppBaseUrl(legacyPort) : preset.baseUrl),
 		apiKey: rawProvider.apiKey ?? DEFAULT_SETTINGS.provider.apiKey,
 	}
 

@@ -53,6 +53,11 @@ test("cold default settings cannot complete a turn", () => {
 		}),
 		null,
 	)
+	assert.match(providerSetupNeeded({ id: "ondevice", model: "", baseUrl: "", apiKey: "" }) ?? "", /GGUF/)
+	assert.equal(
+		providerSetupNeeded({ id: "ondevice", model: "Qwen_Qwen3-1.7B-Q4_K_M.gguf", baseUrl: "", apiKey: "" }),
+		null,
+	)
 })
 
 test("Voice setup is only for cloud backends without a usable key", () => {

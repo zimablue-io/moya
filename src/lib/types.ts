@@ -7,7 +7,7 @@ export type InboxSeverity = "info" | "need" | "urgent"
 export type BoardItemState = "watching" | "running" | "blocked" | "idle" | "done"
 export type MemoryKind = "fact" | "preference" | "decision" | "project" | "insight"
 
-export type ProviderId = "xai" | "openai" | "groq" | "openrouter" | "ollama" | "llamacpp" | "custom"
+export type ProviderId = "xai" | "openai" | "groq" | "openrouter" | "ollama" | "llamacpp" | "ondevice" | "custom"
 
 export type VoiceBackendId = "s2s" | "xai" | "openai" | "custom" | "browser"
 
@@ -271,9 +271,11 @@ export const MEMORY_KINDS: { id: MemoryKind; label: string }[] = [
 
 export { normalizeArtifact, normalizeArtifacts, normalizeSettings, normalizeSnapshot } from "./types-normalize.ts"
 export {
+	type HostCaps,
 	isKokoroVoice,
 	isLocalOnlyProvider,
 	isLocalOnlyVoice,
+	isOnDeviceProvider,
 	isProviderId,
 	isVoiceBackendId,
 	KOKORO_TTS_VOICES,

@@ -7,7 +7,7 @@
 - Zustand store + Environment act/query
 - PGLite (`@electric-sql/pglite`) or Neon when `DATABASE_URL` is set
 - Better Auth (web / `pnpm desktop` only)
-- Tauri 2 desktop (`src-tauri/`, identifier `africa.moya`)
+- Tauri 2 desktop (`src-tauri/`, identifier `africa.moya`). Tray/autostart `#[cfg(desktop)]`. Android/iOS via `pnpm android:init` / `pnpm ios:init` (generated under `src-tauri/gen/`).
 - TypeScript. Tests: `node --experimental-strip-types --test 'scripts/**/*.test.mjs'`
 
 ## Commands
@@ -16,6 +16,8 @@
 pnpm dev              # http://127.0.0.1:5173
 pnpm desktop          # tauri dev; beforeDevCommand is `npm run dev`
 pnpm package:mac      # apply git version, then tauri build
+pnpm android:init     # generate Android project (SDK/NDK)
+pnpm ios:init         # generate Xcode project
 pnpm test
 pnpm lint
 pnpm typecheck

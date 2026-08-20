@@ -1,13 +1,14 @@
 # Moya — agent overlay
 
-This is **Moya**, a local-first personal assistant (web + Tauri desktop). Product copy, routes, and data stay on-device. Do not re-scaffold it as a generic app-builder template.
+This is **Moya**, a local-first personal assistant (web + Tauri desktop; Android/iOS apps in the same repo). Product copy, routes, and data stay on-device. Do not re-scaffold it as a generic app-builder template.
 
 ## Product
 
 - Home (`/`) is the assistant. Sign-in is optional; `/login` is not a gate.
 - Memory, transcript, routines, inbox, and settings persist locally (`src/lib/persist.ts`).
-- Chat completion is a client `fetch` to the configured provider (`src/lib/llm.ts`). Desktop uses the same function.
-- Voice mode is OpenAI Realtime over WebSocket (`src/lib/realtime-session.ts`). Backends: Local (`huggingface/speech-to-speech` on `:8765`), Grok, OpenAI. llama.cpp is Settings → Model only; it is not a voice server. Moya does not start speech-to-speech or llama-server. Web does not offer Local voice, Ollama, or llama.cpp (`liveSettings` / `*ChoicesForHost`).
+- Chat completion is `completeTurn` in `src/lib/llm.ts`. Cloud and Mac sidecars use `fetch`. Provider `ondevice` uses Tauri `invoke("llm_complete")` (in-process llama.cpp + a user-picked GGUF). Same `{ ok, content, toolCalls }` either way. Desktop Mac does **not** use in-process llama.cpp — llama-server / Ollama stay HTTP.
+- Voice mode is OpenAI Realtime over WebSocket (`src/lib/realtime-session.ts`). Backends: Local (`huggingface/speech-to-speech` on `:8765`), Grok, OpenAI, System. llama.cpp is Settings → Model only; it is not a voice server. Moya does not start speech-to-speech or llama-server. Web does not offer Local voice, Ollama, llama.cpp-as-localhost, or on-device GGUF (`liveSettings` / `hostCaps` / `*ChoicesForHost`). Phone/tablet apps hide those sidecars too and may offer `ondevice`. Voice on mobile is Grok or System for this work.
+- Sidecar pickers must use `isDesktopOs()` / `hostCaps()`, not `isDesktop()` alone. `isDesktop()` means any Tauri webview (true on Android/iOS) and would wrongly show `127.0.0.1` servers on a phone.
 - Realtime barge-in must keep sending mic audio while the agent talks, flush local playback on `speech_started`, ignore leftover audio from the cancelled reply, wait for the user to finish, then play the new reply. Muting the mic to dodge echo makes interruption impossible. Resetting the play cursor is not enough — `ScheduledAudioQueue.flush()` has to `stop()` every queued source.
 - The packaged `.app` has no Node server. Do not add `createServerFn` paths that the `.app` must call.
 
@@ -17,6 +18,8 @@ This is **Moya**, a local-first personal assistant (web + Tauri desktop). Produc
 pnpm dev              # http://127.0.0.1:5173
 pnpm desktop          # tauri dev; beforeDevCommand is `npm run dev`
 pnpm package:mac      # apply git version, then tauri build → .app + drag-to-Applications .dmg (needs Finder)
+pnpm android:init     # generate Android Studio project (needs SDK/NDK)
+pnpm ios:init         # generate Xcode project
 pnpm test
 pnpm lint
 pnpm typecheck
@@ -51,7 +54,7 @@ Better Auth at `/api/auth/*` federates to the Grok broker (Google, X only). Do *
 - Icons listed in `bundle.icon` must exist; `.icns` files must be real icns (magic `icns`).
 - Local `package:mac` does not set `CI=true` (Finder can layout the DMG). Release sets `CI=true` on the runner.
 - `scripts/desktop-frontend.mjs` runs after the desktop Vite build and fails if `index.html` is missing.
-- Closing the window hides to the tray (`src-tauri/src/lib.rs`).
+- Closing the window hides to the tray (`src-tauri/src/lib.rs`) on **desktop OS only** (`#[cfg(desktop)]`). Android/iOS do not get tray or autostart.
 
 ## Data
 
@@ -64,6 +67,7 @@ Better Auth at `/api/auth/*` federates to the Grok broker (Google, X only). Do *
 - Format: `pnpm format` (Biome). Lint: `pnpm lint` (Biome). Tests: `pnpm test`.
 - After code changes: format, lint, then tests before claiming done.
 - Desktop/runtime claims require booting `Moya.app` or `pnpm desktop`, not path-exists.
+- On-device GGUF claims require a real Android or iOS/iPad device running a typed turn. Init success and `pnpm test` are not that.
 - One path per behavior. No dual auth, no “old origin still works” aliases.
 - Voice protocol JSON tests are not enough to claim barge-in works. `scripts/realtime-voice.test.mjs` must cover flush-stops-queued-sources and dropping stale output audio (`src/lib/realtime-playback.ts`).
 - Voice is the product. `scripts/voice-system.test.mjs` must stay red if Conversation speaker and the system `voiceURI` get mixed, empty Local omits `af_heart`, Web Speech finals become realtime Voice turns, leftover cancelled audio plays, or Settings stops using `src/lib/voice-contract.ts`.

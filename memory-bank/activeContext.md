@@ -2,40 +2,34 @@
 
 ## Current focus
 
-Version is one path: last `vX.Y.Z` tag plus commits after it. `package:mac` and Release apply that number. No `pnpm bump`, no Actions Bump. Four commits after `v0.1.0` is `0.1.4` at this HEAD.
+On-device GGUF on phone/tablet native apps: in-process llama.cpp via Tauri `invoke`, same JS tool loop. Web stays cloud-only. Mac keeps localhost sidecars.
 
-## Current focus (voice / UI)
+## Host gates
 
-Voice Settings matches Model: one Provider select, then only that provider’s fields. System is the built-in-voices choice (not a Mac option). Local Base URL is a field, not a hidden Connection drawer.
+- `isTauri()` — native webview (Mac, Android, iOS)
+- `isDesktop()` — alias of `isTauri()` for mic / notifications / “download Mac app”
+- `isDesktopOs()` — macOS / Windows / Linux only → Ollama, llama.cpp URL, Local Voice
+- `hasOnDeviceLlm()` — phone/tablet Tauri (or `llm_status.available`) → `ondevice`
+- Web: not Tauri → hide sidecars, no `ondevice`
 
-Web hides Local voice, Ollama, and llama.cpp. Effective settings on web fall back to System / xAI without writing the stored desktop row. Custom OpenAI-compatible stays.
+`liveSettings()` uses `hostCaps()`. A phone app must not show `127.0.0.1` Ollama.
 
 ## What just changed
 
-1. Shipping contract + CI + Mac Release on `main`. Version is git (last `v*` tag + commits). `package:mac` and Release apply it. No bump workflow.
-2. Product classes moved off colliding Moya names: `bg-accent` / `text-accent-fg` → `bg-primary` / `text-primary-foreground`; `text-muted` → `text-muted-foreground`.
-2. Brand palette SSOT: beige is `--color-brand` / `COLOR.brand`; gray text is `--color-quiet` / `COLOR.quiet`. `:root --primary` still points at beige.
-3. Unused `cmdk` and `vaul` removed so `@radix-ui/*` is gone from the lockfile.
-4. `Input` / `Textarea` dropped `forwardRef` (React 19 props refs).
-5. Focus rings are Tailwind `ring-inset`. Official nova outset `ring-3` was cropped by Dialog, ScrollArea, and the app shell. Not an Input-only bug.
-6. Visual UI audit (`scripts/ui-visual.test.mjs`) boots the app and checks painted focus on home + every Settings tab. Class-string grep is not a visual test. CI installs Playwright Chromium.
+1. Provider id `ondevice`: no `baseUrl`. `completeTurn` dispatches to `invoke("llm_complete")`. HTTP path extracted to `src/lib/llm-http.ts`.
+2. Shared Tauri commands in `src-tauri/src/llm.rs`. Desktop stub `available: false`. Android links llama.cpp + Vulkan; iOS/iPad Metal. Same APK/IPA on tablets.
+3. Settings/Setup GGUF picker downloads into app files. Suggested defaults: Qwen 3 1.7B Q4 and Gemma 4 E2B Q4.
+4. `tauri android init` / `tauri ios init` generated `src-tauri/gen/android` and `src-tauri/gen/apple` (gitignored). Tray/autostart are `#[cfg(desktop)]`.
+5. Voice on mobile: Grok or System. No speech-to-speech sidecar.
 
-## What is not done
+## What is not proven
 
-- Spoken Local Kokoro voice still needs a sidecar restart + listen (unchanged).
-- Do not `shadcn add --overwrite` customized wrappers. Do not `init -d`. Do not `migrate radix`.
-- Settings forms still use the local Field helper, not shadcn `Field` / `FieldGroup`.
-- Dropdowns are shadcn `Select` (`@base-ui/react/select`), not a native `<select>`. Focus is `outline-none` + `ring-inset` + `focus-visible:border-ring` + `ring-3 ring-ring/50`. Do not pad overflow parents to make room for an outset ring.
-
-## Active decisions
-
-- Beige CTA is `bg-primary`. `accent` is the muted hover surface so CLI-added components look right.
-- Wrappers keep Moya sizes (`h-11`) and `danger` / `destructive` aliases.
-- Calendar stays `react-day-picker`. Transcript calendar is behind the Calendar chip, not shown in List.
+- Typed `memory.write` on a real Android phone/tablet or iPhone/iPad. No device was attached (`adb devices` empty). Do not claim inference works from path-exists or init success.
+- Mac in-process llama.cpp (out of scope; sidecar stays).
+- On-device Voice (Parakeet/Kokoro).
 
 ## Next
 
-1. First DMG: Release must run on `main` in the same workflow. Later cuts are new commits after the last `v*` tag — `package:mac` / Release apply the next patch.
-2. Apple Developer ID signing/notarization still needs human secrets. Unsigned DMGs will Gatekeeper-warn until those are set.
-3. Spoken Local Kokoro voice still needs a sidecar restart + listen (unchanged).
-4. Add new UI with `pnpm dlx shadcn@latest add <name>` (Base UI). Replay Moya classes; do not overwrite.
+1. Boot the Android APK and iOS app on hardware; pick a small GGUF; prove a typed turn.
+2. If Android Vulkan cmake fails on NDK, fall back to CPU (`android-static-stdcxx` without `vulkan`).
+3. Homebrew rust has no `rustup`; mobile Rust targets were skipped at init (`--skip-targets-install`).

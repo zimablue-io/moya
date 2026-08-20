@@ -38,6 +38,12 @@ export const PROVIDER_PRESETS: Record<ProviderId, { label: string; model: string
 		baseUrl: "http://127.0.0.1:8080/v1",
 		hint: `You run llama-server. ${APP_NAME} does not start it. URL must end in /v1.`,
 	},
+	ondevice: {
+		label: "On-device",
+		model: "",
+		baseUrl: "",
+		hint: "GGUF on this phone or tablet. You pick the file. No localhost server.",
+	},
 	custom: {
 		label: "Custom OpenAI-compatible",
 		model: "",
@@ -143,36 +149,63 @@ export function isLocalOnlyProvider(id: string): boolean {
 	return id === "ollama" || id === "llamacpp"
 }
 
+export function isOnDeviceProvider(id: string): boolean {
+	return id === "ondevice"
+}
+
 export function isLocalOnlyVoice(id: string): boolean {
 	return id === "s2s"
 }
 
-export function providerChoicesForHost(desktop: boolean): ProviderId[] {
+/** `true` = Mac/Win/Linux native (sidecars). Object also gates in-process GGUF. */
+export type HostCaps = {
+	desktopOs: boolean
+	onDeviceLlm?: boolean
+}
+
+export function hostCapsFrom(caps: boolean | HostCaps): HostCaps {
+	if (typeof caps === "boolean") return { desktopOs: caps, onDeviceLlm: false }
+	return { desktopOs: caps.desktopOs, onDeviceLlm: Boolean(caps.onDeviceLlm) }
+}
+
+export function providerChoicesForHost(caps: boolean | HostCaps): ProviderId[] {
+	const { desktopOs, onDeviceLlm } = hostCapsFrom(caps)
 	const ids = Object.keys(PROVIDER_PRESETS) as ProviderId[]
-	return desktop ? ids : ids.filter((id) => !isLocalOnlyProvider(id))
+	return ids.filter((id) => {
+		if (isLocalOnlyProvider(id)) return desktopOs
+		if (isOnDeviceProvider(id)) return Boolean(onDeviceLlm)
+		return true
+	})
 }
 
-export function voiceChoicesForHost(desktop: boolean): VoiceBackendId[] {
-	return desktop ? [...VOICE_CHOICES] : VOICE_CHOICES.filter((id) => !isLocalOnlyVoice(id))
+export function voiceChoicesForHost(caps: boolean | HostCaps): VoiceBackendId[] {
+	const { desktopOs } = hostCapsFrom(caps)
+	return desktopOs ? [...VOICE_CHOICES] : VOICE_CHOICES.filter((id) => !isLocalOnlyVoice(id))
 }
 
-export function providerForHost(provider: ProviderConfig, desktop: boolean): ProviderConfig {
-	if (desktop || !isLocalOnlyProvider(provider.id)) return provider
+export function providerForHost(provider: ProviderConfig, caps: boolean | HostCaps): ProviderConfig {
+	const { desktopOs, onDeviceLlm } = hostCapsFrom(caps)
+	if (isOnDeviceProvider(provider.id) && !onDeviceLlm) {
+		const preset = PROVIDER_PRESETS.xai
+		return { id: "xai", model: preset.model, baseUrl: preset.baseUrl, apiKey: "" }
+	}
+	if (desktopOs || !isLocalOnlyProvider(provider.id)) return provider
 	const preset = PROVIDER_PRESETS.xai
 	return { id: "xai", model: preset.model, baseUrl: preset.baseUrl, apiKey: "" }
 }
 
-export function voiceBackendForHost(voice: VoiceConfig, desktop: boolean): VoiceConfig {
-	if (desktop || !isLocalOnlyVoice(voice.id)) return voice
+export function voiceBackendForHost(voice: VoiceConfig, caps: boolean | HostCaps): VoiceConfig {
+	const { desktopOs } = hostCapsFrom(caps)
+	if (desktopOs || !isLocalOnlyVoice(voice.id)) return voice
 	const preset = VOICE_PRESETS.browser
 	return { id: "browser", model: preset.model, baseUrl: preset.baseUrl, apiKey: "", voice: preset.voice }
 }
 
-export function settingsForHost(settings: Settings, desktop: boolean): Settings {
+export function settingsForHost(settings: Settings, caps: boolean | HostCaps): Settings {
 	return {
 		...settings,
-		provider: providerForHost(settings.provider, desktop),
-		voiceBackend: voiceBackendForHost(settings.voiceBackend, desktop),
+		provider: providerForHost(settings.provider, caps),
+		voiceBackend: voiceBackendForHost(settings.voiceBackend, caps),
 	}
 }
 

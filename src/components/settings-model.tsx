@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react"
 import { Field } from "@/components/settings-field"
+import { OnDeviceModels } from "@/components/settings-ondevice"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { isDesktop } from "@/lib/host"
+import { hostCaps } from "@/lib/host"
 import { listProviderModels } from "@/lib/llm"
 import { useApp } from "@/lib/store"
 import {
@@ -19,14 +20,14 @@ export function ModelTab() {
 	const settings = useApp((s) => s.settings)
 	const applyProvider = useApp((s) => s.applyProvider)
 	const dispatch = useApp((s) => s.dispatch)
-	const desktop = isDesktop()
-	const choices = providerChoicesForHost(desktop)
-	const provider = providerForHost(settings.provider, desktop)
+	const caps = hostCaps()
+	const choices = providerChoicesForHost(caps)
+	const provider = providerForHost(settings.provider, caps)
 	const preset = PROVIDER_PRESETS[provider.id]
 
 	const writeField = (field: "baseUrl" | "apiKey", value: string) => {
 		void (async () => {
-			if (!desktop && isLocalOnlyProvider(useApp.getState().settings.provider.id)) {
+			if (!caps.desktopOs && isLocalOnlyProvider(useApp.getState().settings.provider.id)) {
 				await dispatch("settings.provider", { id: provider.id })
 			}
 			await dispatch("settings.provider", { field, value })
@@ -63,7 +64,7 @@ export function ModelTab() {
 				<Field label="Base URL">
 					<Input value={provider.baseUrl} onChange={(e) => writeField("baseUrl", e.target.value)} />
 				</Field>
-			) : (
+			) : provider.id === "ondevice" ? null : (
 				<p className="text-xs text-subtle">{provider.baseUrl}</p>
 			)}
 			{provider.id === "xai" ||
@@ -81,7 +82,7 @@ export function ModelTab() {
 					/>
 				</Field>
 			) : null}
-			<ProviderModels provider={provider} />
+			{provider.id === "ondevice" ? <OnDeviceModels model={provider.model} /> : <ProviderModels provider={provider} />}
 		</div>
 	)
 }
@@ -94,7 +95,7 @@ function ProviderModels({ provider }: { provider: ProviderConfig }) {
 
 	const writeModel = (value: string) => {
 		void (async () => {
-			if (!isDesktop() && isLocalOnlyProvider(useApp.getState().settings.provider.id)) {
+			if (!hostCaps().desktopOs && isLocalOnlyProvider(useApp.getState().settings.provider.id)) {
 				await dispatch("settings.provider", { id: provider.id })
 			}
 			await dispatch("settings.provider", { field: "model", value })

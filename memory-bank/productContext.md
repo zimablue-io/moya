@@ -8,9 +8,9 @@ Household assistant that stays on this machine. Memory, transcript, routines, an
 
 - Open `/` and talk or type. No account required.
 - Settings → Voice is the same shape as Model: one Provider, then only that provider’s fields.
-- Providers: Local (Kokoro speaker + Base URL), Grok / OpenAI (speaker + key), System (this device’s built-in voices + rate + pitch). System is not a second block next to Local. Web hides Local, Ollama, and llama.cpp.
+- Providers: Local (Kokoro speaker + Base URL), Grok / OpenAI (speaker + key), System (this device’s built-in voices + rate + pitch). System is not a second block next to Local. Web hides Local, Ollama, llama.cpp URL, and on-device GGUF. Phone/tablet apps hide the localhost sidecars; Voice there is Grok or System.
 - A Mac `voiceURI` must never be sent on a Local / Grok / OpenAI `session.update`.
-- Settings → Model chooses the text LLM (xAI, OpenAI, Groq, OpenRouter, and on desktop Ollama / llama.cpp). That is not the voice server.
+- Settings → Model chooses the text LLM (xAI, OpenAI, Groq, OpenRouter; on Mac also Ollama / llama.cpp URL; on phone/tablet native apps, optional on-device GGUF). That is not the voice server.
 - Local Voice talks to `http://127.0.0.1:8765/v1` → `ws://127.0.0.1:8765/v1/realtime`. The human starts `speech-to-speech`.
 - Barge-in: keep sending mic audio while the agent talks. Flush every queued playback source on `speech_started`. Do not mute the mic to dodge echo.
 

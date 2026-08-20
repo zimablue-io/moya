@@ -24,7 +24,7 @@ Local Conversation speaker is **Kokoro ids only** (`af_heart`, `af_bella`, `bm_f
 
 `browser` (System) is a Voice provider, not a second settings section. Voice mode then uses Web Speech listen + the device TTS. Realtime backends never receive a system `voiceURI`.
 
-Web pickers use `voiceChoicesForHost(false)` / `providerChoicesForHost(false)`. Local (`s2s`), Ollama, and llama.cpp are desktop-only. `liveSettings()` remaps those ids at connect/send time without writing persist.
+Web pickers use `voiceChoicesForHost(false)` / `providerChoicesForHost(false)`. Local (`s2s`), Ollama, and llama.cpp URL are **desktop OS** only (`hostCaps().desktopOs`). In-process GGUF is `ondevice` when `hostCaps().onDeviceLlm`. `liveSettings()` remaps those ids at connect/send time without writing persist. `completeTurn` uses `fetch` unless `provider.id === "ondevice"`, then `invoke("llm_complete")`.
 
 Settings must `await` `settings.voice` before `restartVoiceIfNeeded()`. Fire-and-forget `void run()` then restart reads the old voice.
 

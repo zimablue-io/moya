@@ -1,6 +1,6 @@
 # Project brief — Moya
 
-Moya is a **local-first personal assistant** (web + Tauri desktop). Product copy, routes, and data stay on-device. Do not re-scaffold it as a generic app-builder template.
+Moya is a **local-first personal assistant** (web + Tauri desktop; Android/iOS in the same repo). Product copy, routes, and data stay on-device. Do not re-scaffold it as a generic app-builder template.
 
 **Tagline:** One assistant. Local first. Voice first.
 
@@ -9,8 +9,8 @@ Moya is a **local-first personal assistant** (web + Tauri desktop). Product copy
 - Home (`/`) is the assistant. Sign-in is optional; `/login` is not a gate.
 - Voice- and text-first chat with a presence UI.
 - On-device memory, transcript (list + calendar), routines, inbox, sources, and settings.
-- Chat completion is a client `fetch` to the configured provider. Desktop uses the same function.
-- Voice mode is OpenAI Realtime over WebSocket. Local voice is `huggingface/speech-to-speech` on `:8765`. llama.cpp is Settings → Model only; it is not a voice server.
+- Chat completion is `completeTurn` (`src/lib/llm.ts`): `fetch` for cloud and Mac sidecars; `invoke("llm_complete")` for provider `ondevice` on native Android/iOS.
+- Voice mode is OpenAI Realtime over WebSocket. Local voice is `huggingface/speech-to-speech` on `:8765` (Mac). llama.cpp is Settings → Model only; it is not a voice server.
 - Moya does **not** start speech-to-speech or llama-server.
 - The packaged `.app` has no Node server. Do not add `createServerFn` paths the `.app` must call.
 
