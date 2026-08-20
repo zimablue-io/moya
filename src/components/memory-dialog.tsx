@@ -90,7 +90,7 @@ export function MemoryDialog() {
 											) : (
 												<button
 													type="button"
-													className="mt-1.5 w-full text-left text-sm leading-relaxed text-fg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+													className="mt-1.5 w-full text-left text-sm leading-relaxed text-fg outline-none ring-inset focus-visible:ring-3 focus-visible:ring-ring/50"
 													onClick={() => {
 														setEditing(m.id)
 														setEditText(m.text)

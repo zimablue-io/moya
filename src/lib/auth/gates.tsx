@@ -67,7 +67,7 @@ export function UserButton() {
 				<button
 					type="button"
 					onClick={() => void signOut()}
-					className="cursor-pointer text-sm underline-offset-4 opacity-70 outline-none hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
+					className="cursor-pointer text-sm underline-offset-4 opacity-70 outline-none ring-inset hover:underline focus-visible:ring-3 focus-visible:ring-ring/50"
 				>
 					Sign out
 				</button>

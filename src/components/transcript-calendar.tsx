@@ -85,7 +85,7 @@ export function TranscriptCalendar({
 				day: "min-h-0 min-w-0 flex-1 p-0",
 				day_button: cn(
 					"type-chip flex size-full min-h-0 flex-col items-start gap-0.5 rounded-lg p-1.5 text-left text-fg",
-					"outline-none hover:bg-surface-2 focus-visible:ring-3 focus-visible:ring-ring/50",
+					"outline-none ring-inset hover:bg-surface-2 focus-visible:ring-3 focus-visible:ring-ring/50",
 				),
 				selected: "[&>button]:bg-primary [&>button]:text-primary-foreground [&>button]:hover:bg-primary",
 				today: "[&>button]:ring-1 [&>button]:ring-border-strong",

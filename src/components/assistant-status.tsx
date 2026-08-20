@@ -46,7 +46,7 @@ export function AssistantStatus({
 							key={verb.id}
 							type="button"
 							onClick={() => onVerb(verb)}
-							className="type-chip h-11 rounded-full border border-border bg-surface px-4 text-muted-foreground transition-colors outline-none hover:text-fg focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+							className="type-chip h-11 rounded-full border border-border bg-surface px-4 text-muted-foreground transition-colors outline-none ring-inset hover:text-fg focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
 						>
 							{verb.label}
 						</button>
@@ -59,7 +59,7 @@ export function AssistantStatus({
 					{micFix || /mic is blocked|microphone/i.test(error) ? (
 						<button
 							type="button"
-							className="pointer-events-auto text-xs text-fg underline decoration-border underline-offset-4 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+							className="pointer-events-auto text-xs text-fg underline decoration-border underline-offset-4 outline-none ring-inset focus-visible:ring-3 focus-visible:ring-ring/50"
 							onClick={() => {
 								void allowMicrophone().then((result) => {
 									if (result !== "granted") {

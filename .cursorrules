@@ -35,6 +35,10 @@ AGENTS.md wins on product/desktop/auth. This file is the living journal. The pub
 - `scripts/shipping-contract.test.mjs` must stay red if those workflows disappear or stop publishing.
 - Version is the last `vX.Y.Z` tag plus one patch per commit after it. `pnpm package:mac` and Release both apply that number. Do not add a second bump command or workflow. Do not hand-edit one of package.json / tauri.conf.json / Cargo.toml / Cargo.lock / `APP_VERSION`.
 
+## Focus
+
+- Focus is `outline-none` + `ring-inset` + `focus-visible:border-ring` + `ring-3 ring-ring/50`. Outset rings clip inside Dialog, ScrollArea, and the app shell. Do not pad overflow parents to fake space for them. `scripts/focus-ring.test.mjs` stays red if a class string paints a ring without `ring-inset`.
+
 ## Owner preference
 
 - Do not claim Voice, Settings, or fonts work from tests or “should”. State evidence.

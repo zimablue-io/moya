@@ -8,7 +8,7 @@ function Switch({ className, ...props }: SwitchPrimitive.Root.Props) {
 			className={cn(
 				"peer inline-flex h-6 w-11 shrink-0 items-center rounded-full border border-border transition-colors outline-none",
 				"data-checked:bg-primary data-unchecked:bg-surface-2",
-				"focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
+				"ring-inset focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50",
 				className,
 			)}
 			{...props}

@@ -102,7 +102,7 @@ export function HistoryDialog() {
 					{mode === "list" && dayKey ? (
 						<button
 							type="button"
-							className="shrink-0 text-xs text-muted-foreground transition-colors outline-none hover:text-fg focus-visible:ring-3 focus-visible:ring-ring/50"
+							className="shrink-0 text-xs text-muted-foreground transition-colors outline-none ring-inset hover:text-fg focus-visible:ring-3 focus-visible:ring-ring/50"
 							onClick={() => setDayKey(null)}
 						>
 							All days · {formatLocalDayKey(dayKey)}

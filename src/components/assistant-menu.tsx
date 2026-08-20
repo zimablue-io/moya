@@ -51,7 +51,7 @@ export function AssistantMenu({ pending }: { pending: number }) {
 						}}
 						style={{ transitionDelay: menuOpen ? `${i * 45}ms` : "0ms" }}
 						className={cn(
-							"group flex items-center justify-end gap-4 text-right transition-[opacity,transform,filter] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] outline-none focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]",
+							"group flex items-center justify-end gap-4 text-right transition-[opacity,transform,filter] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] outline-none ring-inset focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]",
 							menuOpen ? "translate-x-0 opacity-100 blur-0" : "translate-x-6 opacity-0 blur-[4px]",
 						)}
 					>
@@ -73,7 +73,7 @@ export function AssistantMenu({ pending }: { pending: number }) {
 						onClick={() => setMenuOpen(false)}
 						style={{ transitionDelay: menuOpen ? `${tools.length * 45}ms` : "0ms" }}
 						className={cn(
-							"group flex items-center justify-end gap-4 text-right transition-[opacity,transform,filter] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] outline-none focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]",
+							"group flex items-center justify-end gap-4 text-right transition-[opacity,transform,filter] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] outline-none ring-inset focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]",
 							menuOpen ? "translate-x-0 opacity-100 blur-0" : "translate-x-6 opacity-0 blur-[4px]",
 						)}
 					>

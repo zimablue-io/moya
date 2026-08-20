@@ -32,7 +32,7 @@ export function InfoTip({ text }: { text: string }) {
 				render={
 					<button
 						type="button"
-						className="inline-flex size-7 items-center justify-center rounded-full text-subtle outline-none hover:bg-surface-2 hover:text-fg focus-visible:ring-3 focus-visible:ring-ring/50"
+						className="inline-flex size-7 items-center justify-center rounded-full text-subtle outline-none ring-inset hover:bg-surface-2 hover:text-fg focus-visible:ring-3 focus-visible:ring-ring/50"
 						aria-label="About this setting"
 					/>
 				}

@@ -29,7 +29,7 @@ function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
 			className={cn(
 				"type-chip inline-flex h-9 items-center justify-center rounded-md px-3 text-muted-foreground transition-colors outline-none",
 				"data-active:bg-surface data-active:text-fg",
-				"focus-visible:ring-3 focus-visible:ring-ring/50",
+				"ring-inset focus-visible:ring-3 focus-visible:ring-ring/50",
 				className,
 			)}
 			{...props}

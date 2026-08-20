@@ -34,7 +34,7 @@ function Login() {
 				)}
 				<a
 					href="/"
-					className="block text-center text-sm text-muted-foreground outline-none hover:text-fg focus-visible:ring-3 focus-visible:ring-ring/50"
+					className="block text-center text-sm text-muted-foreground outline-none ring-inset hover:text-fg focus-visible:ring-3 focus-visible:ring-ring/50"
 				>
 					Back
 				</a>

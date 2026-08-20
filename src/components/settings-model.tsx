@@ -127,7 +127,7 @@ function ProviderModels() {
 				</p>
 				<button
 					type="button"
-					className="text-xs text-muted-foreground underline decoration-border underline-offset-4 outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+					className="text-xs text-muted-foreground underline decoration-border underline-offset-4 outline-none ring-inset focus-visible:ring-3 focus-visible:ring-ring/50"
 					onClick={() => {
 						setChecking(true)
 						void listProviderModels({

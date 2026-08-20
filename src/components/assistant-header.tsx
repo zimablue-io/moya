@@ -22,7 +22,7 @@ export function AssistantHeader({ clock, pending, firstRun }: { clock: string; p
 				aria-expanded={menuOpen}
 				onClick={() => setMenuOpen(!menuOpen)}
 				className={cn(
-					"pointer-events-auto relative z-40 grid size-11 place-items-center rounded-full text-muted-foreground transition-[color,background-color,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] outline-none hover:bg-surface-2 hover:text-fg focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]",
+					"pointer-events-auto relative z-40 grid size-11 place-items-center rounded-full text-muted-foreground transition-[color,background-color,transform] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] outline-none ring-inset hover:bg-surface-2 hover:text-fg focus-visible:ring-3 focus-visible:ring-ring/50 active:scale-[0.96]",
 					menuOpen && "bg-surface-2 text-fg",
 				)}
 			>

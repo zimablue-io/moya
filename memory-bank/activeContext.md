@@ -15,13 +15,14 @@ Voice Settings matches Model: one Provider select, then only that provider’s f
 2. Brand palette SSOT: beige is `--color-brand` / `COLOR.brand`; gray text is `--color-quiet` / `COLOR.quiet`. `:root --primary` still points at beige.
 3. Unused `cmdk` and `vaul` removed so `@radix-ui/*` is gone from the lockfile.
 4. `Input` / `Textarea` dropped `forwardRef` (React 19 props refs).
+5. Focus rings are Tailwind `ring-inset`. Official nova outset `ring-3` was cropped by Dialog, ScrollArea, and the app shell. Not an Input-only bug.
 
 ## What is not done
 
 - Spoken Local Kokoro voice still needs a sidecar restart + listen (unchanged).
 - Do not `shadcn add --overwrite` customized wrappers. Do not `init -d`. Do not `migrate radix`.
 - Settings forms still use the local Field helper, not shadcn `Field` / `FieldGroup`.
-- Dropdowns are shadcn `Select` (`@base-ui/react/select`), not a native `<select>`. Focus is `outline-none` + `focus-visible:border-ring` + `ring-3 ring-ring/50`.
+- Dropdowns are shadcn `Select` (`@base-ui/react/select`), not a native `<select>`. Focus is `outline-none` + `ring-inset` + `focus-visible:border-ring` + `ring-3 ring-ring/50`. Do not pad overflow parents to make room for an outset ring.
 
 ## Active decisions
 

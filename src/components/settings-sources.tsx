@@ -118,7 +118,7 @@ export function SourcesPanel({
 											type="button"
 											aria-pressed={selected}
 											className={cn(
-												"relative flex min-h-24 flex-col items-center justify-center gap-2 rounded-xl bg-surface-2 px-2 py-3 text-fg ring-2 ring-transparent outline-none",
+												"relative flex min-h-24 flex-col items-center justify-center gap-2 rounded-xl bg-surface-2 px-2 py-3 text-fg ring-2 ring-inset ring-transparent outline-none",
 												"hover:bg-surface focus-visible:ring-ring/50",
 												selected && "ring-ring",
 											)}

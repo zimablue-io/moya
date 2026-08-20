@@ -77,7 +77,7 @@ export function TranscriptMinimap({
 		<div className="relative flex w-7 shrink-0 flex-col items-center py-0.5">
 			<button
 				type="button"
-				className="grid size-6 place-items-center rounded-md text-subtle outline-none hover:bg-surface-2 hover:text-fg focus-visible:ring-3 focus-visible:ring-ring/50"
+				className="grid size-6 place-items-center rounded-md text-subtle outline-none ring-inset hover:bg-surface-2 hover:text-fg focus-visible:ring-3 focus-visible:ring-ring/50"
 				aria-label="Scroll up"
 				onClick={() => page(-1)}
 			>
@@ -85,7 +85,7 @@ export function TranscriptMinimap({
 			</button>
 			<div
 				ref={(node) => setTrackH(node?.clientHeight ?? 0)}
-				className="relative min-h-0 w-full flex-1 cursor-pointer outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+				className="relative min-h-0 w-full flex-1 cursor-pointer outline-none ring-inset focus-visible:ring-3 focus-visible:ring-ring/50"
 				role="slider"
 				aria-label="Transcript position"
 				aria-valuemin={0}
@@ -129,7 +129,7 @@ export function TranscriptMinimap({
 			</div>
 			<button
 				type="button"
-				className="grid size-6 place-items-center rounded-md text-subtle outline-none hover:bg-surface-2 hover:text-fg focus-visible:ring-3 focus-visible:ring-ring/50"
+				className="grid size-6 place-items-center rounded-md text-subtle outline-none ring-inset hover:bg-surface-2 hover:text-fg focus-visible:ring-3 focus-visible:ring-ring/50"
 				aria-label="Scroll down"
 				onClick={() => page(1)}
 			>
