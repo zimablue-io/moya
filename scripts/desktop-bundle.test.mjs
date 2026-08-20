@@ -122,6 +122,12 @@ test("package:mac does not force CI so a local DMG can be a drag-to-Applications
 		false,
 		"CI=true skips Finder layout and leaves a huge empty folder window",
 	)
+	assert.match(pkg.scripts["package:mac"], /package-mac\.mjs/)
+})
+
+test("beforeBundleCommand ejects leftover Moya volumes right before the DMG, not only 40s earlier", () => {
+	const conf = readConf()
+	assert.match(conf.build?.beforeBundleCommand ?? "", /desktop-frontend\.mjs/)
 })
 
 test("DMG is a 660×400 drag-to-Applications window, not a default folder view", () => {

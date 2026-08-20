@@ -17,7 +17,7 @@ This is **Moya**, a local-first personal assistant (web + Tauri desktop; Android
 ```sh
 pnpm dev              # http://127.0.0.1:5173
 pnpm desktop          # tauri dev; beforeDevCommand is `npm run dev`
-pnpm package:mac      # tauri build → .app + drag-to-Applications .dmg (needs Finder)
+pnpm package:mac      # signed .app + drag-to-Applications .dmg (retries bundle_dmg.sh if Tauri hides the error)
 pnpm android:init     # generate Android Studio project (needs SDK/NDK)
 pnpm ios:init         # generate Xcode project
 pnpm test

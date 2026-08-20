@@ -2,7 +2,7 @@
 
 ## Current focus
 
-`pnpm package:mac` is `tauri build` only. It does not rewrite versions. Failed DMG runs leave `rw.*.dmg` next to `Moya.app` and can leave `/Volumes/Moya` mounted; the next `-srcfolder` packs those leftovers in and `bundle_dmg.sh` dies. `desktop-frontend.mjs` (already the beforeBuild hook) deletes those temps and ejects leftover Moya volumes.
+Root cause of `pnpm package:mac` failing for the owner and succeeding in the agent shell: `osascript` → Finder returns **Not authorized to send Apple events to Finder (-1743)**. That is a per-app TCC Automation grant. The owner’s terminal does not have Finder. Cursor (this agent) does. Retrying the same AppleScript cannot fix it. Last retry now uses `--skip-jenkins` so the command still writes a DMG; pretty layout needs System Settings → Privacy & Security → Automation → [that terminal] → Finder.
 
 On-device GGUF on phone/tablet native apps: in-process llama.cpp via Tauri `invoke`, same JS tool loop. Web stays cloud-only. Mac keeps localhost sidecars.
 
