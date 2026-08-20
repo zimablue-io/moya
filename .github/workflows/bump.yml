@@ -40,4 +40,4 @@ jobs:
           body: |
             Lockstep bump `${{ steps.bump.outputs.previous }}` → `${{ steps.bump.outputs.version }}` via `pnpm bump ${{ inputs.bump }}`.
 
-            Merge this PR. The Tag workflow creates `v${{ steps.bump.outputs.version }}` and Release publishes the Mac DMG.
+            Merge this PR. Release on `main` builds and publishes the Mac DMG for `v${{ steps.bump.outputs.version }}`.

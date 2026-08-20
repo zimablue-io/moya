@@ -20,10 +20,10 @@ pnpm package:mac      # CI=true tauri build → .app + .dmg
 pnpm test
 pnpm lint
 pnpm typecheck
-pnpm bump patch   # lockstep SemVer; open a PR. Tag + Release follow merge
+pnpm bump patch   # lockstep SemVer; land on main. Release builds the DMG in that run
 ```
 
-CI (`.github/workflows/ci.yml`) runs lint, format check, typecheck, and tests on every pull request. `pnpm bump <patch|minor|major|X.Y.Z>` is the only version increment. Merging that PR tags `vX.Y.Z` and publishes the Mac DMG. Do not advertise Download or a README release URL without that publish job. `scripts/shipping-contract.test.mjs` must stay red if the workflows disappear.
+CI (`.github/workflows/ci.yml`) runs lint, format check, typecheck, and tests on every pull request. `pnpm bump <patch|minor|major|X.Y.Z>` is the only version increment. Landing that on `main` publishes the Mac DMG in the same Release workflow — a `GITHUB_TOKEN` tag push cannot start a second job. Do not advertise Download or a README release URL without that publish job. `scripts/shipping-contract.test.mjs` must stay red if the workflows disappear.
 
 Release artifacts:
 

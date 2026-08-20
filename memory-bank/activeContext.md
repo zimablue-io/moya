@@ -31,7 +31,7 @@ Voice Settings matches Model: one Provider select, then only that provider’s f
 
 ## Next
 
-1. Merge this onto `main` via PR so CI can run. The Tag workflow will create `v0.1.0` and Release will publish the first DMG. Later cuts: `pnpm bump patch` (or Actions → Bump).
+1. First DMG: Release must run on `main` in the same workflow. `v0.1.0` exists as a tag but has no assets — GITHUB_TOKEN tag push did not start Release. Later cuts: `pnpm bump patch`.
 2. Apple Developer ID signing/notarization still needs human secrets. Unsigned DMGs will Gatekeeper-warn until those are set.
 3. Spoken Local Kokoro voice still needs a sidecar restart + listen (unchanged).
 4. Add new UI with `pnpm dlx shadcn@latest add <name>` (Base UI). Replay Moya classes; do not overwrite.

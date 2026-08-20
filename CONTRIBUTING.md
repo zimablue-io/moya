@@ -30,7 +30,7 @@ pnpm bump major    # 0.1.0 → 1.0.0
 pnpm bump 0.2.0    # explicit
 ```
 
-Open a PR with those files (or run **Actions → Bump**). After it merges, the Tag workflow creates `vX.Y.Z` and Release publishes the DMG. Do not hand-edit one version file, and do not push a tag that does not match `package.json`.
+Open a PR with those files (or run **Actions → Bump**). After it lands on `main`, Release builds the DMG in the same run (a `GITHUB_TOKEN` tag push cannot start a second workflow). Do not hand-edit one version file.
 
 `DOWNLOAD_APP_URL` is `https://github.com/zimablue-io/moya/releases/latest/download/Moya_aarch64.dmg` so the browser fetches the file instead of the releases page. Release also uploads the versioned Tauri DMG.
 

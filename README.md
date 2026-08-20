@@ -81,7 +81,7 @@ A green Voice test suite proves Moya’s contract, not that a sidecar spoke the 
 pnpm bump patch    # lockstep SemVer bump → open a PR
 ```
 
-Or **Actions → Bump**. After merge, Tag creates `vX.Y.Z` and Release publishes the Mac DMG to [the latest release](https://github.com/zimablue-io/moya/releases/latest). Until Apple Developer ID secrets are set, Gatekeeper will warn; right-click the app → Open.
+Or **Actions → Bump**. After it lands on `main`, Release builds and publishes the Mac DMG. Until Apple Developer ID secrets are set, Gatekeeper will warn; right-click the app → Open.
 
 ## License
 

@@ -8,7 +8,6 @@ export const EXPECTED_DOWNLOAD_URL = `https://github.com/zimablue-io/moya/releas
 export const CI_WORKFLOW = ".github/workflows/ci.yml"
 export const RELEASE_WORKFLOW = ".github/workflows/release.yml"
 export const BUMP_WORKFLOW = ".github/workflows/bump.yml"
-export const TAG_WORKFLOW = ".github/workflows/tag.yml"
 export const PR_TEMPLATE = ".github/pull_request_template.md"
 
 export function readRel(root, rel) {
@@ -66,6 +65,9 @@ export function assertReleaseWorkflow(yaml) {
 	if (!/tags:/.test(yaml) || !/v\*/.test(yaml)) {
 		throw new Error("Release must trigger on version tags (v*)")
 	}
+	if (!/branches:/.test(yaml) || !/\bmain\b/.test(yaml)) {
+		throw new Error("Release must run on main — a GITHUB_TOKEN tag push cannot start a second workflow")
+	}
 	if (!/macos/.test(yaml)) {
 		throw new Error("Release must build the Mac app on a macOS runner")
 	}
@@ -100,18 +102,6 @@ export function assertBumpWorkflow(yaml) {
 	}
 }
 
-export function assertTagWorkflow(yaml) {
-	if (!/\bmain\b/.test(yaml)) {
-		throw new Error("Tag must run on main so a merged bump becomes vX.Y.Z")
-	}
-	if (!/git tag/.test(yaml) || !/git push/.test(yaml)) {
-		throw new Error("Tag must create and push vX.Y.Z")
-	}
-	if (!/release-version\.mjs/.test(yaml)) {
-		throw new Error("Tag must read the lockstep version from release-version.mjs")
-	}
-}
-
 export function assertShippingContract(root) {
 	if (DOWNLOAD_APP_ASSET !== EXPECTED_DOWNLOAD_ASSET) {
 		throw new Error(`DOWNLOAD_APP_ASSET must stay ${EXPECTED_DOWNLOAD_ASSET} (got ${DOWNLOAD_APP_ASSET})`)
@@ -137,11 +127,7 @@ export function assertShippingContract(root) {
 	if (!existsSync(join(root, BUMP_WORKFLOW))) {
 		throw new Error(`${BUMP_WORKFLOW} is missing — version bumps must be a dispatch that opens a PR`)
 	}
-	if (!existsSync(join(root, TAG_WORKFLOW))) {
-		throw new Error(`${TAG_WORKFLOW} is missing — merging a bump must tag vX.Y.Z`)
-	}
 	assertBumpWorkflow(readRel(root, BUMP_WORKFLOW))
-	assertTagWorkflow(readRel(root, TAG_WORKFLOW))
 	const pkg = JSON.parse(readRel(root, "package.json"))
 	if (!/bump-version\.mjs/.test(pkg.scripts?.bump ?? "")) {
 		throw new Error("package.json scripts.bump must run scripts/bump-version.mjs")

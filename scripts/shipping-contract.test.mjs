@@ -10,7 +10,6 @@ import {
 	assertCiWorkflow,
 	assertReleaseWorkflow,
 	assertShippingContract,
-	assertTagWorkflow,
 	assertVersionsMatch,
 	CI_WORKFLOW,
 	EXPECTED_DOWNLOAD_URL,
@@ -48,28 +47,34 @@ test("Download and README advertise GitHub latest, which requires a publish work
 	assert.ok(shipped.workflows.includes("ci.yml"))
 	assert.ok(shipped.workflows.includes("release.yml"))
 	assert.ok(shipped.workflows.includes("bump.yml"))
-	assert.ok(shipped.workflows.includes("tag.yml"))
+	assert.equal(shipped.workflows.includes("tag.yml"), false)
 })
 
 test("a URL-shaped Download link is not enough without CI and a Mac release job", () => {
 	assert.throws(() => assertCiWorkflow("name: ci\non: push\n"), /pull_request/)
 	assert.throws(() => assertCiWorkflow("on: pull_request\n"), /pnpm test/)
-	assert.throws(() => assertReleaseWorkflow("on:\n  push:\n    tags:\n      - v*\n"), /macOS runner/)
+	assert.throws(() => assertReleaseWorkflow("on:\n  push:\n    tags:\n      - v*\n"), /main/)
 	assert.throws(
-		() => assertReleaseWorkflow("on:\n  push:\n    tags:\n      - v*\nruns-on: macos-latest\n"),
+		() => assertReleaseWorkflow("on:\n  push:\n    tags:\n      - v*\n    branches: [main]\n"),
+		/macOS runner/,
+	)
+	assert.throws(
+		() => assertReleaseWorkflow("on:\n  push:\n    tags:\n      - v*\n    branches: [main]\nruns-on: macos-latest\n"),
 		/package:mac/,
 	)
 	assert.throws(
-		() => assertReleaseWorkflow("on:\n  push:\n    tags:\n      - v*\nruns-on: macos-latest\nrun: pnpm package:mac\n"),
+		() =>
+			assertReleaseWorkflow(
+				"on:\n  push:\n    tags:\n      - v*\n    branches: [main]\nruns-on: macos-latest\nrun: pnpm package:mac\n",
+			),
 		/gh release create/,
 	)
 	assert.throws(
 		() =>
 			assertReleaseWorkflow(
-				"on:\n  push:\n    tags:\n      - v*\nruns-on: macos-latest\nrun: pnpm package:mac\ngh release create\ncontents: write\n*.dmg\n",
+				"on:\n  push:\n    tags:\n      - v*\n    branches: [main]\nruns-on: macos-latest\nrun: pnpm package:mac\ngh release create\ncontents: write\n*.dmg\n",
 			),
 		/Moya_aarch64\.dmg/,
 	)
 	assert.throws(() => assertBumpWorkflow("on: push\n"), /workflow_dispatch/)
-	assert.throws(() => assertTagWorkflow("on: push\n"), /main/)
 })
