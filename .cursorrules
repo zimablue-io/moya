@@ -30,7 +30,7 @@ AGENTS.md wins on product/desktop/auth. This file is the living journal. The pub
 
 ## Shipping surfaces
 
-- If the product or README advertises Download / `releases/latest`, `.github/workflows/release.yml` must publish a `.dmg` on `v*` tags. A URL-shaped test is not enough.
+- Do not advertise a GitHub DMG as the Mac install. Apple blocks unsigned internet downloads. Menu/README go to `#mac-app` (clone + `pnpm package:mac`). A Releases `.dmg` is optional.
 - Pull requests are the path onto `main`. `.github/workflows/ci.yml` must run `pnpm lint`, `pnpm typecheck`, and `pnpm test`.
 - `scripts/shipping-contract.test.mjs` must stay red if those workflows disappear or stop publishing.
 - Version increment is `pnpm bump <patch|minor|major|X.Y.Z>` only. It writes package.json, tauri.conf.json, Cargo.toml, Cargo.lock, and `APP_VERSION`. Do not hand-edit one file.

@@ -32,9 +32,7 @@ pnpm bump 0.2.0    # explicit
 
 Open a PR with those files (or run **Actions → Bump**). After it lands on `main`, Release builds the DMG in the same run (a `GITHUB_TOKEN` tag push cannot start a second workflow). Do not hand-edit one version file.
 
-The menu Download control only appears after GitHub’s latest release lists `Moya_aarch64.dmg`. A hardcoded `releases/latest/download` link 404s while that asset is missing. Release also uploads the versioned Tauri DMG.
-
-Release unsets Apple signing env when `APPLE_CERTIFICATE` is empty or not valid base64, then sets `APPLE_SIGNING_IDENTITY=-`. A linker-signed-only `.app` (no sealed resources) is what macOS reports as “damaged” after a browser download. Ad-hoc signing seals the bundle; first open still goes through System Settings → Privacy & Security → Open Anyway until a Developer ID + notarization cert is set.
+The menu Mac app control links to README `#mac-app` (clone + `pnpm package:mac`). Do not send people to a GitHub DMG as the install path — Apple blocks unsigned internet downloads. A Releases DMG is optional. Local builds open without that sheet because they were not downloaded from the internet.
 
 ## Product rules that regress easily
 

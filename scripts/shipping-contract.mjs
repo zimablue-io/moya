@@ -101,6 +101,9 @@ export function assertReleaseWorkflow(yaml) {
 	if (!/codesign --verify/.test(yaml)) {
 		throw new Error("Release must codesign --verify the .app so a linker-signed-only bundle cannot publish")
 	}
+	if (!/CI:\s*"true"/.test(yaml)) {
+		throw new Error("Release must set CI=true so headless Mac runners skip Finder AppleScript")
+	}
 }
 
 export function assertBumpWorkflow(yaml) {
@@ -125,20 +128,21 @@ export function assertShippingContract(root) {
 	const readme = readRel(root, "README.md")
 	if (readme.includes(EXPECTED_DOWNLOAD_URL)) {
 		throw new Error(
-			"README must not hard-link releases/latest/download — that URL 404s until a DMG exists. Link /releases instead.",
+			"README must not hard-link releases/latest/download — that is not the install path. Document #mac-app instead.",
 		)
 	}
 	if (!readme.includes("https://github.com/zimablue-io/moya/releases")) {
-		throw new Error("README must link GitHub Releases for Mac builds")
+		throw new Error("README may mention GitHub Releases as an optional artifact, not the install path")
 	}
 	const menu = readRel(root, "src/components/assistant-menu.tsx")
-	if (!/resolveMacDownloadUrl/.test(menu)) {
-		throw new Error(
-			"Download must resolve a live GitHub asset — a hardcoded latest/download URL 404s when no Release exists",
-		)
+	if (!/macAppInstallUrl/.test(menu)) {
+		throw new Error("Mac app must send people to build-from-source, not a GitHub DMG")
 	}
-	if (/href=\{DOWNLOAD_APP_URL\}/.test(menu)) {
-		throw new Error("Download must not use DOWNLOAD_APP_URL as a static href")
+	if (/href=\{DOWNLOAD_APP_URL\}/.test(menu) || /resolveMacDownloadUrl/.test(menu)) {
+		throw new Error("Menu must not use the GitHub DMG URL — Apple blocks unsigned internet downloads")
+	}
+	if (!readme.includes("#mac-app") || !/pnpm package:mac/.test(readme)) {
+		throw new Error("README must document #mac-app as clone + pnpm package:mac")
 	}
 	const tauri = JSON.parse(readRel(root, "src-tauri/tauri.conf.json"))
 	if (tauri.bundle?.macOS?.signingIdentity !== "-") {

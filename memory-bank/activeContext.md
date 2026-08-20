@@ -2,7 +2,7 @@
 
 ## Current focus
 
-v0.1.0 DMG downloads (7.5MB) but Finder says the app is damaged. Measured: Mach-O is `adhoc,linker-signed` with `Sealed Resources=none`; `codesign --verify` fails (`code has no resources but signature indicates they must be present`). Frontend is embedded in the 9.3MB binary. Fix: `signingIdentity: "-"` plus Release `APPLE_SIGNING_IDENTITY=-` and a sealed-resources check before upload.
+DMG background is one full-bleed light fill plus an arrow. An inset “card” on the PNG sat inside Finder’s own window fill and looked like two backgrounds.
 
 ## Current focus (voice / UI)
 

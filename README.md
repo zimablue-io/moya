@@ -4,7 +4,7 @@ One assistant. Local first. Voice first.
 
 Moya is a personal assistant that runs on this machine. Memory, transcript, routines, inbox, and API keys stay on-device. You bring the model — a local server or your own cloud key.
 
-[Mac builds](https://github.com/zimablue-io/moya/releases) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+[Mac app](#mac-app) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
 ## What it does
 
@@ -38,6 +38,20 @@ pnpm lint
 pnpm typecheck
 pnpm format
 ```
+
+## Mac app
+
+Apple will not silently open a `.app` you downloaded from the internet unless the maintainer pays for a Developer ID and notarizes the build. Moya is MIT and does not do that. Other open-source tools you run with `pnpm`, `cargo`, or Homebrew from source skip this because **you compiled them on this Mac**.
+
+```sh
+git clone https://github.com/zimablue-io/moya.git
+cd moya
+pnpm install
+pnpm package:mac
+open src-tauri/target/release/bundle/macos/Moya.app
+```
+
+`pnpm desktop` is the same app during development (Vite + Tauri). A [GitHub Releases](https://github.com/zimablue-io/moya/releases) DMG is an optional artifact; opening it still hits **Apple could not verify…** until someone notarizes.
 
 ### Desktop artifacts
 
@@ -73,7 +87,7 @@ React 19, TanStack Start, Tailwind v4, Better Auth, PGLite (or Neon when `DATABA
 
 A green Voice test suite proves Moya’s contract, not that a sidecar spoke the selected voice.
 
-`pnpm test` also checks the shipping contract: the Download link above is only honest if CI gates pull requests and a Release workflow publishes a `.dmg` when you tag `v*`.
+`pnpm test` also checks the shipping contract: CI gates pull requests, and Release may publish a `.dmg` on `v*` tags. That file is not the install path.
 
 ## Releases
 
@@ -81,7 +95,7 @@ A green Voice test suite proves Moya’s contract, not that a sidecar spoke the 
 pnpm bump patch    # lockstep SemVer bump → open a PR
 ```
 
-Or **Actions → Bump**. After it lands on `main`, Release builds and publishes the Mac DMG. Until Apple Developer ID secrets are set, Gatekeeper will warn; right-click the app → Open.
+Or **Actions → Bump**. After it lands on `main`, Release may publish a Mac DMG. That download is not notarized. Install by building on the Mac (`#mac-app`).
 
 ## License
 

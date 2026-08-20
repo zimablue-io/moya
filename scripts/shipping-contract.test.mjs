@@ -29,12 +29,12 @@ test("app, crate, and Tauri versions stay in lockstep", () => {
 	assert.throws(() => assertVersionsMatch(root, "v9.9.9"), /does not match/)
 })
 
-test("Download and README advertise GitHub latest, which requires a publish workflow", () => {
+test("Release may publish a DMG, but install is build-from-source", () => {
 	assert.equal(DOWNLOAD_APP_URL, EXPECTED_DOWNLOAD_URL)
 	assert.equal(
 		existsSync(join(root, RELEASE_WORKFLOW)),
 		true,
-		`${RELEASE_WORKFLOW} must exist because Download resolves a live ${EXPECTED_DOWNLOAD_URL} only after that file is published`,
+		`${RELEASE_WORKFLOW} may publish ${EXPECTED_DOWNLOAD_URL}; the menu must not use that as install`,
 	)
 	assert.equal(
 		existsSync(join(root, CI_WORKFLOW)),
@@ -96,6 +96,13 @@ test("a URL-shaped Download link is not enough without CI and a Mac release job"
 				'on:\n  push:\n    tags:\n      - v*\n    branches: [main]\nruns-on: macos-latest\nrun: pnpm package:mac\ngh release create\ncontents: write\n*.dmg\nMoya_aarch64.dmg\nunset APPLE_CERTIFICATE\nAPPLE_SIGNING_IDENTITY="-"\n',
 			),
 		/codesign --verify/,
+	)
+	assert.throws(
+		() =>
+			assertReleaseWorkflow(
+				'on:\n  push:\n    tags:\n      - v*\n    branches: [main]\nruns-on: macos-latest\nrun: pnpm package:mac\ngh release create\ncontents: write\n*.dmg\nMoya_aarch64.dmg\nunset APPLE_CERTIFICATE\nAPPLE_SIGNING_IDENTITY="-"\ncodesign --verify\n',
+			),
+		/CI=true/,
 	)
 	assert.throws(() => assertBumpWorkflow("on: push\n"), /workflow_dispatch/)
 })

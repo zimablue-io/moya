@@ -4,11 +4,15 @@ export const APP_VERSION = "0.1.0"
 
 export const TAGLINE = "One assistant. Local first. Voice first."
 
-/** Stable GitHub Release asset. Versioned DMGs also upload; this name does not change. */
+export const REPO_URL = "https://github.com/zimablue-io/moya"
+
+/** How you get a Mac app without paying Apple: build it on that Mac. */
+export const MAC_APP_INSTALL_URL = `${REPO_URL}#mac-app`
+
+/** Optional GitHub Release asset. A browser download of this file is always Gatekeeper-blocked until notarized. */
 export const DOWNLOAD_APP_ASSET = "Moya_aarch64.dmg"
 
-/** Direct DMG. GitHub 302s to the latest file so the browser downloads instead of opening the releases page. */
-export const DOWNLOAD_APP_URL = `https://github.com/zimablue-io/moya/releases/latest/download/${DOWNLOAD_APP_ASSET}`
+export const DOWNLOAD_APP_URL = `${REPO_URL}/releases/latest/download/${DOWNLOAD_APP_ASSET}`
 
 export const COLOR = {
 	bg: "#0b0b0a",

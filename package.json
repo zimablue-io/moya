@@ -26,7 +26,7 @@
 		"preview": "vite preview --host 0.0.0.0 --port 5173",
 		"build:desktop": "vite build --mode desktop && node scripts/desktop-frontend.mjs",
 		"desktop": "tauri dev",
-		"package:mac": "CI=true tauri build",
+		"package:mac": "tauri build",
 		"typecheck": "tsc --noEmit",
 		"test": "node --experimental-strip-types --test 'scripts/**/*.test.mjs'",
 		"shipping": "node --experimental-strip-types scripts/shipping-contract.mjs",

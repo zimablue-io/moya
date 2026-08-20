@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Shipping surfaces
 
-Do not land a user-facing Download, README release link, or `releases/latest` URL unless `.github/workflows/release.yml` publishes a `.dmg` on `v*` tags. A test that only checks the URL shape is unfinished work.
+Do not advertise a GitHub DMG as the Mac install path. Apple blocks unsigned internet downloads until someone notarizes. The honest path is clone + `pnpm package:mac` on that Mac (`#mac-app`). A Releases `.dmg` is optional and must not be the menu/README primary link.
 
 Do not merge to `main` without a pull request. `.github/workflows/ci.yml` must run `pnpm lint`, `pnpm typecheck`, and `pnpm test` on every PR.
 

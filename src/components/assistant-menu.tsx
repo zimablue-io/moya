@@ -1,9 +1,7 @@
 import { Brain, Download, History, MessageSquare, Repeat, Settings } from "lucide-react"
-import { useEffect, useState } from "react"
-import { DOWNLOAD_APP_ASSET } from "@/lib/brand"
 import { menuToolsForHost, showDownloadApp } from "@/lib/first-run"
 import { isDesktop } from "@/lib/host"
-import { resolveMacDownloadUrl } from "@/lib/mac-download"
+import { macAppInstallUrl } from "@/lib/mac-download"
 import { useApp } from "@/lib/store"
 import { type DialogId } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -26,20 +24,9 @@ export function AssistantMenu({ pending }: { pending: number }) {
 	const setMenuOpen = useApp((s) => s.setMenuOpen)
 	const openDialog = useApp((s) => s.openDialog)
 	const desktop = isDesktop()
-	const [downloadHref, setDownloadHref] = useState<string | null>(null)
 	const tools = menuToolsForHost(desktop)
 		.map((id) => DIALOG_TOOLS.find((t) => t.id === id))
 		.filter((t): t is (typeof DIALOG_TOOLS)[number] => Boolean(t))
-
-	useEffect(() => {
-		let cancelled = false
-		void resolveMacDownloadUrl().then((url) => {
-			if (!cancelled) setDownloadHref(url)
-		})
-		return () => {
-			cancelled = true
-		}
-	}, [])
 
 	return (
 		<div
@@ -80,10 +67,9 @@ export function AssistantMenu({ pending }: { pending: number }) {
 						</span>
 					</button>
 				))}
-				{downloadHref && showDownloadApp(desktop, downloadHref) ? (
+				{showDownloadApp(desktop) ? (
 					<a
-						href={downloadHref}
-						download={DOWNLOAD_APP_ASSET}
+						href={macAppInstallUrl()}
 						onClick={() => setMenuOpen(false)}
 						style={{ transitionDelay: menuOpen ? `${tools.length * 45}ms` : "0ms" }}
 						className={cn(
@@ -92,8 +78,8 @@ export function AssistantMenu({ pending }: { pending: number }) {
 						)}
 					>
 						<span className="min-w-0">
-							<span className="block type-display text-2xl text-fg">Download</span>
-							<span className="block text-xs text-muted-foreground">Mac app</span>
+							<span className="block type-display text-2xl text-fg">Mac app</span>
+							<span className="block text-xs text-muted-foreground">Build on this Mac</span>
 						</span>
 						<span className="relative grid size-14 shrink-0 place-items-center rounded-full border border-border bg-surface text-fg transition-colors group-hover:border-border-strong group-hover:bg-surface-2">
 							<Download className="size-5" />

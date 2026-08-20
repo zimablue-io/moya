@@ -21,7 +21,8 @@
 - Settings Model can auto-select the first listed model if the stored id is missing from `/models`.
 - Canvas overlay intercepts pointer events; Playwright menu clicks need `{ force: true }`. First Escape closes a popover before its parent dialog.
 - CI `latest-release` on `main` stays red until `v0.1.0` publishes a `.dmg`. First DMGs are unsigned until Apple Developer ID secrets are set.
-- `v0.1.0` `Moya_aarch64.dmg` is 7,876,607 bytes and downloads. Opening it in Finder says “Moya is damaged” because the published `.app` is linker-signed only (`Sealed Resources=none`). Not a truncated file. Ad-hoc bundle signing is the next publish.
+- Prebuilt GitHub DMG is optional and Gatekeeper-blocked until notarized. Install path is clone + `pnpm package:mac` on this Mac. Local build 2026-08-20: sealed ad-hoc, `codesign --verify` valid. Menu/README point at `#mac-app`, not the DMG.
+- DMG background is one full-bleed light fill (no inset card). An earlier 36px “card” sat on Finder’s own window fill and looked like two backgrounds.
 
 ## Status
 

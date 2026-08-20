@@ -69,11 +69,9 @@ test("Voice setup is only for cloud backends without a usable key", () => {
 	assert.equal(voiceCloudSetupNeeded({ ...empty.voiceBackend, id: "browser", apiKey: "" }, empty.provider), false)
 })
 
-test("Download is a web menu item only when a live DMG URL exists", () => {
-	assert.equal(showDownloadApp(false), false)
-	assert.equal(showDownloadApp(false, null), false)
-	assert.equal(showDownloadApp(false, EXPECTED_DOWNLOAD_URL), true)
-	assert.equal(showDownloadApp(true, EXPECTED_DOWNLOAD_URL), false)
+test("Mac app is a web menu item that points at build-from-source, not a DMG", () => {
+	assert.equal(showDownloadApp(false), true)
+	assert.equal(showDownloadApp(true), false)
 	assert.deepEqual(menuToolsForHost(true), ["history", "memory", "routines", "watch", "settings"])
 	assert.deepEqual(menuToolsForHost(false), ["history", "memory", "routines", "watch", "settings"])
 	assert.equal(DOWNLOAD_APP_URL, EXPECTED_DOWNLOAD_URL)
@@ -82,7 +80,7 @@ test("Download is a web menu item only when a live DMG URL exists", () => {
 test("first-run copy names the product and the local-first tax", () => {
 	assert.match(FIRST_RUN_LINE, /Household assistant/)
 	assert.match(firstRunLimit(true, "mac"), /this Mac/)
-	assert.match(firstRunLimit(false, "mac"), /Download the Mac app/)
+	assert.match(firstRunLimit(false, "mac"), /Build the Mac app/)
 	assert.match(firstRunHint(false), /starting line/)
 	assert.deepEqual(
 		FIRST_RUN_VERBS.map((v) => v.id),
@@ -111,10 +109,10 @@ test("shell uses the first-run contract and does not convert on login", () => {
 	assert.match(shell, /FIRST_RUN_LINE/)
 	assert.match(shell, /FIRST_RUN_VERBS/)
 	assert.match(shell, /showDownloadApp/)
-	assert.match(shell, /resolveMacDownloadUrl/)
-	assert.match(shell, /DOWNLOAD_APP_ASSET/)
-	assert.match(shell, /download=\{DOWNLOAD_APP_ASSET\}/)
+	assert.match(shell, /macAppInstallUrl/)
 	assert.equal(shell.includes("href={DOWNLOAD_APP_URL}"), false)
+	assert.equal(shell.includes("resolveMacDownloadUrl"), false)
+	assert.equal(shell.includes("DOWNLOAD_APP_ASSET"), false)
 	assert.equal(shell.includes('target="_blank"'), false)
 	assert.match(shell, /settings\.provider/)
 	assert.match(shell, /Where should I think/)

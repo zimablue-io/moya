@@ -5,6 +5,7 @@ import { dirname, join } from "node:path"
 import { test } from "node:test"
 import { fileURLToPath } from "node:url"
 import { assertDesktopFrontend, desktopFrontendIndex } from "./desktop-frontend.mjs"
+import { DMG_APP, DMG_APPLICATIONS, DMG_BACKGROUND, DMG_WINDOW } from "./write-dmg-background.mjs"
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..")
 const tauriDir = join(root, "src-tauri")
@@ -69,13 +70,26 @@ test("build:desktop validates the frontend after vite", () => {
 	assert.match(pkg.scripts["build:desktop"], /desktop-frontend\.mjs/)
 })
 
-test("package:mac sets CI so DMG packaging does not require Finder automation", () => {
+test("package:mac does not force CI so a local DMG can be a drag-to-Applications window", () => {
 	const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"))
-	assert.match(
-		pkg.scripts["package:mac"],
-		/\bCI=true\b/,
-		"macOS create-dmg AppleScript needs Finder automation; CI=true passes --skip-jenkins",
+	assert.equal(
+		/\bCI=true\b/.test(pkg.scripts["package:mac"]),
+		false,
+		"CI=true skips Finder layout and leaves a huge empty folder window",
 	)
+})
+
+test("DMG is a 660×400 drag-to-Applications window, not a default folder view", () => {
+	const conf = readConf()
+	const dmg = conf.bundle?.macOS?.dmg
+	assert.equal(dmg?.background, DMG_BACKGROUND)
+	assert.equal(existsSync(join(tauriDir, DMG_BACKGROUND)), true, `missing ${DMG_BACKGROUND}`)
+	assert.equal(dmg?.windowSize?.width, DMG_WINDOW.width)
+	assert.equal(dmg?.windowSize?.height, DMG_WINDOW.height)
+	assert.equal(dmg?.appPosition?.x, DMG_APP.x)
+	assert.equal(dmg?.appPosition?.y, DMG_APP.y)
+	assert.equal(dmg?.applicationFolderPosition?.x, DMG_APPLICATIONS.x)
+	assert.equal(dmg?.applicationFolderPosition?.y, DMG_APPLICATIONS.y)
 })
 
 test("tauri beforeDevCommand starts the frontend that desktop waits for", () => {

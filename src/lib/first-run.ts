@@ -41,8 +41,8 @@ export function voiceCloudSetupNeeded(voice: VoiceConfig, provider: ProviderConf
 	return !resolveVoiceApiKey(voice, provider)
 }
 
-export function showDownloadApp(desktop: boolean, downloadHref: string | null = null): boolean {
-	return !desktop && Boolean(downloadHref)
+export function showDownloadApp(desktop: boolean): boolean {
+	return !desktop
 }
 
 export function firstRunLimit(desktop: boolean, os: HostOs = "other"): string {
@@ -50,7 +50,7 @@ export function firstRunLimit(desktop: boolean, os: HostOs = "other"): string {
 		const place = os === "windows" ? "this PC" : os === "mac" ? "this Mac" : "this device"
 		return `You bring the model. Keys stay on ${place}.`
 	}
-	return "You bring the model. Download the Mac app to keep a copy on this machine."
+	return "You bring the model. Build the Mac app on this machine to keep a copy."
 }
 
 export function firstRunHint(desktop: boolean, os?: HostOs): string {
