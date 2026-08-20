@@ -52,6 +52,10 @@ test("Release may publish a DMG, but install is build-from-source", () => {
 test("a URL-shaped Download link is not enough without CI and a Mac release job", () => {
 	assert.throws(() => assertCiWorkflow("name: ci\non: push\n"), /pull_request/)
 	assert.throws(() => assertCiWorkflow("on: pull_request\n"), /pnpm test/)
+	assert.throws(
+		() => assertCiWorkflow("on: pull_request\npnpm lint\npnpm typecheck\npnpm test\n"),
+		/Playwright Chromium/,
+	)
 	assert.throws(() => assertReleaseWorkflow("on:\n  push:\n    tags:\n      - v*\n"), /main/)
 	assert.throws(
 		() => assertReleaseWorkflow("on:\n  push:\n    tags:\n      - v*\n    branches: [main]\n"),

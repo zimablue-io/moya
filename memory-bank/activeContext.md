@@ -16,6 +16,7 @@ Voice Settings matches Model: one Provider select, then only that provider’s f
 3. Unused `cmdk` and `vaul` removed so `@radix-ui/*` is gone from the lockfile.
 4. `Input` / `Textarea` dropped `forwardRef` (React 19 props refs).
 5. Focus rings are Tailwind `ring-inset`. Official nova outset `ring-3` was cropped by Dialog, ScrollArea, and the app shell. Not an Input-only bug.
+6. Visual UI audit (`scripts/ui-visual.test.mjs`) boots the app and checks painted focus on home + every Settings tab. Class-string grep is not a visual test. CI installs Playwright Chromium.
 
 ## What is not done
 

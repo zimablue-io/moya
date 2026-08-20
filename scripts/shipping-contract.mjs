@@ -59,6 +59,9 @@ export function assertCiWorkflow(yaml) {
 	if (!/pnpm typecheck/.test(yaml)) {
 		throw new Error("CI must run pnpm typecheck")
 	}
+	if (!/playwright install/.test(yaml)) {
+		throw new Error("CI must install Playwright Chromium so visual UI audits can run")
+	}
 }
 
 export function assertReleaseWorkflow(yaml) {
@@ -169,6 +172,12 @@ export function assertShippingContract(root) {
 		!/from "\.\/brand\.ts"/.test(readRel(root, "src/lib/mcp.ts"))
 	) {
 		throw new Error("mcp.ts must send APP_VERSION from brand.ts, not a hardcoded semver")
+	}
+	if (!existsSync(join(root, "scripts/ui-visual.test.mjs")) || !existsSync(join(root, "scripts/ui-visual.mjs"))) {
+		throw new Error("Visual UI audit is missing — source contracts do not prove components appear correctly")
+	}
+	if (!/playwright/.test(readRel(root, "scripts/ui-visual.mjs"))) {
+		throw new Error("Visual UI audit must drive a browser, not class-string grep")
 	}
 	if (!existsSync(join(root, PR_TEMPLATE))) {
 		throw new Error(`${PR_TEMPLATE} is missing`)

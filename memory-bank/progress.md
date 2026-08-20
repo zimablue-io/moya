@@ -7,7 +7,7 @@
 - Voice **contract**: Conversation speaker ≠ system `voiceURI`; empty Local sends `af_heart`; Web Speech finals are not realtime Voice turns; barge-in flush/stale-audio tests in `scripts/realtime-voice.test.mjs`.
 - Settings Voice offers Local / Grok / OpenAI / System. Same layout as Model. Local picker is Kokoro-only. System fields show only when System is selected.
 - Brand SSOT: Bricolage Grotesque + Ubuntu; palette in `src/lib/brand.ts` (`COLOR.brand` beige, `COLOR.quiet` gray text).
-- **UI kit:** `components.json` is `style: base-nova`, `base: base`. Wrappers use `@base-ui/react` (`render`, native `<label>`, scalar sliders). No `@radix-ui/*` in app or lockfile. Focus is `ring-inset` (inner ring) — outset `ring-3` clips inside Dialog / ScrollArea / the app shell. `scripts/focus-ring.test.mjs` stays red if a class string paints a ring without `ring-inset`.
+- **UI kit:** `components.json` is `style: base-nova`, `base: base`. Wrappers use `@base-ui/react` (`render`, native `<label>`, scalar sliders). No `@radix-ui/*` in app or lockfile. Focus is `ring-inset` (inner ring). Appearance is proven by `scripts/ui-visual.test.mjs` (boot + pixel audit), not by class names.
 
 ## Left to prove by ear
 
