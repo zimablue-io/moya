@@ -69,11 +69,13 @@ test("Voice setup is only for cloud backends without a usable key", () => {
 	assert.equal(voiceCloudSetupNeeded({ ...empty.voiceBackend, id: "browser", apiKey: "" }, empty.provider), false)
 })
 
-test("Download is a web menu item, never desktop chrome", () => {
-	assert.equal(showDownloadApp(false), true)
-	assert.equal(showDownloadApp(true), false)
+test("Download is a web menu item only when a live DMG URL exists", () => {
+	assert.equal(showDownloadApp(false), false)
+	assert.equal(showDownloadApp(false, null), false)
+	assert.equal(showDownloadApp(false, EXPECTED_DOWNLOAD_URL), true)
+	assert.equal(showDownloadApp(true, EXPECTED_DOWNLOAD_URL), false)
 	assert.deepEqual(menuToolsForHost(true), ["history", "memory", "routines", "watch", "settings"])
-	assert.ok(menuToolsForHost(false).includes("download"))
+	assert.deepEqual(menuToolsForHost(false), ["history", "memory", "routines", "watch", "settings"])
 	assert.equal(DOWNLOAD_APP_URL, EXPECTED_DOWNLOAD_URL)
 })
 
@@ -109,9 +111,10 @@ test("shell uses the first-run contract and does not convert on login", () => {
 	assert.match(shell, /FIRST_RUN_LINE/)
 	assert.match(shell, /FIRST_RUN_VERBS/)
 	assert.match(shell, /showDownloadApp/)
-	assert.match(shell, /DOWNLOAD_APP_URL/)
+	assert.match(shell, /resolveMacDownloadUrl/)
 	assert.match(shell, /DOWNLOAD_APP_ASSET/)
 	assert.match(shell, /download=\{DOWNLOAD_APP_ASSET\}/)
+	assert.equal(shell.includes("href={DOWNLOAD_APP_URL}"), false)
 	assert.equal(shell.includes('target="_blank"'), false)
 	assert.match(shell, /settings\.provider/)
 	assert.match(shell, /Where should I think/)

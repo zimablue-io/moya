@@ -2,7 +2,7 @@
 
 ## Current focus
 
-Download is `releases/latest/download/Moya_aarch64.dmg` so the browser fetches the file. Release uploads that stable name plus the versioned Tauri DMG.
+The menu Download control must not use a hardcoded `releases/latest/download/Moya_aarch64.dmg` href. That URL 404s until a GitHub Release asset exists (measured 2026-08-20). The button only renders after `resolveMacDownloadUrl()` sees `Moya_aarch64.dmg` on latest. README links `/releases`, not the file shortcut.
 
 ## Current focus (voice / UI)
 

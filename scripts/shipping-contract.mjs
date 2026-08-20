@@ -88,6 +88,11 @@ export function assertReleaseWorkflow(yaml) {
 	if (!/contents:\s*write/.test(yaml)) {
 		throw new Error("Release needs contents: write to publish the GitHub Release")
 	}
+	if (!/unset APPLE_CERTIFICATE/.test(yaml)) {
+		throw new Error(
+			"Release must unset APPLE_CERTIFICATE when it is empty — a blank secret still triggers codesign and never publishes a DMG",
+		)
+	}
 }
 
 export function assertBumpWorkflow(yaml) {
@@ -110,8 +115,22 @@ export function assertShippingContract(root) {
 		throw new Error(`DOWNLOAD_APP_URL must stay ${EXPECTED_DOWNLOAD_URL} (got ${DOWNLOAD_APP_URL})`)
 	}
 	const readme = readRel(root, "README.md")
-	if (!readme.includes(EXPECTED_DOWNLOAD_URL)) {
-		throw new Error("README must link the same GitHub latest-release URL the app Download button uses")
+	if (readme.includes(EXPECTED_DOWNLOAD_URL)) {
+		throw new Error(
+			"README must not hard-link releases/latest/download — that URL 404s until a DMG exists. Link /releases instead.",
+		)
+	}
+	if (!readme.includes("https://github.com/zimablue-io/moya/releases")) {
+		throw new Error("README must link GitHub Releases for Mac builds")
+	}
+	const menu = readRel(root, "src/components/assistant-menu.tsx")
+	if (!/resolveMacDownloadUrl/.test(menu)) {
+		throw new Error(
+			"Download must resolve a live GitHub asset — a hardcoded latest/download URL 404s when no Release exists",
+		)
+	}
+	if (/href=\{DOWNLOAD_APP_URL\}/.test(menu)) {
+		throw new Error("Download must not use DOWNLOAD_APP_URL as a static href")
 	}
 	assertVersionsMatch(root)
 	if (!existsSync(join(root, CI_WORKFLOW))) {

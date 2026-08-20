@@ -4,7 +4,7 @@ One assistant. Local first. Voice first.
 
 Moya is a personal assistant that runs on this machine. Memory, transcript, routines, inbox, and API keys stay on-device. You bring the model — a local server or your own cloud key.
 
-[Download the latest Mac build](https://github.com/zimablue-io/moya/releases/latest/download/Moya_aarch64.dmg) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+[Mac builds](https://github.com/zimablue-io/moya/releases) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
 ## What it does
 

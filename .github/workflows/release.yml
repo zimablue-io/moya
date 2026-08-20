@@ -77,7 +77,15 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: pnpm package:mac
+        run: |
+          set -euo pipefail
+          # Empty GitHub secrets still export APPLE_CERTIFICATE="". Tauri then
+          # runs `security import` and the bundle dies before any DMG exists.
+          if [[ -z "${APPLE_CERTIFICATE:-}" ]] || ! printf '%s' "${APPLE_CERTIFICATE}" | base64 -d >/dev/null 2>&1; then
+            unset APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID
+            echo "Apple signing cert is missing or not valid base64; building unsigned"
+          fi
+          pnpm package:mac
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

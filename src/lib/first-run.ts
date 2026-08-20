@@ -41,8 +41,8 @@ export function voiceCloudSetupNeeded(voice: VoiceConfig, provider: ProviderConf
 	return !resolveVoiceApiKey(voice, provider)
 }
 
-export function showDownloadApp(desktop: boolean): boolean {
-	return !desktop
+export function showDownloadApp(desktop: boolean, downloadHref: string | null = null): boolean {
+	return !desktop && Boolean(downloadHref)
 }
 
 export function firstRunLimit(desktop: boolean, os: HostOs = "other"): string {
@@ -57,9 +57,8 @@ export function firstRunHint(desktop: boolean, os?: HostOs): string {
 	return `${firstRunLimit(desktop, os)} Talk, type, or pick a starting line.`
 }
 
-export type MenuToolId = "history" | "memory" | "routines" | "watch" | "settings" | "download"
+export type MenuToolId = "history" | "memory" | "routines" | "watch" | "settings"
 
-export function menuToolsForHost(desktop: boolean): MenuToolId[] {
-	const core: MenuToolId[] = ["history", "memory", "routines", "watch", "settings"]
-	return showDownloadApp(desktop) ? [...core, "download"] : core
+export function menuToolsForHost(_desktop: boolean): MenuToolId[] {
+	return ["history", "memory", "routines", "watch", "settings"]
 }

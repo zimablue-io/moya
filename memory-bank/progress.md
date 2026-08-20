@@ -21,6 +21,7 @@
 - Settings Model can auto-select the first listed model if the stored id is missing from `/models`.
 - Canvas overlay intercepts pointer events; Playwright menu clicks need `{ force: true }`. First Escape closes a popover before its parent dialog.
 - CI `latest-release` on `main` stays red until `v0.1.0` publishes a `.dmg`. First DMGs are unsigned until Apple Developer ID secrets are set.
+- `https://github.com/zimablue-io/moya/releases/latest/download/Moya_aarch64.dmg` measured HTTP 404 on 2026-08-20. Release run 32383483573 compiled, then died on `security import` because an empty `APPLE_CERTIFICATE` still triggers codesign. Download is hidden until the GitHub API lists `Moya_aarch64.dmg`.
 
 ## Status
 

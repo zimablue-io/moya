@@ -32,9 +32,9 @@ pnpm bump 0.2.0    # explicit
 
 Open a PR with those files (or run **Actions → Bump**). After it lands on `main`, Release builds the DMG in the same run (a `GITHUB_TOKEN` tag push cannot start a second workflow). Do not hand-edit one version file.
 
-`DOWNLOAD_APP_URL` is `https://github.com/zimablue-io/moya/releases/latest/download/Moya_aarch64.dmg` so the browser fetches the file instead of the releases page. Release also uploads the versioned Tauri DMG.
+The menu Download control only appears after GitHub’s latest release lists `Moya_aarch64.dmg`. A hardcoded `releases/latest/download` link 404s while that asset is missing. Release also uploads the versioned Tauri DMG.
 
-First builds are unsigned until Apple Developer ID secrets (`APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD`, `APPLE_SIGNING_IDENTITY`, `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID`) are set on the repo. Gatekeeper will warn; right-click → Open.
+Release unsets Apple signing env when `APPLE_CERTIFICATE` is empty or not valid base64. A blank GitHub secret still exports the variable; Tauri then fails `security import` and never writes a DMG. Unsigned builds Gatekeeper-warn; right-click → Open. Set a real Developer ID p12 to sign.
 
 ## Product rules that regress easily
 

@@ -34,7 +34,7 @@ test("Download and README advertise GitHub latest, which requires a publish work
 	assert.equal(
 		existsSync(join(root, RELEASE_WORKFLOW)),
 		true,
-		`${RELEASE_WORKFLOW} must exist because the product Download button points at ${EXPECTED_DOWNLOAD_URL}`,
+		`${RELEASE_WORKFLOW} must exist because Download resolves a live ${EXPECTED_DOWNLOAD_URL} only after that file is published`,
 	)
 	assert.equal(
 		existsSync(join(root, CI_WORKFLOW)),
@@ -75,6 +75,13 @@ test("a URL-shaped Download link is not enough without CI and a Mac release job"
 				"on:\n  push:\n    tags:\n      - v*\n    branches: [main]\nruns-on: macos-latest\nrun: pnpm package:mac\ngh release create\ncontents: write\n*.dmg\n",
 			),
 		/Moya_aarch64\.dmg/,
+	)
+	assert.throws(
+		() =>
+			assertReleaseWorkflow(
+				"on:\n  push:\n    tags:\n      - v*\n    branches: [main]\nruns-on: macos-latest\nrun: pnpm package:mac\ngh release create\ncontents: write\n*.dmg\nMoya_aarch64.dmg\n",
+			),
+		/unset APPLE_CERTIFICATE/,
 	)
 	assert.throws(() => assertBumpWorkflow("on: push\n"), /workflow_dispatch/)
 })

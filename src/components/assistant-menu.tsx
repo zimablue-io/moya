@@ -1,7 +1,9 @@
 import { Brain, Download, History, MessageSquare, Repeat, Settings } from "lucide-react"
-import { DOWNLOAD_APP_ASSET, DOWNLOAD_APP_URL } from "@/lib/brand"
+import { useEffect, useState } from "react"
+import { DOWNLOAD_APP_ASSET } from "@/lib/brand"
 import { menuToolsForHost, showDownloadApp } from "@/lib/first-run"
 import { isDesktop } from "@/lib/host"
+import { resolveMacDownloadUrl } from "@/lib/mac-download"
 import { useApp } from "@/lib/store"
 import { type DialogId } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -24,9 +26,20 @@ export function AssistantMenu({ pending }: { pending: number }) {
 	const setMenuOpen = useApp((s) => s.setMenuOpen)
 	const openDialog = useApp((s) => s.openDialog)
 	const desktop = isDesktop()
+	const [downloadHref, setDownloadHref] = useState<string | null>(null)
 	const tools = menuToolsForHost(desktop)
 		.map((id) => DIALOG_TOOLS.find((t) => t.id === id))
 		.filter((t): t is (typeof DIALOG_TOOLS)[number] => Boolean(t))
+
+	useEffect(() => {
+		let cancelled = false
+		void resolveMacDownloadUrl().then((url) => {
+			if (!cancelled) setDownloadHref(url)
+		})
+		return () => {
+			cancelled = true
+		}
+	}, [])
 
 	return (
 		<div
@@ -67,9 +80,9 @@ export function AssistantMenu({ pending }: { pending: number }) {
 						</span>
 					</button>
 				))}
-				{showDownloadApp(desktop) ? (
+				{downloadHref && showDownloadApp(desktop, downloadHref) ? (
 					<a
-						href={DOWNLOAD_APP_URL}
+						href={downloadHref}
 						download={DOWNLOAD_APP_ASSET}
 						onClick={() => setMenuOpen(false)}
 						style={{ transitionDelay: menuOpen ? `${tools.length * 45}ms` : "0ms" }}
