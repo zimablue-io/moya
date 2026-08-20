@@ -2,7 +2,7 @@
 
 ## Current focus
 
-The menu Download control must not use a hardcoded `releases/latest/download/Moya_aarch64.dmg` href. That URL 404s until a GitHub Release asset exists (measured 2026-08-20). The button only renders after `resolveMacDownloadUrl()` sees `Moya_aarch64.dmg` on latest. README links `/releases`, not the file shortcut.
+v0.1.0 DMG downloads (7.5MB) but Finder says the app is damaged. Measured: Mach-O is `adhoc,linker-signed` with `Sealed Resources=none`; `codesign --verify` fails (`code has no resources but signature indicates they must be present`). Frontend is embedded in the 9.3MB binary. Fix: `signingIdentity: "-"` plus Release `APPLE_SIGNING_IDENTITY=-` and a sealed-resources check before upload.
 
 ## Current focus (voice / UI)
 

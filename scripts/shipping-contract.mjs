@@ -93,6 +93,14 @@ export function assertReleaseWorkflow(yaml) {
 			"Release must unset APPLE_CERTIFICATE when it is empty — a blank secret still triggers codesign and never publishes a DMG",
 		)
 	}
+	if (!/APPLE_SIGNING_IDENTITY="-/.test(yaml)) {
+		throw new Error(
+			'Release must ad-hoc sign with APPLE_SIGNING_IDENTITY="-" when no Developer ID cert exists — linker-signed bundles are reported as damaged',
+		)
+	}
+	if (!/codesign --verify/.test(yaml)) {
+		throw new Error("Release must codesign --verify the .app so a linker-signed-only bundle cannot publish")
+	}
 }
 
 export function assertBumpWorkflow(yaml) {
@@ -131,6 +139,12 @@ export function assertShippingContract(root) {
 	}
 	if (/href=\{DOWNLOAD_APP_URL\}/.test(menu)) {
 		throw new Error("Download must not use DOWNLOAD_APP_URL as a static href")
+	}
+	const tauri = JSON.parse(readRel(root, "src-tauri/tauri.conf.json"))
+	if (tauri.bundle?.macOS?.signingIdentity !== "-") {
+		throw new Error(
+			'tauri.conf.json bundle.macOS.signingIdentity must be "-" so the .app is sealed; a linker-signed binary is reported as damaged after download',
+		)
 	}
 	assertVersionsMatch(root)
 	if (!existsSync(join(root, CI_WORKFLOW))) {

@@ -34,7 +34,7 @@ Open a PR with those files (or run **Actions → Bump**). After it lands on `mai
 
 The menu Download control only appears after GitHub’s latest release lists `Moya_aarch64.dmg`. A hardcoded `releases/latest/download` link 404s while that asset is missing. Release also uploads the versioned Tauri DMG.
 
-Release unsets Apple signing env when `APPLE_CERTIFICATE` is empty or not valid base64. A blank GitHub secret still exports the variable; Tauri then fails `security import` and never writes a DMG. Unsigned builds Gatekeeper-warn; right-click → Open. Set a real Developer ID p12 to sign.
+Release unsets Apple signing env when `APPLE_CERTIFICATE` is empty or not valid base64, then sets `APPLE_SIGNING_IDENTITY=-`. A linker-signed-only `.app` (no sealed resources) is what macOS reports as “damaged” after a browser download. Ad-hoc signing seals the bundle; first open still goes through System Settings → Privacy & Security → Open Anyway until a Developer ID + notarization cert is set.
 
 ## Product rules that regress easily
 

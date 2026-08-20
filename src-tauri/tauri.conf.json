@@ -44,7 +44,8 @@
 		"longDescription": "Moya is a single personal assistant. Memory, routines, and models stay on this machine.",
 		"macOS": {
 			"entitlements": "Entitlements.plist",
-			"minimumSystemVersion": "10.15"
+			"minimumSystemVersion": "10.15",
+			"signingIdentity": "-"
 		}
 	},
 	"plugins": {}

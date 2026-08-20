@@ -6,6 +6,11 @@ on:
     tags:
       - "v*"
   workflow_dispatch:
+    inputs:
+      force:
+        description: Rebuild even if Moya_aarch64.dmg already exists
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -38,7 +43,10 @@ jobs:
           VERSION="$(node --experimental-strip-types scripts/release-version.mjs --tag "${TAG}")"
           echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
           echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
-          if gh release view "${TAG}" --json assets --jq '.assets[].name' | grep -qx "Moya_aarch64.dmg"; then
+          if [[ "${{ github.event.inputs.force }}" == "true" ]]; then
+            echo "build=true" >> "${GITHUB_OUTPUT}"
+            echo "forced rebuild of ${TAG}"
+          elif gh release view "${TAG}" --json assets --jq '.assets[].name' | grep -qx "Moya_aarch64.dmg"; then
             echo "build=false" >> "${GITHUB_OUTPUT}"
             echo "${TAG} already has Moya_aarch64.dmg"
           else
@@ -83,9 +91,25 @@ jobs:
           # runs `security import` and the bundle dies before any DMG exists.
           if [[ -z "${APPLE_CERTIFICATE:-}" ]] || ! printf '%s' "${APPLE_CERTIFICATE}" | base64 -d >/dev/null 2>&1; then
             unset APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_ID APPLE_PASSWORD APPLE_TEAM_ID
-            echo "Apple signing cert is missing or not valid base64; building unsigned"
+            export APPLE_SIGNING_IDENTITY="-"
+            echo "Apple signing cert is missing or not valid base64; ad-hoc signing the bundle"
           fi
           pnpm package:mac
+      - name: Verify the app bundle is sealed
+        run: |
+          set -euo pipefail
+          APP="src-tauri/target/release/bundle/macos/Moya.app"
+          codesign --verify --deep --strict --verbose=2 "${APP}"
+          INFO="$(codesign -dv --verbose=4 "${APP}" 2>&1)"
+          echo "${INFO}"
+          if echo "${INFO}" | grep -q 'Sealed Resources=none\|linker-signed'; then
+            echo "linker-signed-only bundles are reported as damaged after a GitHub download" >&2
+            exit 1
+          fi
+          if ! echo "${INFO}" | grep -q 'Sealed Resources version='; then
+            echo "bundle is missing sealed resources" >&2
+            exit 1
+          fi
       - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -105,7 +129,7 @@ jobs:
             git tag "${TAG}"
             git push origin "${TAG}"
           fi
-          NOTES="Mac DMG for ${TAG}. Unsigned until Apple Developer ID secrets are set; Gatekeeper will warn (right-click → Open)."
+          NOTES="Mac DMG for ${TAG}. Ad-hoc signed until Apple Developer ID secrets are set. First open: System Settings → Privacy & Security → Open Anyway."
           if gh release view "${TAG}" >/dev/null 2>&1; then
             gh release upload "${TAG}" "${DMGS[@]}" "${STABLE}" --clobber
           else

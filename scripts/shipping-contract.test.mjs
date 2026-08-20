@@ -83,5 +83,19 @@ test("a URL-shaped Download link is not enough without CI and a Mac release job"
 			),
 		/unset APPLE_CERTIFICATE/,
 	)
+	assert.throws(
+		() =>
+			assertReleaseWorkflow(
+				"on:\n  push:\n    tags:\n      - v*\n    branches: [main]\nruns-on: macos-latest\nrun: pnpm package:mac\ngh release create\ncontents: write\n*.dmg\nMoya_aarch64.dmg\nunset APPLE_CERTIFICATE\n",
+			),
+		/APPLE_SIGNING_IDENTITY/,
+	)
+	assert.throws(
+		() =>
+			assertReleaseWorkflow(
+				'on:\n  push:\n    tags:\n      - v*\n    branches: [main]\nruns-on: macos-latest\nrun: pnpm package:mac\ngh release create\ncontents: write\n*.dmg\nMoya_aarch64.dmg\nunset APPLE_CERTIFICATE\nAPPLE_SIGNING_IDENTITY="-"\n',
+			),
+		/codesign --verify/,
+	)
 	assert.throws(() => assertBumpWorkflow("on: push\n"), /workflow_dispatch/)
 })

@@ -108,6 +108,15 @@ test("macOS Info.plist declares microphone and speech-recognition usage", () => 
 	assert.match(plist, /<key>NSAllowsLocalNetworking<\/key>/)
 })
 
+test("macOS bundle ad-hoc signs so Gatekeeper does not call a linker-signed app damaged", () => {
+	const conf = readConf()
+	assert.equal(
+		conf.bundle?.macOS?.signingIdentity,
+		"-",
+		"signingIdentity - tells Tauri to seal CodeResources; omit it and downloaded apps say they are damaged",
+	)
+})
+
 test("macOS bundle requires 10.15 so Speech and mic auth APIs are in range", () => {
 	const conf = readConf()
 	assert.equal(conf.bundle?.macOS?.minimumSystemVersion, "10.15")
