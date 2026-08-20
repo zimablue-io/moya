@@ -16,19 +16,18 @@ This is **Moya**, a local-first personal assistant (web + Tauri desktop). Produc
 ```sh
 pnpm dev              # http://127.0.0.1:5173
 pnpm desktop          # tauri dev; beforeDevCommand is `npm run dev`
-pnpm package:mac      # tauri build → .app + drag-to-Applications .dmg (needs Finder)
+pnpm package:mac      # apply git version, then tauri build → .app + drag-to-Applications .dmg (needs Finder)
 pnpm test
 pnpm lint
 pnpm typecheck
-pnpm bump patch   # lockstep SemVer; land on main. Release builds the DMG in that run
 ```
 
-CI (`.github/workflows/ci.yml`) runs lint, format check, typecheck, and tests on every pull request. `pnpm bump <patch|minor|major|X.Y.Z>` is the only version increment. Landing that on `main` may publish a Mac DMG in the same Release workflow — a `GITHUB_TOKEN` tag push cannot start a second job. Do not advertise that DMG as the install path. Mac app is clone + `pnpm package:mac` (`#mac-app`). `scripts/shipping-contract.test.mjs` must stay red if the workflows disappear.
+CI (`.github/workflows/ci.yml`) runs lint, format check, typecheck, and tests on every pull request. Version is the last `vX.Y.Z` tag plus one patch per commit after it. `pnpm package:mac` and Release both apply that number — there is no `pnpm bump` and no Actions Bump job. Landing on `main` may publish a Mac DMG in the same Release workflow — a `GITHUB_TOKEN` tag push cannot start a second job. Do not advertise that DMG as the install path. Mac app is clone + `pnpm package:mac` (`#mac-app`). `scripts/shipping-contract.test.mjs` must stay red if the workflows disappear.
 
 Release artifacts:
 
 - `src-tauri/target/release/bundle/macos/Moya.app`
-- `src-tauri/target/release/bundle/dmg/Moya_0.1.0_aarch64.dmg`
+- `src-tauri/target/release/bundle/dmg/Moya_<version>_aarch64.dmg`
 
 ## Auth
 
@@ -50,7 +49,7 @@ Better Auth at `/api/auth/*` federates to the Grok broker (Google, X only). Do *
 - `frontendDist` is `../dist/client` and must contain a bootable `index.html` after `pnpm build:desktop`.
 - Desktop Vite is SPA mode (`vite.config.ts`, `prerender.outputPath: "/index"`).
 - Icons listed in `bundle.icon` must exist; `.icns` files must be real icns (magic `icns`).
-- `package:mac` sets `CI=true` so DMG creation does not need Finder automation.
+- Local `package:mac` does not set `CI=true` (Finder can layout the DMG). Release sets `CI=true` on the runner.
 - `scripts/desktop-frontend.mjs` runs after the desktop Vite build and fails if `index.html` is missing.
 - Closing the window hides to the tray (`src-tauri/src/lib.rs`).
 

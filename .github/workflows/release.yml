@@ -26,6 +26,8 @@ jobs:
       build: ${{ steps.version.outputs.build }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -35,12 +37,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
+          VERSION="$(node --experimental-strip-types scripts/release-version.mjs)"
           if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
             TAG="${GITHUB_REF_NAME}"
+            node --experimental-strip-types scripts/release-version.mjs --tag "${TAG}" >/dev/null
           else
-            TAG="v$(node --experimental-strip-types scripts/release-version.mjs)"
+            TAG="v${VERSION}"
           fi
-          VERSION="$(node --experimental-strip-types scripts/release-version.mjs --tag "${TAG}")"
           echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
           echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
           if [[ "${{ github.event.inputs.force }}" == "true" ]]; then
@@ -62,6 +65,8 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: pnpm/action-setup@v4
         with:
           version: 11.10.0

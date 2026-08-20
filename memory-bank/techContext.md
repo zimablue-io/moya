@@ -15,7 +15,7 @@
 ```sh
 pnpm dev              # http://127.0.0.1:5173
 pnpm desktop          # tauri dev; beforeDevCommand is `npm run dev`
-pnpm package:mac      # CI=true tauri build
+pnpm package:mac      # apply git version, then tauri build
 pnpm test
 pnpm lint
 pnpm typecheck

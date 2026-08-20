@@ -26,7 +26,7 @@
 
 ## Status
 
-Repo is **public** (`zimablue-io/moya`). MIT © 2026 Lefa Moffat. First-run landing on `/` is in tree. Spoken Local voice: **unverified** until sidecar restart + listen. Release pipeline is in tree (CI + `pnpm bump` → PR → Tag `vX.Y.Z` → Mac DMG). No GitHub Release artifact until this lands on `main` and Tag creates `v0.1.0`.
+Repo is **public** (`zimablue-io/moya`). MIT © 2026 Lefa Moffat. First-run landing on `/` is in tree. Spoken Local voice: **unverified** until sidecar restart + listen. Version is git (last `v*` tag + commits). `pnpm package:mac` and Release apply it; there is no bump workflow.
 
 ## Connector presets (shipped in Settings → Sources)
 

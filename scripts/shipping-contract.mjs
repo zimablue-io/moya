@@ -104,17 +104,8 @@ export function assertReleaseWorkflow(yaml) {
 	if (!/CI:\s*"true"/.test(yaml)) {
 		throw new Error("Release must set CI=true so headless Mac runners skip Finder AppleScript")
 	}
-}
-
-export function assertBumpWorkflow(yaml) {
-	if (!/\bworkflow_dispatch\b/.test(yaml)) {
-		throw new Error("Bump must be runnable from Actions (workflow_dispatch)")
-	}
-	if (!/bump-version\.mjs/.test(yaml)) {
-		throw new Error("Bump must run scripts/bump-version.mjs")
-	}
-	if (!/pull.request|create-pull-request|gh pr create/i.test(yaml)) {
-		throw new Error("Bump must open a pull request — main is not a direct push")
+	if (!/fetch-depth:\s*0/.test(yaml)) {
+		throw new Error("Release must fetch-depth: 0 so the git version can count commits since the last v* tag")
 	}
 }
 
@@ -161,13 +152,17 @@ export function assertShippingContract(root) {
 	}
 	assertCiWorkflow(readRel(root, CI_WORKFLOW))
 	assertReleaseWorkflow(readRel(root, RELEASE_WORKFLOW))
-	if (!existsSync(join(root, BUMP_WORKFLOW))) {
-		throw new Error(`${BUMP_WORKFLOW} is missing — version bumps must be a dispatch that opens a PR`)
+	if (existsSync(join(root, BUMP_WORKFLOW))) {
+		throw new Error(
+			`${BUMP_WORKFLOW} is a second version path — version is the last v* tag plus commits, applied by package:mac`,
+		)
 	}
-	assertBumpWorkflow(readRel(root, BUMP_WORKFLOW))
 	const pkg = JSON.parse(readRel(root, "package.json"))
-	if (!/bump-version\.mjs/.test(pkg.scripts?.bump ?? "")) {
-		throw new Error("package.json scripts.bump must run scripts/bump-version.mjs")
+	if (pkg.scripts?.bump) {
+		throw new Error("package.json scripts.bump is a second version path — package:mac applies the git version")
+	}
+	if (!/app-version\.mjs/.test(pkg.scripts?.["package:mac"] ?? "") || !/--apply/.test(pkg.scripts["package:mac"])) {
+		throw new Error("package:mac must apply the git version before tauri build")
 	}
 	if (
 		!/APP_VERSION/.test(readRel(root, "src/lib/mcp.ts")) ||

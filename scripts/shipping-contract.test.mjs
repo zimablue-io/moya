@@ -6,7 +6,6 @@ import { fileURLToPath } from "node:url"
 import { DOWNLOAD_APP_URL } from "../src/lib/brand.ts"
 import {
 	appVersions,
-	assertBumpWorkflow,
 	assertCiWorkflow,
 	assertReleaseWorkflow,
 	assertShippingContract,
@@ -46,7 +45,7 @@ test("Release may publish a DMG, but install is build-from-source", () => {
 	assert.equal(shipped.downloadUrl, EXPECTED_DOWNLOAD_URL)
 	assert.ok(shipped.workflows.includes("ci.yml"))
 	assert.ok(shipped.workflows.includes("release.yml"))
-	assert.ok(shipped.workflows.includes("bump.yml"))
+	assert.equal(shipped.workflows.includes("bump.yml"), false)
 	assert.equal(shipped.workflows.includes("tag.yml"), false)
 })
 
@@ -104,5 +103,11 @@ test("a URL-shaped Download link is not enough without CI and a Mac release job"
 			),
 		/CI=true/,
 	)
-	assert.throws(() => assertBumpWorkflow("on: push\n"), /workflow_dispatch/)
+	assert.throws(
+		() =>
+			assertReleaseWorkflow(
+				'on:\n  push:\n    tags:\n      - v*\n    branches: [main]\nruns-on: macos-latest\nrun: pnpm package:mac\ngh release create\ncontents: write\n*.dmg\nMoya_aarch64.dmg\nunset APPLE_CERTIFICATE\nAPPLE_SIGNING_IDENTITY="-"\ncodesign --verify\nCI: "true"\n',
+			),
+		/fetch-depth/,
+	)
 })

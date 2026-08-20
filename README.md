@@ -58,7 +58,7 @@ open src-tauri/target/release/bundle/macos/Moya.app
 `pnpm package:mac` writes:
 
 - `src-tauri/target/release/bundle/macos/Moya.app`
-- `src-tauri/target/release/bundle/dmg/Moya_0.1.0_aarch64.dmg`
+- `src-tauri/target/release/bundle/dmg/Moya_<version>_aarch64.dmg`
 
 Closing the window hides Moya to the menu-bar tray. Quit from the tray menu or Cmd+Q.
 
@@ -91,11 +91,7 @@ A green Voice test suite proves Moya’s contract, not that a sidecar spoke the 
 
 ## Releases
 
-```sh
-pnpm bump patch    # lockstep SemVer bump → open a PR
-```
-
-Or **Actions → Bump**. After it lands on `main`, Release may publish a Mac DMG. That download is not notarized. Install by building on the Mac (`#mac-app`).
+`pnpm package:mac` (and the Release workflow) apply the git version — last `vX.Y.Z` tag plus one patch per commit after it — then build. There is no separate bump step. A GitHub DMG is optional and not notarized. Install by building on the Mac (`#mac-app`).
 
 ## License
 

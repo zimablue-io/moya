@@ -11,4 +11,4 @@ Do not merge to `main` without a pull request. `.github/workflows/ci.yml` must r
 
 `scripts/shipping-contract.test.mjs` must stay red if those workflows disappear or stop publishing the DMG.
 
-Version increment is `pnpm bump <patch|minor|major|X.Y.Z>` only. Do not hand-edit one of package.json / tauri.conf.json / Cargo.toml / `APP_VERSION`.
+Version is the last `vX.Y.Z` tag plus one patch per commit after it. `pnpm package:mac` and Release both apply that number. Do not add a second bump command or workflow. Do not hand-edit one of package.json / tauri.conf.json / Cargo.toml / `APP_VERSION`.

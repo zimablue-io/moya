@@ -2,7 +2,7 @@
 
 ## Current focus
 
-DMG background is one full-bleed light fill plus an arrow. An inset “card” on the PNG sat inside Finder’s own window fill and looked like two backgrounds.
+Version is one path: last `vX.Y.Z` tag plus commits after it. `package:mac` and Release apply that number. No `pnpm bump`, no Actions Bump. Four commits after `v0.1.0` is `0.1.4` at this HEAD.
 
 ## Current focus (voice / UI)
 
@@ -10,7 +10,7 @@ Voice Settings matches Model: one Provider select, then only that provider’s f
 
 ## What just changed
 
-1. Shipping contract + CI + tag-triggered Mac Release workflow. Version increment is `pnpm bump <patch|minor|major|X.Y.Z>` (lockstep). Actions → Bump opens a PR; merge tags `vX.Y.Z`. Main is a GitHub ruleset: PR required, `check` must pass. No DMG on GitHub until this lands and Tag creates `v0.1.0`.
+1. Shipping contract + CI + Mac Release on `main`. Version is git (last `v*` tag + commits). `package:mac` and Release apply it. No bump workflow.
 2. Product classes moved off colliding Moya names: `bg-accent` / `text-accent-fg` → `bg-primary` / `text-primary-foreground`; `text-muted` → `text-muted-foreground`.
 2. Brand palette SSOT: beige is `--color-brand` / `COLOR.brand`; gray text is `--color-quiet` / `COLOR.quiet`. `:root --primary` still points at beige.
 3. Unused `cmdk` and `vaul` removed so `@radix-ui/*` is gone from the lockfile.
@@ -31,7 +31,7 @@ Voice Settings matches Model: one Provider select, then only that provider’s f
 
 ## Next
 
-1. First DMG: Release must run on `main` in the same workflow. `v0.1.0` exists as a tag but has no assets — GITHUB_TOKEN tag push did not start Release. Later cuts: `pnpm bump patch`.
+1. First DMG: Release must run on `main` in the same workflow. Later cuts are new commits after the last `v*` tag — `package:mac` / Release apply the next patch.
 2. Apple Developer ID signing/notarization still needs human secrets. Unsigned DMGs will Gatekeeper-warn until those are set.
 3. Spoken Local Kokoro voice still needs a sidecar restart + listen (unchanged).
 4. Add new UI with `pnpm dlx shadcn@latest add <name>` (Base UI). Replay Moya classes; do not overwrite.

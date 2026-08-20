@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync } from "node:fs"
-import { dirname, join } from "node:path"
+import { join } from "node:path"
 import { fileURLToPath } from "node:url"
 import { assertVersionsMatch, readRel } from "./shipping-contract.mjs"
 
@@ -88,16 +88,8 @@ export function bumpVersion(root, bump, { dryRun = false } = {}) {
 
 const invokedDirectly = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]
 if (invokedDirectly) {
-	const root = dirname(dirname(fileURLToPath(import.meta.url)))
-	const flags = new Set(process.argv.slice(2).filter((arg) => arg.startsWith("--")))
-	const bump = process.argv.slice(2).find((arg) => !arg.startsWith("--"))
-	if (!bump) {
-		console.error("usage: pnpm bump <patch|minor|major|X.Y.Z> [--dry-run]")
-		process.exit(1)
-	}
-	const result = bumpVersion(root, bump, { dryRun: flags.has("--dry-run") })
-	if (process.env.GITHUB_OUTPUT) {
-		writeFileSync(process.env.GITHUB_OUTPUT, `version=${result.version}\nprevious=${result.previous}\n`, { flag: "a" })
-	}
-	console.log(`${flags.has("--dry-run") ? "would bump" : "bumped"} ${result.previous} → ${result.version}`)
+	console.error(
+		"Version is the last vX.Y.Z tag plus commits after it. pnpm package:mac applies that number. Do not increment by hand.",
+	)
+	process.exit(1)
 }
