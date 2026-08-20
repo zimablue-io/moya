@@ -103,14 +103,14 @@ function emptyProjectsSpeech(env: EnvState): string {
 	const boards = env.snapshot.boards.length
 	const work = env.snapshot.sources.filter((s) => s.kind === "work").length
 	if (boards === 0 && work === 0) {
-		return "No projects yet. Add a Linear or GitHub source in Settings → Sources, or start a board."
+		return "No projects yet. Pick Linear or GitHub in Settings → Sources, or start a board."
 	}
 	return "Opened Watch → Boards."
 }
 
 function emptyCalendarSpeech(env: EnvState): string {
 	if (!env.snapshot.sources.some((s) => s.kind === "calendar")) {
-		return "No calendar source. Add an ICS feed in Settings → Sources."
+		return "No calendar source. Pick a calendar in Settings → Sources."
 	}
 	return "Opened Watch → Time."
 }

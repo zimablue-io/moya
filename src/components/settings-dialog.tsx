@@ -142,7 +142,7 @@ export function SettingsDialog() {
 						<TabsContent value="tools">
 							<ToolsTab />
 						</TabsContent>
-						<TabsContent value="sources" className="space-y-4">
+						<TabsContent value="sources">
 							<SourcesPanel
 								sources={sources ?? []}
 								onAttach={attachSource}

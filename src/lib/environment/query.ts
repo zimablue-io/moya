@@ -142,7 +142,7 @@ export function runQuery(env: EnvState, args: QueryArgs = {}): { data: unknown; 
 		empty: snap.sources.length === 0,
 		hint:
 			snap.sources.length === 0
-				? "Add a calendar ICS, attach notes, or connect a read-only work tracker in Settings → Sources."
+				? "Pick a source in Settings → Sources. Calendar, Linear, GitHub, or attached files."
 				: null,
 	}
 
@@ -176,7 +176,7 @@ export function runQuery(env: EnvState, args: QueryArgs = {}): { data: unknown; 
 		empty: calSources.length === 0,
 		hint:
 			calSources.length === 0
-				? "No calendar source. Add an ICS feed or file in Settings → Sources."
+				? "No calendar source. Pick Google, Apple, or Outlook Calendar in Settings → Sources."
 				: events.length === 0
 					? "Calendar is connected but has no matching events."
 					: null,
@@ -193,7 +193,7 @@ export function runQuery(env: EnvState, args: QueryArgs = {}): { data: unknown; 
 		empty: workSources.length === 0 && snap.boards.length === 0,
 		hint:
 			workSources.length === 0 && snap.boards.length === 0
-				? "No work source and no boards. Connect Linear readonly or GitHub read in Settings → Sources, or start a board."
+				? "No work source and no boards. Pick Linear or GitHub in Settings → Sources, or start a board."
 				: null,
 	}
 

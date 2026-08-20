@@ -156,7 +156,7 @@ export function WatchDialog() {
 						<TabsContent value="time" className="mt-0 space-y-4">
 							{calendar.length === 0 ? (
 								<p className="text-sm text-muted-foreground">
-									No calendar source. Add an ICS feed in Settings → Sources.
+									No calendar source. Pick a calendar in Settings → Sources.
 								</p>
 							) : todayEvents.length === 0 ? (
 								<p className="text-sm text-muted-foreground">Calendar is connected. Nothing on today.</p>
