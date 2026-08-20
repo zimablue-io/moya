@@ -7,7 +7,7 @@ This is **Moya**, a local-first personal assistant (web + Tauri desktop). Produc
 - Home (`/`) is the assistant. Sign-in is optional; `/login` is not a gate.
 - Memory, transcript, routines, inbox, and settings persist locally (`src/lib/persist.ts`).
 - Chat completion is a client `fetch` to the configured provider (`src/lib/llm.ts`). Desktop uses the same function.
-- Voice mode is OpenAI Realtime over WebSocket (`src/lib/realtime-session.ts`). Backends: Local (`huggingface/speech-to-speech` on `:8765`), Grok, OpenAI. llama.cpp is Settings → Model only; it is not a voice server. Moya does not start speech-to-speech or llama-server.
+- Voice mode is OpenAI Realtime over WebSocket (`src/lib/realtime-session.ts`). Backends: Local (`huggingface/speech-to-speech` on `:8765`), Grok, OpenAI. llama.cpp is Settings → Model only; it is not a voice server. Moya does not start speech-to-speech or llama-server. Web does not offer Local voice, Ollama, or llama.cpp (`liveSettings` / `*ChoicesForHost`).
 - Realtime barge-in must keep sending mic audio while the agent talks, flush local playback on `speech_started`, ignore leftover audio from the cancelled reply, wait for the user to finish, then play the new reply. Muting the mic to dodge echo makes interruption impossible. Resetting the play cursor is not enough — `ScheduledAudioQueue.flush()` has to `stop()` every queued source.
 - The packaged `.app` has no Node server. Do not add `createServerFn` paths that the `.app` must call.
 

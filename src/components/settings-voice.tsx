@@ -10,7 +10,13 @@ import { openSettingsToAllow } from "@/lib/brand"
 import { isDesktop, systemSettingsLabel, thisDeviceLabel } from "@/lib/host"
 import { allowMicrophone, type MediaAuth, mediaPermissionStatus } from "@/lib/media-permission"
 import { useApp } from "@/lib/store"
-import { VOICE_CHOICES, VOICE_PRESETS, type VoiceBackendId, voiceUrlIsEditable } from "@/lib/types"
+import {
+	VOICE_PRESETS,
+	type VoiceBackendId,
+	voiceBackendForHost,
+	voiceChoicesForHost,
+	voiceUrlIsEditable,
+} from "@/lib/types"
 import { resolveVoiceApiKey, voiceBackendNeedsKey } from "@/lib/voice-backend"
 import { VOICE_SETTINGS_COPY } from "@/lib/voice-contract"
 import { restartVoiceIfNeeded } from "@/lib/voice-mode"
@@ -30,7 +36,10 @@ export function VoiceTab({
 	const patch = useApp((s) => s.patchSettings)
 	const applyVoiceBackend = useApp((s) => s.applyVoiceBackend)
 	const setVoiceBackendField = useApp((s) => s.setVoiceBackendField)
-	const id = VOICE_CHOICES.includes(settings.voiceBackend.id) ? settings.voiceBackend.id : "s2s"
+	const desktop = isDesktop()
+	const choices = voiceChoicesForHost(desktop)
+	const live = voiceBackendForHost(settings.voiceBackend, desktop)
+	const id = choices.includes(live.id) ? live.id : (choices[0] ?? "browser")
 	const preset = VOICE_PRESETS[id]
 
 	return (
@@ -48,7 +57,7 @@ export function VoiceTab({
 			</div>
 			<Field label="Provider" field="voice">
 				<Select
-					items={VOICE_CHOICES.map((choice) => ({
+					items={choices.map((choice) => ({
 						value: choice,
 						label: VOICE_PRESETS[choice].label,
 					}))}
@@ -65,7 +74,7 @@ export function VoiceTab({
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
-						{VOICE_CHOICES.map((choice) => (
+						{choices.map((choice) => (
 							<SelectItem key={choice} value={choice}>
 								{VOICE_PRESETS[choice].label}
 							</SelectItem>
@@ -136,9 +145,9 @@ export function VoiceTab({
 					) : null}
 					<SpokenVoice
 						id={id}
-						baseUrl={settings.voiceBackend.baseUrl}
-						apiKey={resolveVoiceApiKey(settings.voiceBackend, settings.provider)}
-						value={settings.voiceBackend.voice}
+						baseUrl={live.baseUrl}
+						apiKey={resolveVoiceApiKey(live, settings.provider)}
+						value={live.voice}
 						onChange={async (v) => {
 							await setVoiceBackendField("voice", v)
 						}}

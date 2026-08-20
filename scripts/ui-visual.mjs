@@ -115,16 +115,22 @@ export async function focusPaint(page, locator) {
 		height: box.height + PAD * 2,
 	}
 	const rest = await page.screenshot({ clip, type: "png" })
-	await locator.evaluate((node) => {
-		if (node instanceof HTMLElement) node.focus({ focusVisible: true })
-	})
-	if (!(await locator.evaluate((node) => node === document.activeElement && node.matches(":focus-visible")))) {
-		await page.keyboard.press("Tab")
-		await locator.evaluate((node) => {
-			if (node instanceof HTMLElement) node.focus({ focusVisible: true })
-		})
+	const focusScript = (node) => {
+		const target =
+			node instanceof HTMLElement && node.matches("input, textarea, select, button, [tabindex]")
+				? node
+				: node instanceof Element
+					? node.querySelector("input, textarea, select, button, [tabindex]:not([tabindex='-1'])")
+					: null
+		const el = target instanceof HTMLElement ? target : node instanceof HTMLElement ? node : null
+		if (el) el.focus({ focusVisible: true })
+		return Boolean(el && el === document.activeElement && el.matches(":focus-visible"))
 	}
-	if (!(await locator.evaluate((node) => node === document.activeElement && node.matches(":focus-visible")))) {
+	if (!(await locator.evaluate(focusScript))) {
+		await page.keyboard.press("Tab")
+		await locator.evaluate(focusScript)
+	}
+	if (!(await locator.evaluate(focusScript))) {
 		return { error: "could not keyboard-focus", sides: {} }
 	}
 	await page.waitForTimeout(40)

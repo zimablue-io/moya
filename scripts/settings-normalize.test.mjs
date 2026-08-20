@@ -1,7 +1,15 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
 import { parseOpenAiModelIds } from "../src/lib/provider-models.ts"
-import { llamaCppBaseUrl, normalizeSettings, PROVIDER_PRESETS, VOICE_CHOICES, VOICE_PRESETS } from "../src/lib/types.ts"
+import {
+	llamaCppBaseUrl,
+	normalizeSettings,
+	PROVIDER_PRESETS,
+	providerChoicesForHost,
+	VOICE_CHOICES,
+	VOICE_PRESETS,
+	voiceChoicesForHost,
+} from "../src/lib/types.ts"
 
 test("defaults when given empty input", () => {
 	const settings = normalizeSettings({})
@@ -117,6 +125,15 @@ test("the Voice tab offers Local, Grok, OpenAI, and System", () => {
 		VOICE_CHOICES.map((id) => VOICE_PRESETS[id].label),
 		["Local", "Grok", "OpenAI", "System"],
 	)
+})
+
+test("web Model and Voice pickers drop localhost-only options", () => {
+	assert.equal(providerChoicesForHost(false).includes("ollama"), false)
+	assert.equal(providerChoicesForHost(false).includes("llamacpp"), false)
+	assert.equal(providerChoicesForHost(false).includes("custom"), true)
+	assert.equal(voiceChoicesForHost(false).includes("s2s"), false)
+	assert.equal(voiceChoicesForHost(true).includes("s2s"), true)
+	assert.equal(providerChoicesForHost(true).includes("ollama"), true)
 })
 
 test("an unknown voice backend becomes Local", () => {

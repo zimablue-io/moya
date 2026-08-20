@@ -12,8 +12,15 @@ import {
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { providerSetupNeeded } from "@/lib/first-run"
+import { isDesktop } from "@/lib/host"
 import { useApp } from "@/lib/store"
-import { PROVIDER_PRESETS, type ProviderConfig, type ProviderId } from "@/lib/types"
+import {
+	PROVIDER_PRESETS,
+	type ProviderConfig,
+	type ProviderId,
+	providerChoicesForHost,
+	providerForHost,
+} from "@/lib/types"
 
 export type SetupPending = { kind: "send"; text: string } | { kind: "voice" }
 
@@ -30,11 +37,13 @@ export function SetupSheet({
 }) {
 	const settings = useApp((s) => s.settings)
 	const dispatch = useApp((s) => s.dispatch)
-	const [draft, setDraft] = useState<ProviderConfig>(settings.provider)
+	const desktop = isDesktop()
+	const choices = providerChoicesForHost(desktop)
+	const [draft, setDraft] = useState<ProviderConfig>(() => providerForHost(settings.provider, desktop))
 	const [busy, setBusy] = useState(false)
 
 	useEffect(() => {
-		if (open) setDraft(useApp.getState().settings.provider)
+		if (open) setDraft(providerForHost(useApp.getState().settings.provider, isDesktop()))
 	}, [open])
 
 	const needs = providerSetupNeeded(draft)
@@ -56,7 +65,7 @@ export function SetupSheet({
 				<div className="flex flex-col gap-4">
 					<Field label="Provider">
 						<Select
-							items={(Object.keys(PROVIDER_PRESETS) as ProviderId[]).map((id) => ({
+							items={choices.map((id) => ({
 								value: id,
 								label: PROVIDER_PRESETS[id].label,
 							}))}
@@ -72,7 +81,7 @@ export function SetupSheet({
 								<SelectValue />
 							</SelectTrigger>
 							<SelectContent>
-								{(Object.keys(PROVIDER_PRESETS) as ProviderId[]).map((id) => (
+								{choices.map((id) => (
 									<SelectItem key={id} value={id}>
 										{PROVIDER_PRESETS[id].label}
 									</SelectItem>

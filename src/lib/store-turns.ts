@@ -1,6 +1,7 @@
 import { type AutomationDraft, isDue, makeAutomation, quietReply } from "./automations"
 import { dispatch, runTurn } from "./environment"
-import { notify } from "./host"
+import { liveSettings, notify } from "./host"
+import { completeTurn } from "./llm"
 import { speech } from "./speech"
 import { applyEnv, envFromStore, type Live } from "./store-env"
 import type { Artifact, Message, Snapshot } from "./types"
@@ -75,6 +76,7 @@ export function createTurnActions(get: Get, set: Set) {
 				text: trimmed,
 				kind: "text",
 				appendUser: false,
+				complete: (req) => completeTurn({ ...req, provider: liveSettings(get().settings).provider }),
 			})
 
 			const spoken = result.spoken
@@ -86,7 +88,7 @@ export function createTurnActions(get: Get, set: Set) {
 			const speakBrowser = shouldSpeakTypedReply({
 				autoSpeak: get().settings.autoSpeak,
 				voiceMode: get().voiceMode,
-				backend: get().settings.voiceBackend.id,
+				backend: liveSettings(get().settings).voiceBackend.id,
 			})
 			set({
 				...applyEnv(result.env),
@@ -101,7 +103,7 @@ export function createTurnActions(get: Get, set: Set) {
 			if (added[0]) void notify(added[0].title, added[0].body)
 
 			if (speakBrowser) {
-				if (get().settings.voiceBackend.id === "browser") speech.stopListen()
+				if (liveSettings(get().settings).voiceBackend.id === "browser") speech.stopListen()
 				speech.speak(spoken, {
 					voiceURI: get().settings.voiceURI,
 					rate: get().settings.rate,
@@ -127,6 +129,7 @@ export function createTurnActions(get: Get, set: Set) {
 				kind: "routine",
 				routineId: id,
 				appendUser: false,
+				complete: (req) => completeTurn({ ...req, provider: liveSettings(get().settings).provider }),
 			})
 
 			const keep = !quietReply(result.spoken)
@@ -148,7 +151,7 @@ export function createTurnActions(get: Get, set: Set) {
 				shouldSpeakTypedReply({
 					autoSpeak: get().settings.autoSpeak,
 					voiceMode: get().voiceMode,
-					backend: get().settings.voiceBackend.id,
+					backend: liveSettings(get().settings).voiceBackend.id,
 				})
 			) {
 				speech.speak(result.spoken, {

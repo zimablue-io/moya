@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react"
 import type { SetupPending } from "@/components/setup-sheet"
 import { type FirstRunVerb, providerSetupNeeded, voiceCloudSetupNeeded } from "@/lib/first-run"
+import { liveSettings } from "@/lib/host"
 import { useApp } from "@/lib/store"
 import { enterVoiceMode, exitVoiceMode } from "@/lib/voice-mode"
 
@@ -18,7 +19,7 @@ export function useFirstRunGate() {
 	}, [])
 
 	const enterVoice = useCallback(() => {
-		const next = useApp.getState().settings
+		const next = liveSettings(useApp.getState().settings)
 		if (voiceCloudSetupNeeded(next.voiceBackend, next.provider)) {
 			setSetupPending({ kind: "voice" })
 			setSetupOpen(true)
@@ -31,7 +32,7 @@ export function useFirstRunGate() {
 		(text: string) => {
 			const trimmed = text.trim()
 			if (!trimmed) return
-			if (providerSetupNeeded(useApp.getState().settings.provider)) {
+			if (providerSetupNeeded(liveSettings(useApp.getState().settings).provider)) {
 				setDraftSeed(trimmed)
 				setSetupPending({ kind: "send", text: trimmed })
 				setSetupOpen(true)

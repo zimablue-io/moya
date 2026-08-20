@@ -3,25 +3,45 @@ import { Field } from "@/components/settings-field"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { isDesktop } from "@/lib/host"
 import { listProviderModels } from "@/lib/llm"
 import { useApp } from "@/lib/store"
-import { PROVIDER_PRESETS, type ProviderId } from "@/lib/types"
+import {
+	isLocalOnlyProvider,
+	PROVIDER_PRESETS,
+	type ProviderConfig,
+	type ProviderId,
+	providerChoicesForHost,
+	providerForHost,
+} from "@/lib/types"
 
 export function ModelTab() {
 	const settings = useApp((s) => s.settings)
 	const applyProvider = useApp((s) => s.applyProvider)
-	const setProviderField = useApp((s) => s.setProviderField)
-	const preset = PROVIDER_PRESETS[settings.provider.id]
+	const dispatch = useApp((s) => s.dispatch)
+	const desktop = isDesktop()
+	const choices = providerChoicesForHost(desktop)
+	const provider = providerForHost(settings.provider, desktop)
+	const preset = PROVIDER_PRESETS[provider.id]
+
+	const writeField = (field: "baseUrl" | "apiKey", value: string) => {
+		void (async () => {
+			if (!desktop && isLocalOnlyProvider(useApp.getState().settings.provider.id)) {
+				await dispatch("settings.provider", { id: provider.id })
+			}
+			await dispatch("settings.provider", { field, value })
+		})()
+	}
 
 	return (
 		<div className="space-y-4">
 			<Field label="Provider" field="provider">
 				<Select
-					items={(Object.keys(PROVIDER_PRESETS) as ProviderId[]).map((id) => ({
+					items={choices.map((id) => ({
 						value: id,
 						label: PROVIDER_PRESETS[id].label,
 					}))}
-					value={settings.provider.id}
+					value={provider.id}
 					onValueChange={(v) => {
 						if (v) applyProvider(v as ProviderId)
 					}}
@@ -30,7 +50,7 @@ export function ModelTab() {
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
-						{(Object.keys(PROVIDER_PRESETS) as ProviderId[]).map((id) => (
+						{choices.map((id) => (
 							<SelectItem key={id} value={id}>
 								{PROVIDER_PRESETS[id].label}
 							</SelectItem>
@@ -39,39 +59,47 @@ export function ModelTab() {
 				</Select>
 			</Field>
 			<p className="text-xs text-muted-foreground">{preset.hint}</p>
-			{settings.provider.id === "custom" || settings.provider.id === "ollama" || settings.provider.id === "llamacpp" ? (
+			{provider.id === "custom" || provider.id === "ollama" || provider.id === "llamacpp" ? (
 				<Field label="Base URL">
-					<Input value={settings.provider.baseUrl} onChange={(e) => setProviderField("baseUrl", e.target.value)} />
+					<Input value={provider.baseUrl} onChange={(e) => writeField("baseUrl", e.target.value)} />
 				</Field>
 			) : (
-				<p className="text-xs text-subtle">{settings.provider.baseUrl}</p>
+				<p className="text-xs text-subtle">{provider.baseUrl}</p>
 			)}
-			{settings.provider.id === "xai" ||
-			settings.provider.id === "openai" ||
-			settings.provider.id === "groq" ||
-			settings.provider.id === "openrouter" ||
-			settings.provider.id === "custom" ? (
+			{provider.id === "xai" ||
+			provider.id === "openai" ||
+			provider.id === "groq" ||
+			provider.id === "openrouter" ||
+			provider.id === "custom" ? (
 				<Field label="API key (stored only on this device)" field="apiKey">
 					<Input
 						type="password"
 						autoComplete="off"
-						value={settings.provider.apiKey}
-						onChange={(e) => setProviderField("apiKey", e.target.value)}
-						placeholder={settings.provider.id === "custom" ? "Optional" : "Required — stored only on this device"}
+						value={provider.apiKey}
+						onChange={(e) => writeField("apiKey", e.target.value)}
+						placeholder={provider.id === "custom" ? "Optional" : "Required — stored only on this device"}
 					/>
 				</Field>
 			) : null}
-			<ProviderModels />
+			<ProviderModels provider={provider} />
 		</div>
 	)
 }
 
-function ProviderModels() {
-	const provider = useApp((s) => s.settings.provider)
-	const setProviderField = useApp((s) => s.setProviderField)
+function ProviderModels({ provider }: { provider: ProviderConfig }) {
+	const dispatch = useApp((s) => s.dispatch)
 	const [checking, setChecking] = useState(false)
 	const [error, setError] = useState<string | null>(null)
 	const [models, setModels] = useState<string[] | null>(null)
+
+	const writeModel = (value: string) => {
+		void (async () => {
+			if (!isDesktop() && isLocalOnlyProvider(useApp.getState().settings.provider.id)) {
+				await dispatch("settings.provider", { id: provider.id })
+			}
+			await dispatch("settings.provider", { field: "model", value })
+		})()
+	}
 
 	useEffect(() => {
 		let cancelled = false
@@ -92,9 +120,10 @@ function ProviderModels() {
 				}
 				setError(null)
 				setModels(result.models)
-				const current = useApp.getState().settings.provider.model
-				if (result.models.length && !result.models.includes(current)) {
-					setProviderField("model", result.models[0] ?? "")
+				const stored = useApp.getState().settings.provider
+				if (stored.id !== provider.id) return
+				if (result.models.length && !result.models.includes(stored.model)) {
+					void dispatch("settings.provider", { field: "model", value: result.models[0] ?? "" })
 				}
 			})
 		}
@@ -106,7 +135,7 @@ function ProviderModels() {
 			window.clearTimeout(id)
 			if (poll) window.clearInterval(poll)
 		}
-	}, [provider.id, provider.baseUrl, provider.apiKey, setProviderField])
+	}, [provider.id, provider.baseUrl, provider.apiKey, dispatch])
 
 	const options =
 		provider.model && models && !models.includes(provider.model) ? [provider.model, ...models] : (models ?? [])
@@ -144,9 +173,9 @@ function ProviderModels() {
 							}
 							setError(null)
 							setModels(result.models)
-							const current = useApp.getState().settings.provider.model
-							if (result.models.length && !result.models.includes(current)) {
-								setProviderField("model", result.models[0] ?? "")
+							const stored = useApp.getState().settings.provider
+							if (stored.id === provider.id && result.models.length && !result.models.includes(stored.model)) {
+								void dispatch("settings.provider", { field: "model", value: result.models[0] ?? "" })
 							}
 						})
 					}}
@@ -164,7 +193,7 @@ function ProviderModels() {
 					value={options.includes(provider.model) ? provider.model : ""}
 					disabled={models === null || options.length === 0}
 					onValueChange={(v) => {
-						if (v != null) setProviderField("model", v)
+						if (v != null) writeModel(v)
 					}}
 				>
 					<SelectTrigger>

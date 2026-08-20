@@ -8,6 +8,8 @@ Version is one path: last `vX.Y.Z` tag plus commits after it. `package:mac` and 
 
 Voice Settings matches Model: one Provider select, then only that provider’s fields. System is the built-in-voices choice (not a Mac option). Local Base URL is a field, not a hidden Connection drawer.
 
+Web hides Local voice, Ollama, and llama.cpp. Effective settings on web fall back to System / xAI without writing the stored desktop row. Custom OpenAI-compatible stays.
+
 ## What just changed
 
 1. Shipping contract + CI + Mac Release on `main`. Version is git (last `v*` tag + commits). `package:mac` and Release apply it. No bump workflow.

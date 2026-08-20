@@ -10,9 +10,12 @@ import {
 	KOKORO_TTS_VOICES,
 	normalizeSettings,
 	POCKET_TTS_VOICES,
+	providerChoicesForHost,
+	settingsForHost,
 	speakersFor,
 	VOICE_CHOICES,
 	VOICE_PRESETS,
+	voiceChoicesForHost,
 } from "../src/lib/types.ts"
 import { listRealtimeSpeakers, POCKET_VOICE_TREE_URL } from "../src/lib/voice-catalog.ts"
 import {
@@ -152,6 +155,33 @@ test("Voice tab offers Local, Grok, OpenAI, and System — same one-provider pat
 	assert.equal("browser" in VOICE_PRESETS, true)
 })
 
+test("web omits Local voice, Ollama, and llama.cpp; desktop keeps them", () => {
+	assert.deepEqual(voiceChoicesForHost(true), VOICE_CHOICES)
+	assert.equal(voiceChoicesForHost(false).includes("s2s"), false)
+	assert.deepEqual(voiceChoicesForHost(false), ["xai", "openai", "browser"])
+	assert.equal(providerChoicesForHost(true).includes("ollama"), true)
+	assert.equal(providerChoicesForHost(true).includes("llamacpp"), true)
+	assert.equal(providerChoicesForHost(false).includes("ollama"), false)
+	assert.equal(providerChoicesForHost(false).includes("llamacpp"), false)
+	assert.equal(providerChoicesForHost(false).includes("custom"), true)
+	assert.equal(settingsForHost(DEFAULT_SETTINGS, false).voiceBackend.id, "browser")
+	assert.equal(settingsForHost(DEFAULT_SETTINGS, true).voiceBackend.id, "s2s")
+	assert.equal(
+		settingsForHost(
+			normalizeSettings({ provider: { id: "ollama", model: "qwen3:8b", baseUrl: "http://127.0.0.1:11434/v1" } }),
+			false,
+		).provider.id,
+		"xai",
+	)
+	assert.equal(
+		settingsForHost(
+			normalizeSettings({ provider: { id: "llamacpp", model: "qwen3", baseUrl: "http://127.0.0.1:8080/v1" } }),
+			true,
+		).provider.id,
+		"llamacpp",
+	)
+})
+
 test("Web Speech finals never become a realtime Voice-mode turn", () => {
 	assert.equal(browserSpeechFinalSink({ voiceMode: true, noteListen: false, backend: "s2s" }), "ignore")
 	assert.equal(browserSpeechFinalSink({ voiceMode: true, noteListen: true, backend: "s2s" }), "note")
@@ -218,7 +248,8 @@ test("Settings and Voice mode stay wired to the contract, not a second Speaker f
 
 	assert.match(settingsSrc, /VOICE_SETTINGS_COPY/)
 	assert.match(settingsSrc, /conversationSpeaker/)
-	assert.match(settingsSrc, /voiceBackend\.voice/)
+	assert.match(settingsSrc, /voiceBackend/)
+	assert.match(settingsSrc, /voiceChoicesForHost/)
 	assert.match(settingsSrc, /settings\.voiceURI/)
 	assert.match(settingsSrc, /await setVoiceBackendField/)
 	assert.match(settingsSrc, /await applyVoiceBackend/)
@@ -238,15 +269,19 @@ test("Settings and Voice mode stay wired to the contract, not a second Speaker f
 	assert.equal(shellSrc.includes("lastAssistant"), false)
 
 	assert.match(modeSrc, /realtimeConnectFromSettings/)
+	assert.match(modeSrc, /liveSettings/)
 	assert.match(modeSrc, /voiceUiAfterConnectError/)
 	assert.match(modeSrc, /voiceUsesRealtime/)
 	assert.match(modeSrc, /startListen/)
 	assert.match(storeSrc, /shouldSpeakTypedReply/)
+	assert.match(storeSrc, /liveSettings/)
 	assert.equal(/void run\("settings\.voice"/.test(storeSrc), false)
 	assert.match(storeSrc, /run\("settings\.voice"/)
 	assert.equal(VOICE_SETTINGS_COPY.conversationSpeaker, "Speaker")
 	assert.match(voiceSrc, /label="Base URL"/)
+	assert.match(voiceSrc, /voiceChoicesForHost/)
 	assert.match(modelSrc, /label="Base URL"/)
+	assert.match(modelSrc, /providerChoicesForHost/)
 })
 
 test("SpokenVoice waits for the store write before restarting Voice", () => {

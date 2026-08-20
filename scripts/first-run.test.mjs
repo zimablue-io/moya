@@ -116,6 +116,8 @@ test("shell uses the first-run contract and does not convert on login", () => {
 	assert.equal(shell.includes('target="_blank"'), false)
 	assert.match(shell, /settings\.provider/)
 	assert.match(shell, /Where should I think/)
+	assert.match(shell, /providerChoicesForHost/)
+	assert.match(shell, /liveSettings/)
 	assert.equal(/sign in to save/i.test(shell), false)
 	assert.equal(shell.includes('href="/login"'), false)
 })

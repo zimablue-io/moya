@@ -30,7 +30,7 @@ function Slider({ className, defaultValue, value, min = 0, max = 100, ...props }
 					<SliderPrimitive.Thumb
 						data-slot="slider-thumb"
 						key={index}
-						className="block size-4 shrink-0 rounded-full bg-fg shadow outline-none ring-inset focus-visible:ring-3 focus-visible:ring-ring/50"
+						className="block size-4 shrink-0 rounded-full bg-fg shadow outline-none ring-inset has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring/50"
 					/>
 				))}
 			</SliderPrimitive.Control>

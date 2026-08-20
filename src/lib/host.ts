@@ -1,7 +1,15 @@
+import type { Settings } from "./types.ts"
+import { settingsForHost } from "./types-presets.ts"
+
 export type HostOs = "mac" | "windows" | "linux" | "other"
 
 export function isDesktop(): boolean {
 	return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window
+}
+
+/** Settings as this host should use them. Does not write. Desktop keeps Local / Ollama / llama.cpp. */
+export function liveSettings(settings: Settings): Settings {
+	return settingsForHost(settings, isDesktop())
 }
 
 export function hostOsFrom(userAgent: string, platform = ""): HostOs {

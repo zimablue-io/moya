@@ -1,3 +1,4 @@
+import { liveSettings } from "./host"
 import { buildSystemPrompt } from "./prompt"
 import { type RealtimeLoopAction, reduceVoiceUi } from "./realtime-loop"
 import { realtimeSession } from "./realtime-session"
@@ -27,7 +28,7 @@ export async function enterVoiceMode() {
 	const store = useApp.getState()
 	store.setVoiceMode(true)
 	store.setPresence({ presence: "listening", caption: "", interim: "", error: null })
-	if (!voiceUsesRealtime(store.settings.voiceBackend.id)) {
+	if (!voiceUsesRealtime(liveSettings(store.settings).voiceBackend.id)) {
 		await speech.startListen({ continuous: true })
 		return
 	}
@@ -50,7 +51,7 @@ export async function restartVoiceIfNeeded() {
 	speech.stopListen()
 	speech.stopSpeak()
 	store.setPresence({ presence: "listening", caption: "", interim: "", error: null })
-	if (!voiceUsesRealtime(store.settings.voiceBackend.id)) {
+	if (!voiceUsesRealtime(liveSettings(store.settings).voiceBackend.id)) {
 		await speech.startListen({ continuous: true })
 		return
 	}
@@ -59,7 +60,7 @@ export async function restartVoiceIfNeeded() {
 
 async function startRealtime() {
 	const store = useApp.getState()
-	const { settings } = store
+	const settings = liveSettings(store.settings)
 	const tools = toRealtimeTools(store.realtimeTools())
 	const instructions = buildSystemPrompt({
 		version: 1,

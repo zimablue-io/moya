@@ -9,6 +9,7 @@ AGENTS.md wins on product/desktop/auth. This file is the living journal. The pub
 - `conversationVoice` / `localConversationVoice` coerce unknown Local ids to `af_heart`.
 - Settings must `await` the `settings.voice` act before `restartVoiceIfNeeded()`.
 - Voice Settings is one Provider, like Model. System is the built-in device voices (Web Speech), labeled System on every OS — not a Mac option. Rate/pitch show only for System. Do not hide Base URL in an accordion.
+- Web (`!isDesktop()`) must not offer Local voice, Ollama, or llama.cpp. Those need a process on this machine. Use `voiceChoicesForHost` / `providerChoicesForHost` / `liveSettings`. Custom OpenAI-compatible stays. Do not persist-heal a leftover Local/Ollama row just because the browser opened — desktop may share that IndexedDB.
 - Sending `session.audio.output.voice` is not proof the sidecar spoke it. Upstream Kokoro remaps STT `en` → British and used to force `bm_fable`. Handler on this machine was patched; running process must be restarted.
 - `scripts/voice-system.test.mjs` staying green is necessary, not sufficient. Hear Heart vs Fable or say you have not.
 

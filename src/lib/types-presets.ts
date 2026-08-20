@@ -1,5 +1,5 @@
 import { APP_NAME } from "./brand.ts"
-import type { ProviderId, VoiceBackendId } from "./types.ts"
+import type { ProviderConfig, ProviderId, Settings, VoiceBackendId, VoiceConfig } from "./types.ts"
 
 export const PROVIDER_PRESETS: Record<ProviderId, { label: string; model: string; baseUrl: string; hint: string }> = {
 	xai: {
@@ -138,6 +138,43 @@ export const REALTIME_VOICES: Record<VoiceBackendId, { id: string; label: string
 }
 
 export const VOICE_CHOICES: VoiceBackendId[] = ["s2s", "xai", "openai", "browser"]
+
+export function isLocalOnlyProvider(id: string): boolean {
+	return id === "ollama" || id === "llamacpp"
+}
+
+export function isLocalOnlyVoice(id: string): boolean {
+	return id === "s2s"
+}
+
+export function providerChoicesForHost(desktop: boolean): ProviderId[] {
+	const ids = Object.keys(PROVIDER_PRESETS) as ProviderId[]
+	return desktop ? ids : ids.filter((id) => !isLocalOnlyProvider(id))
+}
+
+export function voiceChoicesForHost(desktop: boolean): VoiceBackendId[] {
+	return desktop ? [...VOICE_CHOICES] : VOICE_CHOICES.filter((id) => !isLocalOnlyVoice(id))
+}
+
+export function providerForHost(provider: ProviderConfig, desktop: boolean): ProviderConfig {
+	if (desktop || !isLocalOnlyProvider(provider.id)) return provider
+	const preset = PROVIDER_PRESETS.xai
+	return { id: "xai", model: preset.model, baseUrl: preset.baseUrl, apiKey: "" }
+}
+
+export function voiceBackendForHost(voice: VoiceConfig, desktop: boolean): VoiceConfig {
+	if (desktop || !isLocalOnlyVoice(voice.id)) return voice
+	const preset = VOICE_PRESETS.browser
+	return { id: "browser", model: preset.model, baseUrl: preset.baseUrl, apiKey: "", voice: preset.voice }
+}
+
+export function settingsForHost(settings: Settings, desktop: boolean): Settings {
+	return {
+		...settings,
+		provider: providerForHost(settings.provider, desktop),
+		voiceBackend: voiceBackendForHost(settings.voiceBackend, desktop),
+	}
+}
 
 export function voiceUsesRealtime(id: VoiceBackendId): boolean {
 	return id !== "browser"

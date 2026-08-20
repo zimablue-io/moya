@@ -13,6 +13,7 @@ import { SetupSheet } from "@/components/setup-sheet"
 import { useFirstRunGate } from "@/components/use-first-run"
 import { WatchDialog } from "@/components/watch-dialog"
 import { isFirstRun } from "@/lib/first-run"
+import { liveSettings } from "@/lib/host"
 import { speech } from "@/lib/speech"
 import { pendingInboxCount, useApp } from "@/lib/store"
 import { formatClock } from "@/lib/utils"
@@ -90,7 +91,7 @@ export function AssistantShell() {
 				const sink = browserSpeechFinalSink({
 					voiceMode: useApp.getState().voiceMode,
 					noteListen: noteListenRef.current,
-					backend: useApp.getState().settings.voiceBackend.id,
+					backend: liveSettings(useApp.getState().settings).voiceBackend.id,
 				})
 				if (sink === "note") {
 					setDraft((prev) => `${prev.replace(/\s+$/, "")} ${text}`.trim())
@@ -110,7 +111,7 @@ export function AssistantShell() {
 				const s = useApp.getState()
 				if (s.voiceMode) {
 					s.setPresence({ presence: "listening" })
-					if (s.settings.voiceBackend.id === "browser") void speech.startListen({ continuous: true })
+					if (liveSettings(s.settings).voiceBackend.id === "browser") void speech.startListen({ continuous: true })
 				} else s.setPresence({ presence: "idle" })
 			},
 			onListenEnd: () => {

@@ -272,6 +272,8 @@ export const MEMORY_KINDS: { id: MemoryKind; label: string }[] = [
 export { normalizeArtifact, normalizeArtifacts, normalizeSettings, normalizeSnapshot } from "./types-normalize.ts"
 export {
 	isKokoroVoice,
+	isLocalOnlyProvider,
+	isLocalOnlyVoice,
 	isProviderId,
 	isVoiceBackendId,
 	KOKORO_TTS_VOICES,
@@ -279,10 +281,15 @@ export {
 	localConversationVoice,
 	POCKET_TTS_VOICES,
 	PROVIDER_PRESETS,
+	providerChoicesForHost,
+	providerForHost,
 	REALTIME_VOICES,
+	settingsForHost,
 	speakersFor,
 	VOICE_CHOICES,
 	VOICE_PRESETS,
+	voiceBackendForHost,
+	voiceChoicesForHost,
 	voiceUrlIsEditable,
 	voiceUsesRealtime,
 } from "./types-presets.ts"
