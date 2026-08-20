@@ -2,6 +2,8 @@
 
 ## Current focus
 
+`pnpm package:mac` is `tauri build` only. It does not rewrite versions. The previous “increment every run” was `app-version.mjs --apply` stamping last-tag + commit count onto the tree. Leftover `/Volumes/Moya*` mounts still break `bundle_dmg.sh` — eject those in Finder, do not add a helper script.
+
 On-device GGUF on phone/tablet native apps: in-process llama.cpp via Tauri `invoke`, same JS tool loop. Web stays cloud-only. Mac keeps localhost sidecars.
 
 ## Host gates

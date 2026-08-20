@@ -25,12 +25,13 @@
 - Settings Model can auto-select the first listed model if the stored id is missing from `/models`.
 - Canvas overlay intercepts pointer events; Playwright menu clicks need `{ force: true }`. First Escape closes a popover before its parent dialog.
 - CI `latest-release` on `main` stays red until `v0.1.0` publishes a `.dmg`. First DMGs are unsigned until Apple Developer ID secrets are set.
-- Prebuilt GitHub DMG is optional and Gatekeeper-blocked until notarized. Install path is clone + `pnpm package:mac` on this Mac. Local build 2026-08-20: sealed ad-hoc, `codesign --verify` valid. Menu/README point at `#mac-app`, not the DMG.
+- Prebuilt GitHub DMG is optional and Gatekeeper-blocked until notarized. Install path is clone + `pnpm package:mac` on this Mac. Menu/README point at `#mac-app`, not the DMG.
 - DMG background is one full-bleed light fill (no inset card). An earlier 36px “card” sat on Finder’s own window fill and looked like two backgrounds.
+- Leftover `/Volumes/Moya*` or `dmg.*` mounts make `bundle_dmg.sh` fail. Closing the Finder window does not unmount. Eject them; do not add a helper script.
 
 ## Status
 
-Repo is **public** (`zimablue-io/moya`). MIT © 2026 Lefa Moffat. First-run landing on `/` is in tree. Spoken Local voice: **unverified** until sidecar restart + listen. Version is git (last `v*` tag + commits). `pnpm package:mac` and Release apply it; there is no bump workflow.
+Repo is **public** (`zimablue-io/moya`). MIT © 2026 Lefa Moffat. First-run landing on `/` is in tree. Spoken Local voice: **unverified** until sidecar restart + listen. Version lives in the lockstep files (`0.1.6`). `pnpm package:mac` and Release build that number; they do not increment it.
 
 ## Connector presets (shipped in Settings → Sources)
 

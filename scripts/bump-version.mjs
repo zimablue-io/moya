@@ -89,7 +89,7 @@ export function bumpVersion(root, bump, { dryRun = false } = {}) {
 const invokedDirectly = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]
 if (invokedDirectly) {
 	console.error(
-		"Version is the last vX.Y.Z tag plus commits after it. pnpm package:mac applies that number. Do not increment by hand.",
+		"Version lives in the lockstep files. pnpm package:mac does not increment it. Change those files in one commit if you need a new number.",
 	)
 	process.exit(1)
 }

@@ -21,9 +21,9 @@ Do not claim Voice, Settings, or fonts work from tests alone. State what you mea
 
 ## Cut a Mac release
 
-Version is one number: the last `vX.Y.Z` git tag, plus one patch per commit after that tag. `pnpm package:mac` and the Release workflow both apply that number to the lockstep files (`package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, `src/lib/brand.ts`) and then build. Do not hand-edit one file. Do not add a second bump command or Actions Bump job.
+Version is one number in the lockstep files (`package.json`, `src-tauri/tauri.conf.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock`, `src/lib/brand.ts`). `pnpm package:mac` and the Release workflow build that number. They do not increment it. Do not edit only one of those files. Do not add a bump command or Actions Bump job.
 
-A new series (`0.2.0`, `1.0.0`) is a `vX.Y.Z` tag on the commit that should be that floor. Commits after it keep adding patches.
+A new number is a single commit that updates every lockstep file, then a matching `vX.Y.Z` tag.
 
 The menu Mac app control links to README `#mac-app` (clone + `pnpm package:mac`). Do not send people to a GitHub DMG as the install path — Apple blocks unsigned internet downloads. A Releases DMG is optional. Local builds open without that sheet because they were not downloaded from the internet.
 

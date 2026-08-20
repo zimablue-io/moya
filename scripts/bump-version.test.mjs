@@ -95,7 +95,7 @@ test("bumpVersion patch/minor/major and refuses a no-op or a drifted tree", () =
 	assert.throws(() => bumpVersion(dir, "patch"), /Version mismatch/)
 })
 
-test("hand increment is not a package script — git version is applied by package:mac", () => {
+test("hand increment is not a package script — package:mac does not rewrite versions", () => {
 	const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"))
 	assert.equal(pkg.scripts.bump, undefined)
 	assert.equal(bumpVersion(root, "patch", { dryRun: true }).previous, appVersions(root).package)

@@ -26,7 +26,7 @@
 		"preview": "vite preview --host 0.0.0.0 --port 5173",
 		"build:desktop": "vite build --mode desktop && node scripts/desktop-frontend.mjs",
 		"desktop": "tauri dev",
-		"package:mac": "node --experimental-strip-types scripts/app-version.mjs --apply && tauri build",
+		"package:mac": "tauri build",
 		"android:init": "tauri android init --ci --skip-targets-install && node scripts/patch-mobile-permissions.mjs",
 		"ios:init": "tauri ios init --ci --skip-targets-install && node scripts/patch-mobile-permissions.mjs",
 		"android": "tauri android dev",

@@ -108,7 +108,7 @@ export function assertReleaseWorkflow(yaml) {
 		throw new Error("Release must set CI=true so headless Mac runners skip Finder AppleScript")
 	}
 	if (!/fetch-depth:\s*0/.test(yaml)) {
-		throw new Error("Release must fetch-depth: 0 so the git version can count commits since the last v* tag")
+		throw new Error("Release must fetch-depth: 0 so a v* tag can be checked against the lockstep version files")
 	}
 }
 
@@ -156,16 +156,15 @@ export function assertShippingContract(root) {
 	assertCiWorkflow(readRel(root, CI_WORKFLOW))
 	assertReleaseWorkflow(readRel(root, RELEASE_WORKFLOW))
 	if (existsSync(join(root, BUMP_WORKFLOW))) {
-		throw new Error(
-			`${BUMP_WORKFLOW} is a second version path — version is the last v* tag plus commits, applied by package:mac`,
-		)
+		throw new Error(`${BUMP_WORKFLOW} is a second version path — version lives in the lockstep files, not a workflow`)
 	}
 	const pkg = JSON.parse(readRel(root, "package.json"))
 	if (pkg.scripts?.bump) {
-		throw new Error("package.json scripts.bump is a second version path — package:mac applies the git version")
+		throw new Error("package.json scripts.bump is a second version path — version lives in the lockstep files")
 	}
-	if (!/app-version\.mjs/.test(pkg.scripts?.["package:mac"] ?? "") || !/--apply/.test(pkg.scripts["package:mac"])) {
-		throw new Error("package:mac must apply the git version before tauri build")
+	const packageMac = pkg.scripts?.["package:mac"] ?? ""
+	if (/app-version\.mjs/.test(packageMac) || /--apply/.test(packageMac)) {
+		throw new Error("package:mac must not rewrite versions — building a DMG is not a version event")
 	}
 	if (
 		!/APP_VERSION/.test(readRel(root, "src/lib/mcp.ts")) ||

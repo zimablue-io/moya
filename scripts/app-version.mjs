@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url"
 import { applyVersion, parseSemver } from "./bump-version.mjs"
 import { assertVersionsMatch } from "./shipping-contract.mjs"
 
-/** Last reachable vX.Y.Z tag, plus one patch per commit after it. Same number locally and in Release. */
+/** Diagnostic only. package:mac and Release use the lockstep files, not this count. */
 export function versionAfterTag(tagVersion, commitsAfter) {
 	const { major, minor, patch } = parseSemver(tagVersion)
 	const n = Number(commitsAfter)
@@ -43,8 +43,10 @@ const invokedDirectly = process.argv[1] && fileURLToPath(import.meta.url) === pr
 if (invokedDirectly) {
 	const root = dirname(dirname(fileURLToPath(import.meta.url)))
 	if (process.argv.includes("--apply")) {
-		const result = applyGitVersion(root)
-		console.log(`git version ${result.previous} → ${result.version}`)
+		console.error(
+			"package:mac must not rewrite versions. Building a DMG is not a version event. Change the lockstep files in one commit if you need a new number.",
+		)
+		process.exit(1)
 	} else {
 		process.stdout.write(`${resolveGitVersion(root)}\n`)
 	}

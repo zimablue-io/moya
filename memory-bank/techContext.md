@@ -15,7 +15,7 @@
 ```sh
 pnpm dev              # http://127.0.0.1:5173
 pnpm desktop          # tauri dev; beforeDevCommand is `npm run dev`
-pnpm package:mac      # apply git version, then tauri build
+pnpm package:mac      # tauri build → .app + .dmg
 pnpm android:init     # generate Android project (SDK/NDK)
 pnpm ios:init         # generate Xcode project
 pnpm test

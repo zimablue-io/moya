@@ -17,7 +17,7 @@ This is **Moya**, a local-first personal assistant (web + Tauri desktop; Android
 ```sh
 pnpm dev              # http://127.0.0.1:5173
 pnpm desktop          # tauri dev; beforeDevCommand is `npm run dev`
-pnpm package:mac      # apply git version, then tauri build → .app + drag-to-Applications .dmg (needs Finder)
+pnpm package:mac      # tauri build → .app + drag-to-Applications .dmg (needs Finder)
 pnpm android:init     # generate Android Studio project (needs SDK/NDK)
 pnpm ios:init         # generate Xcode project
 pnpm test
@@ -25,7 +25,7 @@ pnpm lint
 pnpm typecheck
 ```
 
-CI (`.github/workflows/ci.yml`) runs lint, format check, typecheck, and tests on every pull request. Version is the last `vX.Y.Z` tag plus one patch per commit after it. `pnpm package:mac` and Release both apply that number — there is no `pnpm bump` and no Actions Bump job. Landing on `main` may publish a Mac DMG in the same Release workflow — a `GITHUB_TOKEN` tag push cannot start a second job. Do not advertise that DMG as the install path. Mac app is clone + `pnpm package:mac` (`#mac-app`). `scripts/shipping-contract.test.mjs` must stay red if the workflows disappear.
+CI (`.github/workflows/ci.yml`) runs lint, format check, typecheck, and tests on every pull request. Version lives in the lockstep files. `pnpm package:mac` and Release build that number — they do not increment it, and there is no `pnpm bump` or Actions Bump job. Landing on `main` may publish a Mac DMG in the same Release workflow — a `GITHUB_TOKEN` tag push cannot start a second job. Do not advertise that DMG as the install path. Mac app is clone + `pnpm package:mac` (`#mac-app`). `scripts/shipping-contract.test.mjs` must stay red if the workflows disappear.
 
 Release artifacts:
 

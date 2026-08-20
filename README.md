@@ -92,7 +92,7 @@ A green Voice test suite proves Moya’s contract, not that a sidecar spoke the 
 
 ## Releases
 
-`pnpm package:mac` (and the Release workflow) apply the git version — last `vX.Y.Z` tag plus one patch per commit after it — then build. There is no separate bump step. A GitHub DMG is optional and not notarized. Install by building on the Mac (`#mac-app`).
+`pnpm package:mac` (and the Release workflow) build the lockstep version already in the repo. Building a DMG does not increment it. A GitHub DMG is optional and not notarized. Install by building on the Mac (`#mac-app`).
 
 ## License
 

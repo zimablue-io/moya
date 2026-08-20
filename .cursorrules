@@ -34,7 +34,7 @@ AGENTS.md wins on product/desktop/auth. This file is the living journal. The pub
 - Do not advertise a GitHub DMG as the Mac install. Apple blocks unsigned internet downloads. Menu/README go to `#mac-app` (clone + `pnpm package:mac`). A Releases `.dmg` is optional.
 - Pull requests are the path onto `main`. `.github/workflows/ci.yml` must run `pnpm lint`, `pnpm typecheck`, and `pnpm test`.
 - `scripts/shipping-contract.test.mjs` must stay red if those workflows disappear or stop publishing.
-- Version is the last `vX.Y.Z` tag plus one patch per commit after it. `pnpm package:mac` and Release both apply that number. Do not add a second bump command or workflow. Do not hand-edit one of package.json / tauri.conf.json / Cargo.toml / Cargo.lock / `APP_VERSION`.
+- Version lives in the lockstep files. `pnpm package:mac` and Release build that number. They do not increment it. Do not add a bump command or workflow. Do not edit only one of package.json / tauri.conf.json / Cargo.toml / Cargo.lock / `APP_VERSION`.
 
 ## UI appearance
 

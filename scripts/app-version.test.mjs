@@ -53,9 +53,9 @@ test("applyGitVersion writes lockstep files when git is ahead of the tree", () =
 	assert.equal(assertVersionsMatch(dir), "0.1.4")
 })
 
-test("package:mac applies the git version — there is no second bump command", () => {
+test("package:mac does not rewrite versions — there is no bump command", () => {
 	const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8"))
-	assert.match(pkg.scripts["package:mac"] ?? "", /app-version\.mjs/)
-	assert.match(pkg.scripts["package:mac"] ?? "", /--apply/)
+	assert.equal(/\bapp-version\.mjs\b/.test(pkg.scripts["package:mac"] ?? ""), false)
+	assert.equal(/--apply/.test(pkg.scripts["package:mac"] ?? ""), false)
 	assert.equal(pkg.scripts.bump, undefined)
 })
