@@ -1,9 +1,9 @@
 import assert from "node:assert/strict"
 import { test } from "node:test"
 import {
-	DEFAULT_APP,
-	assessCodesignInfo,
 	assertMacBundle,
+	assessCodesignInfo,
+	DEFAULT_APP,
 	inspectLocalMacBundle,
 	isShippingPath,
 } from "./mac-bundle.mjs"

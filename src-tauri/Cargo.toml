@@ -1,6 +1,6 @@
 [package]
 name = "moya"
-version = "0.1.0"
+version = "0.1.6"
 description = "Moya — one local-first assistant"
 authors = ["Lefa Moffat"]
 license = "MIT"

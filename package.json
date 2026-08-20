@@ -1,6 +1,6 @@
 {
 	"name": "moya",
-	"version": "0.1.0",
+	"version": "0.1.6",
 	"private": true,
 	"license": "MIT",
 	"description": "One local-first personal assistant. Memory, routines, and models stay on this machine.",
