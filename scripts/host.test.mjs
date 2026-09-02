@@ -1,4 +1,5 @@
 import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
 import { test } from "node:test"
 import { providerSetupNeeded } from "../src/lib/first-run.ts"
 import { GGUF_SUGGESTIONS } from "../src/lib/gguf-catalog.ts"
@@ -140,6 +141,10 @@ test("GGUF picker stores the full path and shows the basename", () => {
 		"gemma-4-E4B-it-UD-Q4_K_XL.gguf",
 	)
 	assert.equal(ggufDisplayName("tiny.gguf"), "tiny.gguf")
+	const picker = readFileSync(new URL("../src/components/settings-ondevice.tsx", import.meta.url), "utf8")
+	assert.match(picker, /pickFromDisk/)
+	assert.match(picker, /Choose a different GGUF/)
+	assert.match(picker, /id: "ondevice"/)
 })
 
 test("hasOnDeviceLlm can be set from llm_status without treating web as native", () => {

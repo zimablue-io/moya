@@ -16,7 +16,7 @@ import {
 	providerForHost,
 } from "@/lib/types"
 
-export function ModelTab() {
+export function ModelTab({ onGgufBusy }: { onGgufBusy?: (busy: boolean) => void }) {
 	const settings = useApp((s) => s.settings)
 	const applyProvider = useApp((s) => s.applyProvider)
 	const dispatch = useApp((s) => s.dispatch)
@@ -35,7 +35,7 @@ export function ModelTab() {
 	}
 
 	return (
-		<div className="space-y-4">
+		<div className="flex flex-col gap-4">
 			<Field label="Provider" field="provider">
 				<Select
 					items={choices.map((id) => ({
@@ -82,7 +82,11 @@ export function ModelTab() {
 					/>
 				</Field>
 			) : null}
-			{provider.id === "ondevice" ? <OnDeviceModels model={provider.model} /> : <ProviderModels provider={provider} />}
+			{provider.id === "ondevice" ? (
+				<OnDeviceModels model={provider.model} onBusy={onGgufBusy} />
+			) : (
+				<ProviderModels provider={provider} />
+			)}
 		</div>
 	)
 }

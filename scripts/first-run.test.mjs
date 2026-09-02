@@ -107,6 +107,7 @@ test("shell uses the first-run contract and does not convert on login", () => {
 		"src/components/assistant-header.tsx",
 		"src/components/assistant-menu.tsx",
 		"src/components/setup-sheet.tsx",
+		"src/components/settings-model.tsx",
 		"src/components/use-first-run.ts",
 	]
 		.map(read)
@@ -126,6 +127,10 @@ test("shell uses the first-run contract and does not convert on login", () => {
 	assert.match(shell, /settings\.provider/)
 	assert.match(shell, /Where should I think/)
 	assert.match(shell, /providerChoicesForHost/)
+	assert.match(shell, /ModelTab/)
+	assert.match(shell, /Settings → Model/)
+	assert.match(read("src/components/settings-ondevice.tsx"), /id: "ondevice"/)
+	assert.match(read("src/components/settings-ondevice.tsx"), /Choose a different GGUF/)
 	assert.match(shell, /liveSettings/)
 	assert.equal(/sign in to save/i.test(shell), false)
 	assert.equal(shell.includes('href="/login"'), false)

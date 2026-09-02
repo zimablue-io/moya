@@ -25,7 +25,15 @@ function formatBytes(bytes: number): string {
 	return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
-export function OnDeviceModels({ model, onPicked }: { model: string; onPicked?: (filename: string) => void }) {
+export function OnDeviceModels({
+	model,
+	onPicked,
+	onBusy,
+}: {
+	model: string
+	onPicked?: (filename: string) => void
+	onBusy?: (busy: boolean) => void
+}) {
 	const dispatch = useApp((s) => s.dispatch)
 	const [status, setStatus] = useState<LlmStatus | null>(null)
 	const [files, setFiles] = useState<LlmFile[]>([])
@@ -47,6 +55,11 @@ export function OnDeviceModels({ model, onPicked }: { model: string; onPicked?: 
 			setError(err instanceof Error ? err.message : "On-device runtime is not available.")
 		}
 	}
+
+	useEffect(() => {
+		onBusy?.(busy !== null)
+		return () => onBusy?.(false)
+	}, [busy, onBusy])
 
 	useEffect(() => {
 		let cancelled = false
@@ -72,11 +85,11 @@ export function OnDeviceModels({ model, onPicked }: { model: string; onPicked?: 
 	}, [])
 
 	const choose = async (filename: string) => {
+		onPicked?.(filename)
 		setBusy("load")
 		try {
+			await dispatch("settings.provider", { id: "ondevice", model: filename })
 			await llmLoad(filename)
-			await dispatch("settings.provider", { field: "model", value: filename })
-			onPicked?.(filename)
 			await refresh()
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Could not load that GGUF.")
@@ -111,13 +124,27 @@ export function OnDeviceModels({ model, onPicked }: { model: string; onPicked?: 
 		}
 	}
 
-	const ram = status?.ramHint ?? 0
-	const suggestions = GGUF_SUGGESTIONS
-	const largeOk = ram >= 6144
 	const options = files.map((f) => f.name)
 	if (model && !options.includes(model)) options.unshift(model)
 	const selected = options.includes(model) ? model : ""
-	const loadedLabel = status?.loaded ? ggufDisplayName(status.loaded) : null
+
+	if (pickFromDisk) {
+		return (
+			<div className="flex flex-col gap-3">
+				{error ? <p className="text-xs text-alert">{error}</p> : null}
+				<Button type="button" disabled={busy !== null} onClick={() => void openFromDisk()}>
+					{busy === "pick"
+						? "Opening…"
+						: busy === "load"
+							? "Loading…"
+							: model
+								? "Choose a different GGUF"
+								: `Open a GGUF on ${device}`}
+				</Button>
+				{model ? <p className="text-sm text-fg">{ggufDisplayName(model)}</p> : null}
+			</div>
+		)
+	}
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -126,15 +153,12 @@ export function OnDeviceModels({ model, onPicked }: { model: string; onPicked?: 
 					? error
 					: status
 						? status.available
-							? `${status.backend}${loadedLabel ? ` · ${loadedLabel}` : " · no GGUF loaded"}${ram ? ` · ~${Math.round(ram / 1024)} GB RAM` : ""}`
+							? status.loaded
+								? ggufDisplayName(status.loaded)
+								: "No GGUF on this device yet."
 							: "On-device llama.cpp is not available on this device."
 						: "Checking on-device runtime…"}
 			</p>
-			{largeOk ? (
-				<p className="text-xs text-muted-foreground">This device has enough RAM for a larger GGUF.</p>
-			) : ram > 0 ? (
-				<p className="text-xs text-muted-foreground">Stay with a 1–2B Q4 unless you know the device can hold more.</p>
-			) : null}
 			{progress ? (
 				<p className="text-xs text-muted-foreground">
 					Downloading {progress.filename}
@@ -145,18 +169,13 @@ export function OnDeviceModels({ model, onPicked }: { model: string; onPicked?: 
 							: "…"}
 				</p>
 			) : null}
-			{pickFromDisk ? (
-				<Button type="button" disabled={busy !== null} onClick={() => void openFromDisk()}>
-					{busy === "pick" || busy === "load" ? "Opening…" : `Open a GGUF on ${device}`}
-				</Button>
-			) : null}
 			<label className="grid gap-2">
-				<span className="text-sm font-medium">{pickFromDisk ? `GGUFs on ${device}` : "GGUF on this device"}</span>
+				<span className="text-sm font-medium">GGUF on this device</span>
 				<Select
 					items={[
 						{
 							value: "",
-							label: files.length ? "Choose a GGUF" : pickFromDisk ? "None listed yet" : "No GGUF downloaded yet",
+							label: files.length ? "Choose a GGUF" : "No GGUF downloaded yet",
 						},
 						...options.map((name) => ({ value: name, label: ggufDisplayName(name) })),
 					]}
@@ -170,9 +189,7 @@ export function OnDeviceModels({ model, onPicked }: { model: string; onPicked?: 
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
-						<SelectItem value="">
-							{files.length ? "Choose a GGUF" : pickFromDisk ? "None listed yet" : "No GGUF downloaded yet"}
-						</SelectItem>
+						<SelectItem value="">{files.length ? "Choose a GGUF" : "No GGUF downloaded yet"}</SelectItem>
 						{options.map((name) => {
 							const file = files.find((f) => f.name === name)
 							return (
@@ -187,7 +204,7 @@ export function OnDeviceModels({ model, onPicked }: { model: string; onPicked?: 
 			</label>
 			<div className="flex flex-col gap-2">
 				<p className="text-xs text-muted-foreground">Or download a suggested file.</p>
-				{suggestions.map((item) => (
+				{GGUF_SUGGESTIONS.map((item) => (
 					<Button
 						key={item.id}
 						type="button"

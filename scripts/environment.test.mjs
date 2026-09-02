@@ -176,6 +176,18 @@ test("settings.voice writes the Kokoro id the next read will send", async () => 
 	assert.equal(pocket.env.snapshot.settings.voiceBackend.voice, "af_heart")
 })
 
+test("settings.provider can switch to on-device and keep the GGUF path", async () => {
+	const switched = await act(emptyEnv(), "settings.provider", {
+		id: "ondevice",
+		model: "/Users/me/models/gemma-4-E4B.gguf",
+	})
+	assert.equal(switched.env.snapshot.settings.provider.id, "ondevice")
+	assert.equal(switched.env.snapshot.settings.provider.model, "/Users/me/models/gemma-4-E4B.gguf")
+	assert.equal(switched.env.snapshot.settings.provider.baseUrl, "")
+	const reset = await act(switched.env, "settings.provider", { id: "ondevice" })
+	assert.equal(reset.env.snapshot.settings.provider.model, "")
+})
+
 test("ui.focus opens settings on the API key", async () => {
 	const { env } = await act(emptyEnv(), "ui.focus", { field: "apiKey" })
 	assert.equal(env.ui.dialog, "settings")

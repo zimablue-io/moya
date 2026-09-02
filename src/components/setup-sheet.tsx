@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react"
-import { Field } from "@/components/settings-field"
-import { OnDeviceModels } from "@/components/settings-ondevice"
+import { ModelTab } from "@/components/settings-model"
 import { Button } from "@/components/ui/button"
 import {
 	Dialog,
@@ -10,12 +9,9 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { providerSetupNeeded, setupProviderDraft } from "@/lib/first-run"
-import { hostCaps } from "@/lib/host"
+import { hostCaps, liveSettings } from "@/lib/host"
 import { useApp } from "@/lib/store"
-import { PROVIDER_PRESETS, type ProviderConfig, type ProviderId, providerChoicesForHost } from "@/lib/types"
 
 export type SetupPending = { kind: "send"; text: string } | { kind: "voice" }
 
@@ -33,22 +29,22 @@ export function SetupSheet({
 	const settings = useApp((s) => s.settings)
 	const dispatch = useApp((s) => s.dispatch)
 	const caps = hostCaps()
-	const choices = providerChoicesForHost(caps)
-	const [draft, setDraft] = useState<ProviderConfig>(() => setupProviderDraft(settings.provider, caps))
 	const [busy, setBusy] = useState(false)
+	const [ggufBusy, setGgufBusy] = useState(false)
+	const needs = providerSetupNeeded(liveSettings(settings).provider)
 
 	useEffect(() => {
-		if (open) setDraft(setupProviderDraft(useApp.getState().settings.provider, hostCaps()))
-	}, [open])
-
-	const needs = providerSetupNeeded(draft)
-	const wantsKey =
-		draft.id === "xai" ||
-		draft.id === "openai" ||
-		draft.id === "groq" ||
-		draft.id === "openrouter" ||
-		draft.id === "custom"
-	const wantsUrl = draft.id === "custom" || draft.id === "ollama" || draft.id === "llamacpp"
+		if (!open) return
+		const current = useApp.getState().settings.provider
+		const next = setupProviderDraft(current, hostCaps())
+		if (next.id === current.id && next.model === current.model) return
+		void dispatch("settings.provider", {
+			id: next.id,
+			model: next.model,
+			baseUrl: next.baseUrl,
+			apiKey: next.apiKey,
+		})
+	}, [open, dispatch])
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
@@ -57,89 +53,24 @@ export function SetupSheet({
 					<DialogTitle>Where should I think?</DialogTitle>
 					<DialogDescription>
 						{caps.onDeviceLlm
-							? "Pick a GGUF on this device. Moya thinks with it here."
-							: "Keys stay on this device. You bring the model."}
+							? "Same as Settings → Model. Pick a GGUF on this device."
+							: "Same as Settings → Model. Keys stay on this device."}
 					</DialogDescription>
 				</DialogHeader>
-				<div className="flex flex-col gap-4">
-					<Field label="Provider">
-						<Select
-							items={choices.map((id) => ({
-								value: id,
-								label: PROVIDER_PRESETS[id].label,
-							}))}
-							value={draft.id}
-							onValueChange={(v) => {
-								if (!v) return
-								const id = v as ProviderId
-								const preset = PROVIDER_PRESETS[id]
-								setDraft({ id, model: preset.model, baseUrl: preset.baseUrl, apiKey: "" })
-							}}
-						>
-							<SelectTrigger>
-								<SelectValue />
-							</SelectTrigger>
-							<SelectContent>
-								{choices.map((id) => (
-									<SelectItem key={id} value={id}>
-										{PROVIDER_PRESETS[id].label}
-									</SelectItem>
-								))}
-							</SelectContent>
-						</Select>
-					</Field>
-					<p className="text-xs text-muted-foreground">{PROVIDER_PRESETS[draft.id].hint}</p>
-					{wantsUrl ? (
-						<Field label="Base URL">
-							<Input value={draft.baseUrl} onChange={(e) => setDraft((d) => ({ ...d, baseUrl: e.target.value }))} />
-						</Field>
-					) : null}
-					{wantsKey ? (
-						<Field label="API key (stored only on this device)">
-							<Input
-								type="password"
-								autoComplete="off"
-								value={draft.apiKey}
-								onChange={(e) => setDraft((d) => ({ ...d, apiKey: e.target.value }))}
-								placeholder={draft.id === "custom" ? "Optional" : "Required — stored only on this device"}
-							/>
-						</Field>
-					) : null}
-					{draft.id === "llamacpp" || draft.id === "custom" ? (
-						<Field label="Model">
-							<Input value={draft.model} onChange={(e) => setDraft((d) => ({ ...d, model: e.target.value }))} />
-						</Field>
-					) : null}
-					{draft.id === "ondevice" ? (
-						<OnDeviceModels model={draft.model} onPicked={(filename) => setDraft((d) => ({ ...d, model: filename }))} />
-					) : null}
-				</div>
+				<ModelTab onGgufBusy={setGgufBusy} />
 				<DialogFooter>
 					<Button
 						type="button"
-						disabled={Boolean(needs) || busy}
+						disabled={Boolean(needs) || busy || ggufBusy}
 						onClick={() => {
 							if (!pending) return
 							setBusy(true)
-							void (async () => {
-								const current = useApp.getState().settings.provider
-								if (current.id !== draft.id) await dispatch("settings.provider", { id: draft.id })
-								if (draft.baseUrl !== useApp.getState().settings.provider.baseUrl) {
-									await dispatch("settings.provider", { field: "baseUrl", value: draft.baseUrl })
-								}
-								if (draft.model !== useApp.getState().settings.provider.model) {
-									await dispatch("settings.provider", { field: "model", value: draft.model })
-								}
-								if (draft.apiKey) {
-									await dispatch("settings.provider", { field: "apiKey", value: draft.apiKey })
-								}
-								setBusy(false)
-								onOpenChange(false)
-								onReady(pending)
-							})()
+							onOpenChange(false)
+							onReady(pending)
+							setBusy(false)
 						}}
 					>
-						Continue
+						{ggufBusy ? "Loading…" : "Continue"}
 					</Button>
 				</DialogFooter>
 			</DialogContent>

@@ -160,9 +160,11 @@ export function actChrome(ctx: ActCtx): ActResult | null {
 		const id = str(args, "id") as ProviderId
 		if (id && PROVIDER_PRESETS[id]) {
 			const preset = PROVIDER_PRESETS[id]
+			const model = str(args, "model") || preset.model
+			const baseUrl = id === "ondevice" ? "" : str(args, "baseUrl") || preset.baseUrl
 			snap.settings = {
 				...snap.settings,
-				provider: { id, model: preset.model, baseUrl: preset.baseUrl, apiKey: "" },
+				provider: { id, model, baseUrl, apiKey: str(args, "apiKey") },
 			}
 			return ok(command, `Provider set to ${id}.`, next)
 		}

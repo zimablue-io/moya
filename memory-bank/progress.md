@@ -8,6 +8,7 @@
 - Shared Tauri `llm_*` commands. Engine: Mac Metal, Android Vulkan, iOS Metal; Windows/Linux stub. Paths/pick are shared modules. Desktop + engine: Open from disk. Voice default is System.
 - Voice **contract**: Conversation speaker ≠ system `voiceURI`; empty Local sends `af_heart`; first-open default is System; Web Speech finals are not realtime Voice turns; barge-in flush/stale-audio tests in `scripts/realtime-voice.test.mjs`.
 - Settings Voice: System first on `onDeviceLlm` hosts (no Local). Desktop without an engine still offers Local / Grok / OpenAI / System. Web omits Local, Ollama, and llama.cpp. Same layout as Model. Local picker is Kokoro-only. System fields show only when System is selected.
+- Mac setup for on-device is one Open button plus the chosen filename. Picking a GGUF writes provider `ondevice` and the path in one act so Continue is not stuck on “Pick a GGUF.” First-run “Where should I think?” is Settings → Model (`ModelTab`), not a second form.
 - Brand SSOT: Bricolage Grotesque + Ubuntu; palette in `src/lib/brand.ts` (`COLOR.brand` beige, `COLOR.quiet` gray text).
 - **UI kit:** `components.json` is `style: base-nova`, `base: base`. Wrappers use `@base-ui/react` (`render`, native `<label>`, scalar sliders). No `@radix-ui/*` in app or lockfile. Focus is `ring-inset` (inner ring). Appearance is proven by `scripts/ui-visual.test.mjs` (boot + pixel audit), not by class names.
 

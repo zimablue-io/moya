@@ -75,6 +75,9 @@ export const CHROME_COMMANDS: CommandDef[] = [
 	}),
 	cmd("settings.provider", "Switch provider or set a provider field (model, baseUrl, apiKey).", {
 		id: { type: "string" },
+		model: { type: "string" },
+		baseUrl: { type: "string" },
+		apiKey: { type: "string" },
 		field: { type: "string", enum: ["model", "baseUrl", "apiKey"] },
 		value: { type: "string" },
 	}),

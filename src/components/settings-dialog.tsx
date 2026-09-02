@@ -95,7 +95,7 @@ export function SettingsDialog() {
 			<DialogContent className="grid-rows-[auto_1fr] sm:max-w-2xl">
 				<DialogHeader>
 					<DialogTitle>Settings</DialogTitle>
-					<DialogDescription>Name, voice, and which model talks.</DialogDescription>
+					<DialogDescription>Name, how Talk speaks, and which model thinks.</DialogDescription>
 				</DialogHeader>
 				<Tabs value={settingsTab} onValueChange={(v) => setSettingsTab(v as SettingsTab)} className="min-h-0">
 					<TabsList>
