@@ -12,6 +12,7 @@ import {
 	isFirstRun,
 	menuToolsForHost,
 	providerSetupNeeded,
+	setupProviderDraft,
 	showDownloadApp,
 	voiceCloudSetupNeeded,
 } from "../src/lib/first-run.ts"
@@ -53,11 +54,13 @@ test("cold default settings cannot complete a turn", () => {
 		}),
 		null,
 	)
-	assert.match(providerSetupNeeded({ id: "ondevice", model: "", baseUrl: "", apiKey: "" }) ?? "", /GGUF/)
+	assert.match(providerSetupNeeded({ id: "ondevice", model: "", baseUrl: "", apiKey: "" }) ?? "", /Pick a GGUF/)
 	assert.equal(
 		providerSetupNeeded({ id: "ondevice", model: "Qwen_Qwen3-1.7B-Q4_K_M.gguf", baseUrl: "", apiKey: "" }),
 		null,
 	)
+	assert.equal(setupProviderDraft(DEFAULT_SETTINGS.provider, false).id, "xai")
+	assert.equal(setupProviderDraft(DEFAULT_SETTINGS.provider, { desktopOs: true, onDeviceLlm: true }).id, "ondevice")
 })
 
 test("Voice setup is only for cloud backends without a usable key", () => {
@@ -111,6 +114,7 @@ test("shell uses the first-run contract and does not convert on login", () => {
 	assert.match(shell, /isFirstRun/)
 	assert.match(shell, /providerSetupNeeded/)
 	assert.match(shell, /voiceCloudSetupNeeded/)
+	assert.match(read("src/components/use-first-run.ts"), /enterVoice[\s\S]*providerSetupNeeded\(next\.provider\)/)
 	assert.match(shell, /FIRST_RUN_LINE/)
 	assert.match(shell, /FIRST_RUN_VERBS/)
 	assert.match(shell, /showDownloadApp/)

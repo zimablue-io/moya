@@ -28,22 +28,31 @@ export function setOnDeviceLlmAvailable(value: boolean | null) {
 	onDeviceOverride = value
 }
 
-/** True when this native app can run in-process llama.cpp (phone/tablet). Never web or Mac. */
+/** True when this native app can run in-process llama.cpp (Mac, iPhone, iPad, Android). Never web. Windows/Linux stay false until llama.cpp is linked there. */
 export function hasOnDeviceLlm(): boolean {
 	if (onDeviceOverride != null) return onDeviceOverride
-	return isTauri() && !isDesktopOs()
+	if (!isTauri()) return false
+	const os = detectHostOs()
+	return os === "mac" || os === "ios" || os === "android"
+}
+
+/** Native Open dialog. Needs a real filesystem path, so desktop + in-process engine. */
+export function canPickGgufFromDisk(): boolean {
+	return hasOnDeviceLlm() && isDesktopOs()
 }
 
 export function hostCaps(): HostCaps {
 	const tauri = isTauri()
 	const desktopOs = isDesktopOs()
+	const onDeviceLlm = hasOnDeviceLlm()
 	return {
 		desktopOs: tauri && desktopOs,
-		onDeviceLlm: hasOnDeviceLlm(),
+		onDeviceLlm,
+		pickGgufFromDisk: canPickGgufFromDisk(),
 	}
 }
 
-/** Settings as this host should use them. Does not write. Desktop OS keeps Local / Ollama / llama.cpp. */
+/** Settings as this host should use them. Does not write. On-device LLM hosts remap leftover Local to System. Desktop without an engine keeps Local / Ollama / llama.cpp. */
 export function liveSettings(settings: Settings): Settings {
 	return settingsForHost(settings, hostCaps())
 }

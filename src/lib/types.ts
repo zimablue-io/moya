@@ -253,11 +253,11 @@ export const DEFAULT_SETTINGS: Settings = {
 		apiKey: "",
 	},
 	voiceBackend: {
-		id: "s2s",
-		model: "local",
-		baseUrl: "http://127.0.0.1:8765/v1",
+		id: "browser",
+		model: "",
+		baseUrl: "",
 		apiKey: "",
-		voice: "af_heart",
+		voice: "",
 	},
 }
 
@@ -272,6 +272,7 @@ export const MEMORY_KINDS: { id: MemoryKind; label: string }[] = [
 export { normalizeArtifact, normalizeArtifacts, normalizeSettings, normalizeSnapshot } from "./types-normalize.ts"
 export {
 	type HostCaps,
+	hostCapsFrom,
 	isKokoroVoice,
 	isLocalOnlyProvider,
 	isLocalOnlyVoice,

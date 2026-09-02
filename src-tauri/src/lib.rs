@@ -14,6 +14,7 @@ pub fn run() {
             llm::llm_status,
             llm::llm_list,
             llm::llm_download,
+            llm::llm_pick,
             llm::llm_load,
             llm::llm_unload,
             llm::llm_complete,

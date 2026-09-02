@@ -5,6 +5,8 @@ use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Emitter, Manager};
 
 mod engine;
+mod paths;
+mod pick;
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -14,6 +16,7 @@ pub struct LlmStatus {
     pub backend: String,
     pub loaded: Option<String>,
     pub ram_hint: u64,
+    pub can_pick: bool,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -97,15 +100,8 @@ fn gguf_dir(app: &AppHandle) -> Result<PathBuf, String> {
     Ok(dir)
 }
 
-fn safe_filename(name: &str) -> Result<String, String> {
-    let base = Path::new(name)
-        .file_name()
-        .and_then(|s| s.to_str())
-        .ok_or_else(|| "Invalid filename.".to_string())?;
-    if !base.ends_with(".gguf") || base.contains("..") {
-        return Err("GGUF filename required.".into());
-    }
-    Ok(base.to_string())
+fn unavailable() -> String {
+    "On-device GGUF is not available on this OS.".into()
 }
 
 fn status_now(loaded: Option<String>) -> LlmStatus {
@@ -115,6 +111,7 @@ fn status_now(loaded: Option<String>) -> LlmStatus {
         backend: engine::backend_name().to_string(),
         loaded,
         ram_hint: engine::ram_hint_mb(),
+        can_pick: paths::can_pick_from_disk(),
     }
 }
 
@@ -128,23 +125,13 @@ pub fn llm_list(app: AppHandle) -> Result<Vec<LlmFile>, String> {
     if !engine::available() {
         return Ok(vec![]);
     }
-    let dir = gguf_dir(&app)?;
     let mut out = vec![];
-    for entry in fs::read_dir(&dir).map_err(|e| e.to_string())? {
-        let entry = entry.map_err(|e| e.to_string())?;
-        let path = entry.path();
-        if path.extension().and_then(|s| s.to_str()) != Some("gguf") {
-            continue;
-        }
-        let bytes = entry.metadata().map(|m| m.len()).unwrap_or(0);
-        if let Some(name) = path.file_name().and_then(|s| s.to_str()) {
-            out.push(LlmFile {
-                name: name.to_string(),
-                bytes,
-            });
-        }
+    paths::collect_ggufs(&gguf_dir(&app)?, &mut out, 0);
+    for dir in paths::user_models_dirs() {
+        paths::collect_ggufs(&dir, &mut out, 0);
     }
     out.sort_by(|a, b| a.name.cmp(&b.name));
+    out.dedup_by(|a, b| a.name == b.name);
     Ok(out)
 }
 
@@ -155,11 +142,9 @@ pub async fn llm_download(
     filename: String,
 ) -> Result<LlmFile, String> {
     if !engine::available() {
-        return Err(
-            "On-device GGUF is for the Android and iOS apps. On this Mac run llama-server.".into(),
-        );
+        return Err(unavailable());
     }
-    let filename = safe_filename(&filename)?;
+    let filename = paths::download_filename(&filename)?;
     if !(url.starts_with("https://") || url.starts_with("http://127.0.0.1")) {
         return Err("HTTPS GGUF URL required.".into());
     }
@@ -216,18 +201,21 @@ fn download_file(
 }
 
 #[tauri::command]
+pub async fn llm_pick() -> Result<Option<String>, String> {
+    pick::pick_gguf().await
+}
+
+#[tauri::command]
 pub async fn llm_load(app: AppHandle, filename: String) -> Result<LlmStatus, String> {
     if !engine::available() {
-        return Err(
-            "On-device GGUF is for the Android and iOS apps. On this Mac run llama-server.".into(),
-        );
+        return Err(unavailable());
     }
-    let filename = safe_filename(&filename)?;
-    let path = gguf_dir(&app)?.join(&filename);
+    let path = paths::resolve_gguf_path(&gguf_dir(&app)?, &filename)?;
     if !path.is_file() {
-        return Err("That GGUF is not on this device yet.".into());
+        return Err("That GGUF is not on this device.".into());
     }
-    tauri::async_runtime::spawn_blocking(move || engine::load(&path, filename))
+    let loaded = path.to_string_lossy().into_owned();
+    tauri::async_runtime::spawn_blocking(move || engine::load(&path, loaded))
         .await
         .map_err(|e| e.to_string())??;
     Ok(status_now(engine::loaded_name()))
@@ -255,26 +243,33 @@ pub async fn llm_complete(
             ok: false,
             content: String::new(),
             tool_calls: vec![],
-            error: Some(
-                "On-device GGUF is for the Android and iOS apps. On this Mac run llama-server."
-                    .into(),
-            ),
+            error: Some(unavailable()),
         });
     }
     if let Some(name) = filename.clone() {
-        let name = safe_filename(&name)?;
-        if engine::loaded_name().as_deref() != Some(name.as_str()) {
-            let path = gguf_dir(&app)?.join(&name);
+        let path = match paths::resolve_gguf_path(&gguf_dir(&app)?, &name) {
+            Ok(path) => path,
+            Err(err) => {
+                return Ok(CompleteResult {
+                    ok: false,
+                    content: String::new(),
+                    tool_calls: vec![],
+                    error: Some(err),
+                });
+            }
+        };
+        let loaded = path.to_string_lossy().into_owned();
+        if engine::loaded_name().as_deref() != Some(loaded.as_str()) {
             if !path.is_file() {
                 return Ok(CompleteResult {
                     ok: false,
                     content: String::new(),
                     tool_calls: vec![],
-                    error: Some("Download or pick a GGUF first.".into()),
+                    error: Some("Pick a GGUF first.".into()),
                 });
             }
             let path2 = path.clone();
-            let name2 = name.clone();
+            let name2 = loaded.clone();
             tauri::async_runtime::spawn_blocking(move || engine::load(&path2, name2))
                 .await
                 .map_err(|e| e.to_string())??;
@@ -387,5 +382,27 @@ mod tests {
         assert_eq!(content, "ok");
         assert_eq!(calls.len(), 1);
         assert_eq!(calls[0].name, "memory.write");
+    }
+
+    #[test]
+    #[ignore]
+    fn prove_documents_e4b_loads() {
+        let path = PathBuf::from(std::env::var("HOME").unwrap())
+            .join("Documents/models/gemma/gemma-4-E4B-it-UD-Q4_K_XL.gguf");
+        assert!(path.is_file(), "missing {}", path.display());
+        engine::load(&path, path.to_string_lossy().into_owned()).expect("load E4B");
+        let messages = vec![LlmMessage {
+            role: "user".into(),
+            content: "Reply with the single word: ready".into(),
+            tool_calls: None,
+        }];
+        let out = engine::complete(&messages, &[], 32, 0.1).expect("complete");
+        eprintln!(
+            "e4b ok={} content={:?} error={:?}",
+            out.ok, out.content, out.error
+        );
+        assert!(out.ok, "{:?}", out.error);
+        assert!(!out.content.trim().is_empty());
+        engine::unload();
     }
 }

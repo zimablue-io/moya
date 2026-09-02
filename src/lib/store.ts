@@ -1,6 +1,7 @@
 import { create } from "zustand"
 import { type AutomationDraft } from "./automations"
 import { act, emptyUiState, toolsFor, type UiState } from "./environment"
+import { hostCaps, isTauri, liveSettings } from "./host"
 import { emptySnapshot, loadSnapshot, saveSnapshot } from "./persist"
 import { recoverFromRenderError } from "./recover"
 import { applyAct, applyEnv, envFromStore, envOf, type Live, takeSnapshot } from "./store-env"
@@ -10,6 +11,7 @@ import {
 	type Automation,
 	type DialogId,
 	type Emotion,
+	isLocalOnlyProvider,
 	type McpServer,
 	type Memory,
 	type MemoryKind,
@@ -112,12 +114,33 @@ export const useApp = create<AppStore>((set, get) => {
 
 		hydrate: async () => {
 			const snap = normalizeSnapshot(await loadSnapshot())
+			if (isTauri()) {
+				try {
+					const { llmStatus } = await import("./llm-native.ts")
+					await llmStatus()
+				} catch {
+					/* native runtime missing in tests */
+				}
+			}
+			let skipHeal = false
 			set((s) => {
 				if (s.messages.length > 0 || s.presence === "thinking" || s.presence === "speaking") {
+					skipHeal = true
 					return { ready: true }
 				}
-				return { ...snap, ready: true }
+				return { ...snap, ready: false }
 			})
+			if (!skipHeal && hostCaps().onDeviceLlm) {
+				const stored = get().settings
+				const live = liveSettings(stored)
+				if (live.voiceBackend.id !== stored.voiceBackend.id) {
+					await run("settings.voice", { id: live.voiceBackend.id })
+					if (isLocalOnlyProvider(stored.provider.id)) {
+						await run("settings.provider", { id: "ondevice" })
+					}
+				}
+			}
+			if (!skipHeal) set({ ready: true })
 		},
 
 		dispatch: async (name, args) => {

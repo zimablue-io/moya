@@ -15,9 +15,9 @@ test("defaults when given empty input", () => {
 	const settings = normalizeSettings({})
 	assert.equal(settings.provider.id, "xai")
 	assert.equal(settings.provider.baseUrl, PROVIDER_PRESETS.xai.baseUrl)
-	assert.equal(settings.voiceBackend.id, "s2s")
-	assert.equal(settings.voiceBackend.baseUrl, "http://127.0.0.1:8765/v1")
-	assert.equal(settings.voiceBackend.voice, "af_heart")
+	assert.equal(settings.voiceBackend.id, "browser")
+	assert.equal(settings.voiceBackend.baseUrl, "")
+	assert.equal(settings.voiceBackend.voice, "")
 	assert.equal("engine" in settings, false)
 })
 
@@ -136,12 +136,12 @@ test("web Model and Voice pickers drop localhost-only options", () => {
 	assert.equal(providerChoicesForHost(true).includes("ollama"), true)
 })
 
-test("an unknown voice backend becomes Local", () => {
+test("an unknown voice backend becomes System", () => {
 	const settings = normalizeSettings({
 		voiceBackend: { id: "moshi", baseUrl: "http://127.0.0.1:8998" },
 	})
-	assert.equal(settings.voiceBackend.id, "s2s")
-	assert.equal(settings.voiceBackend.baseUrl, "http://127.0.0.1:8765/v1")
+	assert.equal(settings.voiceBackend.id, "browser")
+	assert.equal(settings.voiceBackend.baseUrl, "")
 })
 
 test("voice preset copy stays short enough for a tooltip", () => {

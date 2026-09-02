@@ -266,6 +266,7 @@ export function AssistantShell() {
 				onMicFix={setMicFix}
 				firstRun={empty}
 				onVerb={firstRun.onVerb}
+				onUseSystemVoice={() => void firstRun.switchToSystemVoice()}
 			/>
 
 			<AssistantDock

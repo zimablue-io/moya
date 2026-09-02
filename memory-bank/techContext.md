@@ -28,7 +28,7 @@ pnpm format
 
 | Id | Label | Endpoint | Speakers |
 | --- | --- | --- | --- |
-| `s2s` | Local | `http://127.0.0.1:8765/v1` | Kokoro ids only |
+| `s2s` | Local | `http://127.0.0.1:8765/v1` | Kokoro ids only. Hidden on `onDeviceLlm` hosts; leftover rows remap to System. |
 | `xai` | Grok | `https://api.x.ai/v1` | Live `/v1/tts/voices` or preset |
 | `openai` | OpenAI | `https://api.openai.com/v1` | Realtime voices |
 | `browser` | System | — | Built-in Web Speech voices on this device |
@@ -50,6 +50,14 @@ Installed handler (owner machine, not in this repo): the site-packages
 Upstream Kokoro maps STT `"en"` → British and overwrites the session voice with `bm_fable`. That file was patched so session voice wins and lang follows the voice prefix. **A running process does not pick up the patch until speech-to-speech is restarted.**
 
 `GET /v1/voices` on the sidecar is 404. Do not treat a 404 as “use Pocket + Kokoro fallback.”
+
+## On-device LLM
+
+- Provider `ondevice` → `invoke("llm_complete")`. Modules: `llm/engine` (llama vs stub), `llm/paths` (resolve/list), `llm/pick` (native Open when the OS returns a real path).
+- Linked: llama-cpp-2 Metal on macOS/iOS, Vulkan on Android. Stub: Windows/Linux (not proven).
+- Desktop + engine: Open a GGUF from disk (`pickGgufFromDisk`). `~/Documents/models` (or `%USERPROFILE%\Documents\models`) is listed. Do not copy into app data.
+- Phone/tablet: download into app `gguf/`. No Open dialog (sandbox / content URIs).
+- Default Voice on first open is System (`browser`). Local sidecar remains optional on desktop OS.
 
 ## Constraints
 

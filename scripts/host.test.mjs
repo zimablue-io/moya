@@ -11,9 +11,11 @@ import {
 	systemVoiceLabel,
 } from "../src/lib/host.ts"
 import { completeTurnMode } from "../src/lib/llm.ts"
+import { ggufDisplayName } from "../src/lib/llm-native.ts"
 import { providerNeedsKey } from "../src/lib/provider-models.ts"
 import {
 	DEFAULT_SETTINGS,
+	hostCapsFrom,
 	normalizeSettings,
 	providerChoicesForHost,
 	providerForHost,
@@ -55,12 +57,36 @@ test("web hides localhost sidecars and on-device GGUF", () => {
 	assert.equal(settingsForHost(DEFAULT_SETTINGS, false).voiceBackend.id, "browser")
 })
 
-test("Mac desktop keeps Ollama and llama.cpp URL, not in-process GGUF", () => {
+test("Mac desktop keeps Ollama and llama.cpp URL; packaged Mac also offers in-process GGUF", () => {
 	const desktop = providerChoicesForHost(true)
 	assert.equal(desktop.includes("ollama"), true)
 	assert.equal(desktop.includes("llamacpp"), true)
 	assert.equal(desktop.includes("ondevice"), false)
 	assert.equal(voiceChoicesForHost(true).includes("s2s"), true)
+	const macApp = { desktopOs: true, onDeviceLlm: true }
+	assert.equal(providerChoicesForHost(macApp).includes("ondevice"), true)
+	assert.equal(providerChoicesForHost(macApp).includes("ollama"), true)
+	assert.equal(providerChoicesForHost(macApp).includes("llamacpp"), true)
+	assert.equal(hostCapsFrom(macApp).pickGgufFromDisk, true)
+	assert.equal(voiceChoicesForHost(macApp).includes("s2s"), false)
+	assert.equal(voiceChoicesForHost(macApp)[0], "browser")
+	assert.equal(
+		settingsForHost(
+			normalizeSettings({
+				voiceBackend: {
+					id: "s2s",
+					model: "local",
+					baseUrl: "http://127.0.0.1:8765/v1",
+					apiKey: "",
+					voice: "af_heart",
+				},
+			}),
+			macApp,
+		).voiceBackend.id,
+		"browser",
+	)
+	assert.equal(hostCapsFrom({ desktopOs: true, onDeviceLlm: false }).pickGgufFromDisk, false)
+	assert.equal(hostCapsFrom(true).pickGgufFromDisk, false)
 })
 
 test("Android and iOS apps offer on-device GGUF and hide localhost sidecars", () => {
@@ -71,6 +97,7 @@ test("Android and iOS apps offer on-device GGUF and hide localhost sidecars", ()
 	assert.equal(ids.includes("llamacpp"), false)
 	assert.equal(ids.includes("xai"), true)
 	assert.equal(voiceChoicesForHost(mobile).includes("s2s"), false)
+	assert.equal(hostCapsFrom(mobile).pickGgufFromDisk, false)
 	assert.equal(
 		providerForHost({ id: "ollama", model: "qwen3:8b", baseUrl: "http://127.0.0.1:11434/v1", apiKey: "" }, mobile).id,
 		"xai",
@@ -105,6 +132,14 @@ test("suggested GGUFs are files the user can replace", () => {
 	assert.ok(GGUF_SUGGESTIONS.some((item) => /1\.7B/i.test(item.label)))
 	assert.ok(GGUF_SUGGESTIONS.some((item) => /Gemma 4 E2B/i.test(item.label)))
 	assert.ok(GGUF_SUGGESTIONS.every((item) => item.filename.endsWith(".gguf") && item.url.startsWith("https://")))
+})
+
+test("GGUF picker stores the full path and shows the basename", () => {
+	assert.equal(
+		ggufDisplayName("/Users/lefamoffat/Documents/models/gemma/gemma-4-E4B-it-UD-Q4_K_XL.gguf"),
+		"gemma-4-E4B-it-UD-Q4_K_XL.gguf",
+	)
+	assert.equal(ggufDisplayName("tiny.gguf"), "tiny.gguf")
 })
 
 test("hasOnDeviceLlm can be set from llm_status without treating web as native", () => {

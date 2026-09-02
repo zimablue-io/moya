@@ -37,6 +37,14 @@ import {
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..")
 
+const LOCAL_VOICE = {
+	id: "s2s",
+	model: "local",
+	baseUrl: "http://127.0.0.1:8765/v1",
+	apiKey: "",
+	voice: "af_heart",
+}
+
 function settings(partial = {}) {
 	return normalizeSettings({ ...DEFAULT_SETTINGS, ...partial })
 }
@@ -45,7 +53,7 @@ test("Voice mode sends Conversation speaker, never the system voiceURI", () => {
 	const mac = "com.apple.voice.compact.en-US.Samantha"
 	const stored = settings({
 		voiceURI: mac,
-		voiceBackend: { ...DEFAULT_SETTINGS.voiceBackend, voice: "af_bella" },
+		voiceBackend: { ...LOCAL_VOICE, voice: "af_bella" },
 	})
 	assert.equal(conversationVoice(stored), "af_bella")
 	assert.equal(typedReplyVoice(stored), mac)
@@ -60,7 +68,7 @@ test("Voice mode sends Conversation speaker, never the system voiceURI", () => {
 test("changing the system speaker does not change what Voice sends to the sidecar", () => {
 	const before = settings({
 		voiceURI: "",
-		voiceBackend: { ...DEFAULT_SETTINGS.voiceBackend, voice: "af_heart" },
+		voiceBackend: { ...LOCAL_VOICE, voice: "af_heart" },
 	})
 	const after = { ...before, voiceURI: "com.apple.eloquence.en-US.Eddy" }
 	assert.equal(sessionOutputVoice(sessionUpdateFromSettings(before)), "af_heart")
@@ -70,7 +78,7 @@ test("changing the system speaker does not change what Voice sends to the sideca
 
 test("empty Local voice still sends Kokoro Heart so the sidecar cannot stay on bm_fable", () => {
 	const empty = settings({
-		voiceBackend: { ...DEFAULT_SETTINGS.voiceBackend, voice: "" },
+		voiceBackend: { ...LOCAL_VOICE, voice: "" },
 	})
 	assert.equal(empty.voiceBackend.voice, "af_heart")
 	assert.equal(conversationVoice({ voiceBackend: { ...empty.voiceBackend, voice: "" } }), "af_heart")
@@ -83,7 +91,7 @@ test("empty Local voice still sends Kokoro Heart so the sidecar cannot stay on b
 
 test("Local never sends a Pocket name; unknown ids fall back to Heart", () => {
 	const pocket = settings({
-		voiceBackend: { ...DEFAULT_SETTINGS.voiceBackend, voice: "jean" },
+		voiceBackend: { ...LOCAL_VOICE, voice: "jean" },
 	})
 	assert.equal(pocket.voiceBackend.voice, "af_heart")
 	assert.equal(conversationVoice(pocket), "af_heart")
@@ -91,9 +99,7 @@ test("Local never sends a Pocket name; unknown ids fall back to Heart", () => {
 	assert.ok(POCKET_TTS_VOICES.some((v) => v.id === "jean"))
 	assert.ok(KOKORO_TTS_VOICES.some((v) => v.id === "af_heart"))
 	assert.equal(
-		sessionOutputVoice(
-			sessionUpdateFromSettings(settings({ voiceBackend: { ...DEFAULT_SETTINGS.voiceBackend, voice: "af_bella" } })),
-		),
+		sessionOutputVoice(sessionUpdateFromSettings(settings({ voiceBackend: { ...LOCAL_VOICE, voice: "af_bella" } }))),
 		"af_bella",
 	)
 })
@@ -110,7 +116,7 @@ test("Local catalog is Kokoro only — Pocket names are not pickable", () => {
 		KOKORO_TTS_VOICES.map((v) => v.id),
 	)
 	assert.equal(VOICE_PRESETS.s2s.voice, "af_heart")
-	assert.equal(DEFAULT_SETTINGS.voiceBackend.voice, "af_heart")
+	assert.equal(DEFAULT_SETTINGS.voiceBackend.id, "browser")
 	assert.match(VOICE_SETTINGS_COPY.conversationTipLocal, /Kokoro/)
 	assert.equal(/Pocket/i.test(VOICE_SETTINGS_COPY.conversationTipLocal), false)
 })
@@ -165,7 +171,15 @@ test("web omits Local voice, Ollama, and llama.cpp; desktop keeps them", () => {
 	assert.equal(providerChoicesForHost(false).includes("llamacpp"), false)
 	assert.equal(providerChoicesForHost(false).includes("custom"), true)
 	assert.equal(settingsForHost(DEFAULT_SETTINGS, false).voiceBackend.id, "browser")
-	assert.equal(settingsForHost(DEFAULT_SETTINGS, true).voiceBackend.id, "s2s")
+	assert.equal(settingsForHost(DEFAULT_SETTINGS, true).voiceBackend.id, "browser")
+	assert.equal(settingsForHost(normalizeSettings({ voiceBackend: LOCAL_VOICE }), true).voiceBackend.id, "s2s")
+	const onDeviceDesktop = { desktopOs: true, onDeviceLlm: true }
+	assert.equal(voiceChoicesForHost(onDeviceDesktop).includes("s2s"), false)
+	assert.equal(voiceChoicesForHost(onDeviceDesktop)[0], "browser")
+	assert.equal(
+		settingsForHost(normalizeSettings({ voiceBackend: LOCAL_VOICE }), onDeviceDesktop).voiceBackend.id,
+		"browser",
+	)
 	assert.equal(
 		settingsForHost(
 			normalizeSettings({ provider: { id: "ollama", model: "qwen3:8b", baseUrl: "http://127.0.0.1:11434/v1" } }),
@@ -275,6 +289,8 @@ test("Settings and Voice mode stay wired to the contract, not a second Speaker f
 	assert.match(modeSrc, /startListen/)
 	assert.match(storeSrc, /shouldSpeakTypedReply/)
 	assert.match(storeSrc, /liveSettings/)
+	assert.match(storeSrc, /hostCaps\(\)\.onDeviceLlm/)
+	assert.match(storeSrc, /isLocalOnlyProvider/)
 	assert.equal(/void run\("settings\.voice"/.test(storeSrc), false)
 	assert.match(storeSrc, /run\("settings\.voice"/)
 	assert.equal(VOICE_SETTINGS_COPY.conversationSpeaker, "Speaker")

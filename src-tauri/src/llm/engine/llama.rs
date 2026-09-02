@@ -6,7 +6,7 @@ use llama_cpp_2::context::params::LlamaContextParams;
 use llama_cpp_2::llama_backend::LlamaBackend;
 use llama_cpp_2::llama_batch::LlamaBatch;
 use llama_cpp_2::model::params::LlamaModelParams;
-use llama_cpp_2::model::{AddBos, LlamaChatMessage, LlamaModel};
+use llama_cpp_2::model::{AddBos, LlamaChatMessage, LlamaChatTemplate, LlamaModel};
 use llama_cpp_2::sampling::LlamaSampler;
 
 use crate::llm::{parse_tool_calls, tools_preamble, CompleteResult, LlmMessage, LlmTool};
@@ -24,7 +24,7 @@ pub fn available() -> bool {
 }
 
 pub fn backend_name() -> &'static str {
-    #[cfg(target_os = "ios")]
+    #[cfg(any(target_os = "ios", target_os = "macos"))]
     {
         "metal"
     }
@@ -39,11 +39,11 @@ pub fn ram_hint_mb() -> u64 {
     {
         return meminfo_total_mb();
     }
-    #[cfg(target_os = "ios")]
+    #[cfg(any(target_os = "ios", target_os = "macos"))]
     {
-        return ios_mem_mb();
+        return darwin_mem_mb();
     }
-    #[cfg(not(any(target_os = "android", target_os = "ios")))]
+    #[cfg(not(any(target_os = "android", target_os = "ios", target_os = "macos")))]
     {
         0
     }
@@ -67,8 +67,8 @@ fn meminfo_total_mb() -> u64 {
     0
 }
 
-#[cfg(target_os = "ios")]
-fn ios_mem_mb() -> u64 {
+#[cfg(any(target_os = "ios", target_os = "macos"))]
+fn darwin_mem_mb() -> u64 {
     let mut size: u64 = 0;
     let mut len = std::mem::size_of::<u64>();
     let name = std::ffi::CString::new("hw.memsize").unwrap_or_default();
@@ -94,11 +94,7 @@ pub fn loaded_name() -> Option<String> {
 
 pub fn load(path: &Path, filename: String) -> Result<(), String> {
     let backend = LlamaBackend::init().map_err(|e| e.to_string())?;
-    let mut params = LlamaModelParams::default();
-    #[cfg(any(target_os = "ios", target_os = "android"))]
-    {
-        params = params.with_n_gpu_layers(99);
-    }
+    let params = LlamaModelParams::default().with_n_gpu_layers(99);
     let model = LlamaModel::load_from_file(&backend, path, &params).map_err(|e| e.to_string())?;
     let mut slot = LOADED.lock().map_err(|e| e.to_string())?;
     *slot = Some(Loaded {
@@ -153,6 +149,7 @@ pub fn complete(
     } else {
         LlamaSampler::chain_simple([LlamaSampler::temp(temperature), LlamaSampler::dist(1234)])
     };
+    let mut decoder = encoding_rs::UTF_8.new_decoder();
     let mut n_cur = batch.n_tokens();
     let mut pieces = String::new();
     let limit = n_cur + max_tokens as i32;
@@ -164,7 +161,7 @@ pub fn complete(
         }
         let piece = loaded
             .model
-            .token_to_str(token, llama_cpp_2::model::Special::Tokenize)
+            .token_to_piece(token, &mut decoder, true, None)
             .map_err(|e| e.to_string())?;
         pieces.push_str(&piece);
         batch.clear();
@@ -212,7 +209,14 @@ fn build_prompt(
         }
         chat.push(LlamaChatMessage::new(msg.role.clone(), content).map_err(|e| e.to_string())?);
     }
-    match model.apply_chat_template(None, &chat, true) {
+    let tmpl = match model.chat_template(None) {
+        Ok(tmpl) => tmpl,
+        Err(_) => match LlamaChatTemplate::new("gemma") {
+            Ok(tmpl) => tmpl,
+            Err(_) => return Ok(fallback_prompt(messages, tools)),
+        },
+    };
+    match model.apply_chat_template(&tmpl, &chat, true) {
         Ok(prompt) => Ok(prompt),
         Err(_) => Ok(fallback_prompt(messages, tools)),
     }

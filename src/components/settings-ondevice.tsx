@@ -4,13 +4,16 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { GGUF_SUGGESTIONS } from "@/lib/gguf-catalog"
+import { hostCaps, thisDeviceLabel } from "@/lib/host"
 import {
+	ggufDisplayName,
 	type LlmDownloadProgress,
 	type LlmFile,
 	type LlmStatus,
 	llmDownload,
 	llmList,
 	llmLoad,
+	llmPick,
 	llmStatus,
 	onLlmDownloadProgress,
 } from "@/lib/llm-native"
@@ -30,6 +33,9 @@ export function OnDeviceModels({ model, onPicked }: { model: string; onPicked?: 
 	const [busy, setBusy] = useState<string | null>(null)
 	const [progress, setProgress] = useState<LlmDownloadProgress | null>(null)
 	const [customUrl, setCustomUrl] = useState("")
+	const caps = hostCaps()
+	const pickFromDisk = Boolean(status?.canPick ?? caps.pickGgufFromDisk)
+	const device = thisDeviceLabel()
 
 	const refresh = async () => {
 		try {
@@ -79,6 +85,18 @@ export function OnDeviceModels({ model, onPicked }: { model: string; onPicked?: 
 		}
 	}
 
+	const openFromDisk = async () => {
+		setBusy("pick")
+		try {
+			const path = await llmPick()
+			if (path) await choose(path)
+		} catch (err) {
+			setError(err instanceof Error ? err.message : "Could not open that GGUF.")
+		} finally {
+			setBusy(null)
+		}
+	}
+
 	const download = async (url: string, filename: string) => {
 		setBusy(filename)
 		setProgress({ filename, received: 0, total: 0 })
@@ -97,16 +115,18 @@ export function OnDeviceModels({ model, onPicked }: { model: string; onPicked?: 
 	const suggestions = GGUF_SUGGESTIONS
 	const largeOk = ram >= 6144
 	const options = files.map((f) => f.name)
+	if (model && !options.includes(model)) options.unshift(model)
 	const selected = options.includes(model) ? model : ""
+	const loadedLabel = status?.loaded ? ggufDisplayName(status.loaded) : null
 
 	return (
-		<div className="space-y-4">
+		<div className="flex flex-col gap-4">
 			<p className={error ? "text-xs text-alert" : "text-xs text-muted-foreground"}>
 				{error
 					? error
 					: status
 						? status.available
-							? `${status.backend}${status.loaded ? ` · ${status.loaded}` : " · no GGUF loaded"}${ram ? ` · ~${Math.round(ram / 1024)} GB RAM` : ""}`
+							? `${status.backend}${loadedLabel ? ` · ${loadedLabel}` : " · no GGUF loaded"}${ram ? ` · ~${Math.round(ram / 1024)} GB RAM` : ""}`
 							: "On-device llama.cpp is not available on this device."
 						: "Checking on-device runtime…"}
 			</p>
@@ -125,12 +145,20 @@ export function OnDeviceModels({ model, onPicked }: { model: string; onPicked?: 
 							: "…"}
 				</p>
 			) : null}
+			{pickFromDisk ? (
+				<Button type="button" disabled={busy !== null} onClick={() => void openFromDisk()}>
+					{busy === "pick" || busy === "load" ? "Opening…" : `Open a GGUF on ${device}`}
+				</Button>
+			) : null}
 			<label className="grid gap-2">
-				<span className="text-sm font-medium">GGUF on this device</span>
+				<span className="text-sm font-medium">{pickFromDisk ? `GGUFs on ${device}` : "GGUF on this device"}</span>
 				<Select
 					items={[
-						{ value: "", label: files.length ? "Choose a GGUF" : "No GGUF downloaded yet" },
-						...options.map((name) => ({ value: name, label: name })),
+						{
+							value: "",
+							label: files.length ? "Choose a GGUF" : pickFromDisk ? "None listed yet" : "No GGUF downloaded yet",
+						},
+						...options.map((name) => ({ value: name, label: ggufDisplayName(name) })),
 					]}
 					value={selected}
 					disabled={options.length === 0 || busy !== null}
@@ -142,17 +170,23 @@ export function OnDeviceModels({ model, onPicked }: { model: string; onPicked?: 
 						<SelectValue />
 					</SelectTrigger>
 					<SelectContent>
-						<SelectItem value="">{files.length ? "Choose a GGUF" : "No GGUF downloaded yet"}</SelectItem>
-						{files.map((file) => (
-							<SelectItem key={file.name} value={file.name}>
-								{file.name} ({formatBytes(file.bytes)})
-							</SelectItem>
-						))}
+						<SelectItem value="">
+							{files.length ? "Choose a GGUF" : pickFromDisk ? "None listed yet" : "No GGUF downloaded yet"}
+						</SelectItem>
+						{options.map((name) => {
+							const file = files.find((f) => f.name === name)
+							return (
+								<SelectItem key={name} value={name}>
+									{ggufDisplayName(name)}
+									{file ? ` (${formatBytes(file.bytes)})` : ""}
+								</SelectItem>
+							)
+						})}
 					</SelectContent>
 				</Select>
 			</label>
-			<div className="space-y-2">
-				<p className="text-xs text-muted-foreground">Suggested files. Or pick another GGUF URL below.</p>
+			<div className="flex flex-col gap-2">
+				<p className="text-xs text-muted-foreground">Or download a suggested file.</p>
 				{suggestions.map((item) => (
 					<Button
 						key={item.id}

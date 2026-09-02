@@ -19,7 +19,7 @@ pub fn loaded_name() -> Option<String> {
 }
 
 pub fn load(_path: &Path, _filename: String) -> Result<(), String> {
-    Err("On-device GGUF is for the Android and iOS apps. On this Mac run llama-server.".into())
+    Err("On-device GGUF is not available on this OS.".into())
 }
 
 pub fn unload() {}
@@ -35,7 +35,7 @@ pub fn complete(
         content: String::new(),
         tool_calls: vec![],
         error: Some(
-            "On-device GGUF is for the Android and iOS apps. On this Mac run llama-server.".into(),
+            "On-device GGUF is not available on this OS.".into(),
         ),
     })
 }

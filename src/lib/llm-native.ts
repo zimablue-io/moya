@@ -7,6 +7,7 @@ export type LlmStatus = {
 	backend: string
 	loaded: string | null
 	ramHint: number
+	canPick?: boolean
 }
 
 export type LlmFile = {
@@ -41,6 +42,17 @@ export async function llmStatus(): Promise<LlmStatus> {
 export async function llmList(): Promise<LlmFile[]> {
 	const { invoke } = await core()
 	return invoke<LlmFile[]>("llm_list")
+}
+
+export async function llmPick(): Promise<string | null> {
+	const { invoke } = await core()
+	return invoke<string | null>("llm_pick")
+}
+
+export function ggufDisplayName(path: string): string {
+	const trimmed = path.trim()
+	const parts = trimmed.split(/[/\\]/)
+	return parts[parts.length - 1] || trimmed
 }
 
 export async function llmDownload(url: string, filename: string): Promise<LlmFile> {
@@ -80,7 +92,7 @@ export async function listNativeModels(): Promise<ProviderModels> {
 
 export async function completeNativeTurn(data: ChatRequest): Promise<ChatResponse> {
 	const model = data.provider.model.trim()
-	if (!model) return { ok: false, error: "Download or pick a GGUF in Settings." }
+	if (!model) return { ok: false, error: "Pick a GGUF in Settings." }
 	try {
 		const { invoke } = await core()
 		const result = await invoke<NativeComplete>("llm_complete", {
@@ -93,7 +105,7 @@ export async function completeNativeTurn(data: ChatRequest): Promise<ChatRespons
 		if (!result.ok) {
 			return {
 				ok: false,
-				error: `${result.error ?? "On-device model failed."} Switch to Grok in Settings for a cloud model.`,
+				error: result.error ?? "On-device model failed. Pick a GGUF in Settings.",
 			}
 		}
 		return {
@@ -104,7 +116,7 @@ export async function completeNativeTurn(data: ChatRequest): Promise<ChatRespons
 	} catch (err) {
 		return {
 			ok: false,
-			error: `${err instanceof Error ? err.message : "On-device model failed."} Switch to Grok in Settings for a cloud model.`,
+			error: `${err instanceof Error ? err.message : "On-device model failed."} Pick a GGUF in Settings.`,
 		}
 	}
 }

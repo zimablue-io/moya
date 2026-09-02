@@ -20,12 +20,17 @@ export function useFirstRunGate() {
 
 	const enterVoice = useCallback(() => {
 		const next = liveSettings(useApp.getState().settings)
-		if (voiceCloudSetupNeeded(next.voiceBackend, next.provider)) {
+		if (providerSetupNeeded(next.provider) || voiceCloudSetupNeeded(next.voiceBackend, next.provider)) {
 			setSetupPending({ kind: "voice" })
 			setSetupOpen(true)
 			return
 		}
 		void enterVoiceMode()
+	}, [])
+
+	const switchToSystemVoice = useCallback(async () => {
+		await useApp.getState().dispatch("settings.voice", { id: "browser" })
+		await enterVoiceMode()
 	}, [])
 
 	const requestSend = useCallback(
@@ -86,6 +91,7 @@ export function useFirstRunGate() {
 		clearDraftSeed: () => setDraftSeed(null),
 		enterVoice,
 		exitVoice,
+		switchToSystemVoice,
 		requestSend,
 		onSetupReady,
 		onVerb,

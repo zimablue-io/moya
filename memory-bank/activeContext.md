@@ -2,36 +2,30 @@
 
 ## Current focus
 
-Root cause of `pnpm package:mac` failing for the owner and succeeding in the agent shell: `osascript` → Finder returns **Not authorized to send Apple events to Finder (-1743)**. That is a per-app TCC Automation grant. The owner’s terminal does not have Finder. Cursor (this agent) does. Retrying the same AppleScript cannot fix it. Last retry now uses `--skip-jenkins` so the command still writes a DMG; pretty layout needs System Settings → Privacy & Security → Automation → [that terminal] → Finder.
-
-On-device GGUF on phone/tablet native apps: in-process llama.cpp via Tauri `invoke`, same JS tool loop. Web stays cloud-only. Mac keeps localhost sidecars.
+Talk on a Mac `.app` was still speech-to-speech. The engine work did not change that path. Leftover IndexedDB `s2s` plus Talk skipping setup made the window feel unchanged.
 
 ## Host gates
 
 - `isTauri()` — native webview (Mac, Android, iOS)
 - `isDesktop()` — alias of `isTauri()` for mic / notifications / “download Mac app”
-- `isDesktopOs()` — macOS / Windows / Linux only → Ollama, llama.cpp URL, Local Voice
-- `hasOnDeviceLlm()` — phone/tablet Tauri (or `llm_status.available`) → `ondevice`
+- `isDesktopOs()` — macOS / Windows / Linux only → Ollama, llama.cpp URL. Local Voice only when there is **no** in-process engine.
+- `hasOnDeviceLlm()` — Tauri on Mac / iOS / Android (or `llm_status.available`) → `ondevice`; leftover Local remaps to System
+- `pickGgufFromDisk` — on-device engine **and** desktop OS (real filesystem path). Phone/tablet download instead.
 - Web: not Tauri → hide sidecars, no `ondevice`
-
-`liveSettings()` uses `hostCaps()`. A phone app must not show `127.0.0.1` Ollama.
 
 ## What just changed
 
-1. Provider id `ondevice`: no `baseUrl`. `completeTurn` dispatches to `invoke("llm_complete")`. HTTP path extracted to `src/lib/llm-http.ts`.
-2. Shared Tauri commands in `src-tauri/src/llm.rs`. Desktop stub `available: false`. Android links llama.cpp + Vulkan; iOS/iPad Metal. Same APK/IPA on tablets.
-3. Settings/Setup GGUF picker downloads into app files. Suggested defaults: Qwen 3 1.7B Q4 and Gemma 4 E2B Q4.
-4. `tauri android init` / `tauri ios init` generated `src-tauri/gen/android` and `src-tauri/gen/apple` (gitignored). Tray/autostart are `#[cfg(desktop)]`.
-5. Voice on mobile: Grok or System. No speech-to-speech sidecar.
+1. `voiceBackendForHost` / `voiceChoicesForHost` — on `onDeviceLlm` hosts, leftover Local becomes System and Local is omitted from Settings. Desktop-without-engine (`voiceChoicesForHost(true)`) still lists Local.
+2. Hydrate persists that remap **before** `ready`, and if leftover Local sat on Ollama/llama.cpp URL, Model becomes on-device once so Talk/type open “Pick a GGUF.”
+3. `enterVoice` opens Setup when the model still needs a GGUF or a cloud key — not only when Grok/OpenAI Voice is missing a key.
 
 ## What is not proven
 
-- Typed `memory.write` on a real Android phone/tablet or iPhone/iPad. No device was attached (`adb devices` empty). Do not claim inference works from path-exists or init success.
-- Mac in-process llama.cpp (out of scope; sidecar stays).
-- On-device Voice (Parakeet/Kokoro).
+- This JS is not in the `.app` the owner already opened until they quit and run a new bundle (`pnpm desktop` or `pnpm package:mac`).
+- System Talk heard.
+- Typed turn on a real Android/iOS device.
+- Windows/Linux in-process llama.cpp (not linked).
 
 ## Next
 
-1. Boot the Android APK and iOS app on hardware; pick a small GGUF; prove a typed turn.
-2. If Android Vulkan cmake fails on NDK, fall back to CPU (`android-static-stdcxx` without `vulkan`).
-3. Homebrew rust has no `rustup`; mobile Rust targets were skipped at init (`--skip-targets-install`).
+Quit the old `Moya.app`. Open a build that includes this frontend. Talk should open Setup (pick a GGUF) or System voice — not `:8765`. Hear it, or say you have not.

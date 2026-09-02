@@ -125,6 +125,10 @@ export function connectFailureMessage(baseUrl: string): string {
 	return "Could not reach the voice backend. Check the URL and key."
 }
 
+export function localSidecarConnectFailed(error: string | null | undefined): boolean {
+	return Boolean(error && /Nothing is listening at/i.test(error))
+}
+
 export function conversationSpeakerOptions(id: VoiceBackendId) {
 	return speakersFor(id)
 }

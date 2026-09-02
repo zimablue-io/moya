@@ -12,16 +12,10 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { providerSetupNeeded } from "@/lib/first-run"
+import { providerSetupNeeded, setupProviderDraft } from "@/lib/first-run"
 import { hostCaps } from "@/lib/host"
 import { useApp } from "@/lib/store"
-import {
-	PROVIDER_PRESETS,
-	type ProviderConfig,
-	type ProviderId,
-	providerChoicesForHost,
-	providerForHost,
-} from "@/lib/types"
+import { PROVIDER_PRESETS, type ProviderConfig, type ProviderId, providerChoicesForHost } from "@/lib/types"
 
 export type SetupPending = { kind: "send"; text: string } | { kind: "voice" }
 
@@ -40,11 +34,11 @@ export function SetupSheet({
 	const dispatch = useApp((s) => s.dispatch)
 	const caps = hostCaps()
 	const choices = providerChoicesForHost(caps)
-	const [draft, setDraft] = useState<ProviderConfig>(() => providerForHost(settings.provider, caps))
+	const [draft, setDraft] = useState<ProviderConfig>(() => setupProviderDraft(settings.provider, caps))
 	const [busy, setBusy] = useState(false)
 
 	useEffect(() => {
-		if (open) setDraft(providerForHost(useApp.getState().settings.provider, hostCaps()))
+		if (open) setDraft(setupProviderDraft(useApp.getState().settings.provider, hostCaps()))
 	}, [open])
 
 	const needs = providerSetupNeeded(draft)
@@ -61,7 +55,11 @@ export function SetupSheet({
 			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>Where should I think?</DialogTitle>
-					<DialogDescription>Keys stay on this device. Moya does not start a model for you.</DialogDescription>
+					<DialogDescription>
+						{caps.onDeviceLlm
+							? "Pick a GGUF on this device. Moya thinks with it here."
+							: "Keys stay on this device. You bring the model."}
+					</DialogDescription>
 				</DialogHeader>
 				<div className="flex flex-col gap-4">
 					<Field label="Provider">

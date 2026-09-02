@@ -1,7 +1,7 @@
 import type { HostOs } from "./host.ts"
 import { providerNeedsKey } from "./provider-models.ts"
 import { resolveVoiceApiKey } from "./realtime-protocol.ts"
-import { PROVIDER_PRESETS, type ProviderConfig, type VoiceConfig } from "./types.ts"
+import { type HostCaps, PROVIDER_PRESETS, type ProviderConfig, providerForHost, type VoiceConfig } from "./types.ts"
 
 export const FIRST_RUN_LINE = "Household assistant. Stays on this device."
 
@@ -29,7 +29,7 @@ export function providerSetupNeeded(provider: ProviderConfig): string | null {
 	const preset = PROVIDER_PRESETS[provider.id]
 	if (!preset) return "Unknown provider."
 	if (provider.id === "ondevice") {
-		if (!provider.model.trim()) return "Download or pick a GGUF."
+		if (!provider.model.trim()) return "Pick a GGUF."
 		return null
 	}
 	if (!provider.baseUrl.trim()) return "Set a provider endpoint."
@@ -38,6 +38,15 @@ export function providerSetupNeeded(provider: ProviderConfig): string | null {
 		return `Add an API key for ${preset.label}.`
 	}
 	return null
+}
+
+export function setupProviderDraft(provider: ProviderConfig, caps: boolean | HostCaps): ProviderConfig {
+	const current = providerForHost(provider, caps)
+	const host = typeof caps === "boolean" ? { desktopOs: caps, onDeviceLlm: false } : caps
+	if (host.onDeviceLlm && providerSetupNeeded(current)) {
+		return current.id === "ondevice" ? current : { id: "ondevice", model: "", baseUrl: "", apiKey: "" }
+	}
+	return current
 }
 
 export function voiceCloudSetupNeeded(voice: VoiceConfig, provider: ProviderConfig): boolean {

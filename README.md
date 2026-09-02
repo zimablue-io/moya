@@ -12,12 +12,13 @@ Moya is a personal assistant that runs on this machine. Memory, transcript, rout
 - On-device memory, transcript (list + calendar), routines, and inbox
 - OpenAI-compatible providers (xAI, OpenAI, Groq, OpenRouter, Ollama, llama.cpp). You run local servers; Moya connects to them.
 - Native Android/iOS apps (same APK on phone and tablet, same iOS app on iPhone and iPad) can pick a GGUF for in-process llama.cpp. That is optional. Web/PWA does not get it. It has not been proven on a handset in this repo.
-- Voice backends: Local (`huggingface/speech-to-speech` on `:8765`, Mac desktop), Grok, OpenAI, or this device’s System voices. Mobile native voice is Grok or System.
+- Packaged desktop with a linked engine (Mac today) loads a GGUF from disk into llama.cpp. Phone/tablet download into app files. Ollama and llama-server remain optional HTTP on desktop OS. Windows/Linux in-process llama.cpp is not linked yet.
+- Voice backends: Local (`huggingface/speech-to-speech` on `:8765`, Mac desktop), Grok, OpenAI, or this device’s System voices. First open of `Moya.app` uses System. Mobile native voice is Grok or System.
 - Optional Google / X sign-in on the **web** preview and `pnpm desktop` only
 
 The home screen is not gated. Sign-in is optional. The packaged Mac app has no Node server and no account wall.
 
-Moya does not start speech-to-speech or llama-server. Start those yourself if you want Local voice or a local LLM on the Mac. Phone/tablet GGUFs are downloaded into the app; Moya still does not start a sidecar.
+Moya does not start speech-to-speech or llama-server. Open `Moya.app`, pick a GGUF, and Talk uses System voices. Start those servers yourself only if you want Local voice or a localhost LLM URL. Phone/tablet GGUFs can also be downloaded into the app.
 
 ## Requirements
 
@@ -70,7 +71,7 @@ Closing the window hides Moya to the menu-bar tray. Quit from the tray menu or C
 | `pnpm desktop` or `pnpm dev` | `http://127.0.0.1:5173` | On — `/login` → this app’s `/api/auth` → Grok broker → Google or X |
 | `Moya.app` / the DMG         | `tauri://localhost`     | Off — no Node auth server in the bundle                            |
 
-Chat in the packaged Mac app talks to the provider from the window (`fetch` for cloud and llama-server). Add a key in Settings, or choose llama.cpp (local) as the provider.
+Chat in the packaged Mac app thinks with a GGUF you pick (in-process llama.cpp) or with a cloud/local HTTP provider from Settings.
 
 ## Auth (web)
 
