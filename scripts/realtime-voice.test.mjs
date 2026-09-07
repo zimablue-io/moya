@@ -512,6 +512,22 @@ test("resetting the play cursor without stopping sources leaves old audio runnin
 	assert.equal(queue.liveCount, 3)
 })
 
+test("queued preview audio finishes without a flush", () => {
+	const queue = new ScheduledAudioQueue()
+	let idle = 0
+	queue.onIdle = () => {
+		idle += 1
+	}
+	const src = fakeSource()
+	queue.schedule(src, 2, 0)
+	assert.equal(src.stopped, false)
+	assert.equal(queue.liveCount, 1)
+	src.onended?.(new Event("ended"))
+	assert.equal(idle, 1)
+	assert.equal(queue.liveCount, 0)
+	assert.equal(src.stopped, false)
+})
+
 test("flush stops every queued chunk so a new reply cannot overlap them", () => {
 	const queue = new ScheduledAudioQueue()
 	const old = [fakeSource(), fakeSource(), fakeSource()]

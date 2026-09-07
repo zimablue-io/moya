@@ -14,6 +14,7 @@ export class ScheduledAudioQueue {
 	playing = false
 	playStartedAt: number | null = null
 	queuedMs = 0
+	onIdle: (() => void) | null = null
 	private sources = new Set<ScheduledSource>()
 
 	get liveCount() {
@@ -30,7 +31,10 @@ export class ScheduledAudioQueue {
 		this.sources.add(src)
 		;(src as SourceWithEnded).onended = () => {
 			this.sources.delete(src)
-			if (this.sources.size === 0) this.playing = false
+			if (this.sources.size === 0) {
+				this.playing = false
+				this.onIdle?.()
+			}
 		}
 	}
 

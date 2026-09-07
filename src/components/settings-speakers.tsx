@@ -133,6 +133,7 @@ function VoicePreviewButton({
 	}
 
 	useEffect(() => {
+		queueRef.current.onIdle = () => setPlaying(false)
 		return () => {
 			closeRef.current?.()
 			closeRef.current = null
@@ -186,7 +187,10 @@ function VoicePreviewButton({
 									src.connect(ctx.destination)
 									queueRef.current.schedule(src, buf.duration, ctx.currentTime)
 								},
-								onDone: () => stop(),
+								onDone: () => {
+									closeRef.current = null
+									if (queueRef.current.liveCount === 0) setPlaying(false)
+								},
 								onError: (message) => {
 									setError(message)
 									stop()

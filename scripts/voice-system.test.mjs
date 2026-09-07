@@ -85,6 +85,13 @@ test("Voice lists the provider catalog with a gender icon, not System TTS", () =
 	assert.equal(onboard.includes("SystemVoicePicker"), false)
 })
 
+test("Hear this voice keeps playing after the Realtime response ends", () => {
+	const picker = readFileSync(join(root, "src/components/settings-speakers.tsx"), "utf8")
+	assert.equal(/onDone:\s*\(\)\s*=>\s*stop\(\)/.test(picker), false)
+	assert.match(picker, /onIdle/)
+	assert.match(picker, /queueRef\.current\.flush\(\)/)
+})
+
 test("Voice mode sends Conversation speaker, never a system voiceURI", () => {
 	const stored = settings({
 		voiceBackend: { ...LOCAL_VOICE, voice: "af_bella" },
