@@ -13,12 +13,12 @@ Moya is a personal assistant that runs on this machine. Memory, transcript, rout
 - OpenAI-compatible providers (xAI, OpenAI, Groq, OpenRouter, Ollama, llama.cpp). You run local servers; Moya connects to them.
 - Native Android/iOS apps (same APK on phone and tablet, same iOS app on iPhone and iPad) can pick a GGUF for in-process llama.cpp. That is optional. Web/PWA does not get it. It has not been proven on a handset in this repo.
 - Packaged desktop with a linked engine (Mac today) loads a GGUF from disk into llama.cpp. Phone/tablet download into app files. Ollama and llama-server remain optional HTTP on desktop OS. Windows/Linux in-process llama.cpp is not linked yet.
-- Voice backends: Local (`huggingface/speech-to-speech` on `:8765`, Mac desktop), Grok, OpenAI, or this device’s System voices. First open of `Moya.app` uses System. Mobile native voice is Grok or System.
+- Voice is Custom (any OpenAI Realtime URL; speakers listed from that endpoint). Desktop also offers Local (`huggingface/speech-to-speech` on `:8765`). First open of `Moya.app` is on-device GGUF for Model and Custom for Voice.
 - Optional Google / X sign-in on the **web** preview and `pnpm desktop` only
 
 The home screen is not gated. Sign-in is optional. The packaged Mac app has no Node server and no account wall.
 
-Moya does not start speech-to-speech or llama-server. Open `Moya.app`, pick a GGUF, and Talk uses System voices. Start those servers yourself only if you want Local voice or a localhost LLM URL. Phone/tablet GGUFs can also be downloaded into the app.
+Moya does not start speech-to-speech or llama-server. Open `Moya.app`, pick a GGUF, and paste a voice URL. Start those servers yourself only if you want Local voice or a localhost LLM URL. Phone/tablet GGUFs can also be downloaded into the app.
 
 ## Requirements
 

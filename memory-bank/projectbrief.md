@@ -10,7 +10,7 @@ Moya is a **local-first personal assistant** (web + Tauri desktop; Android/iOS i
 - Voice- and text-first chat with a presence UI.
 - On-device memory, transcript (list + calendar), routines, inbox, sources, and settings.
 - Chat completion is `completeTurn` (`src/lib/llm.ts`): `fetch` for cloud and optional desktop sidecars; `invoke("llm_complete")` for provider `ondevice` (Mac Metal, Android Vulkan, iOS Metal) with a user-picked GGUF. Windows/Linux in-process llama.cpp is not linked yet.
-- Voice mode is OpenAI Realtime over WebSocket. Local voice is `huggingface/speech-to-speech` on `:8765` (optional on desktop without an in-process engine). Mac / iOS / Android with llama.cpp hide Local and use System unless the owner picks Grok or OpenAI. llama.cpp is Settings → Model; it is not a voice server.
+- Voice mode is OpenAI Realtime over WebSocket. Local voice is `huggingface/speech-to-speech` on `:8765` (optional on desktop, including Mac). Web and phone hide Local. Speakers list from the configured endpoint. llama.cpp is Settings → Model; it is not a voice server.
 - Moya does **not** start speech-to-speech or llama-server.
 - The packaged `.app` has no Node server. Do not add `createServerFn` paths the `.app` must call.
 

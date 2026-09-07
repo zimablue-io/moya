@@ -4,17 +4,19 @@
 
 - Assistant home, local persist (PGLite), transcript calendar, routines, inbox, sources.
 - Environment-owned turns and chrome (`settings.voice`, `settings.provider`, `ui.*`).
-- Host gates: web hides Ollama / llama.cpp URL / Local Voice / on-device GGUF. Mac `.app` keeps Ollama / llama.cpp URL in Model, hides Local Voice, remaps leftover `s2s` to System, and in-process GGUF (`ondevice` when `hostCaps().onDeviceLlm`). `completeTurn` HTTP vs invoke covered by `scripts/host.test.mjs`.
-- Shared Tauri `llm_*` commands. Engine: Mac Metal, Android Vulkan, iOS Metal; Windows/Linux stub. Paths/pick are shared modules. Desktop + engine: Open from disk. Voice default is System.
-- Voice **contract**: Conversation speaker ≠ system `voiceURI`; empty Local sends `af_heart`; first-open default is System; Web Speech finals are not realtime Voice turns; barge-in flush/stale-audio tests in `scripts/realtime-voice.test.mjs`.
-- Settings Voice: System first on `onDeviceLlm` hosts (no Local). Desktop without an engine still offers Local / Grok / OpenAI / System. Web omits Local, Ollama, and llama.cpp. Same layout as Model. Local picker is Kokoro-only. System fields show only when System is selected.
-- Mac setup for on-device is one Open button plus the chosen filename. Picking a GGUF writes provider `ondevice` and the path in one act so Continue is not stuck on “Pick a GGUF.” First-run “Where should I think?” is Settings → Model (`ModelTab`), not a second form.
+- Host gates: web hides Ollama / llama.cpp URL / Local Voice / on-device GGUF. Mac `.app` keeps Ollama / llama.cpp URL in Model, offers Local Voice, and in-process GGUF (`ondevice` when `hostCaps().onDeviceLlm`). `completeTurn` HTTP vs invoke covered by `scripts/host.test.mjs`.
+- Shared Tauri `llm_*` commands. Engine: Mac Metal, Android Vulkan, iOS Metal; Windows/Linux stub. Paths/pick are shared modules. Desktop + engine: Open from disk. Model default is on-device GGUF; web remaps to Custom. Voice default is Custom (empty URL).
+- Voice **contract**: Conversation speaker is `voiceBackend.voice`; empty Local sends `af_heart`; speakers list from the configured endpoint (`/tts/voices` on the xAI URL, `/voices` otherwise) with hardcoded fallback; Web Speech finals are not realtime Voice turns; barge-in flush/stale-audio tests in `scripts/realtime-voice.test.mjs`.
+- Settings Voice: Custom (OpenAI Realtime URL) plus Local on desktop. Labels for Custom match Model (`PROVIDER_PRESETS.custom.label`). Web omits Local, Ollama, and llama.cpp. Local picker is Kokoro-only when the sidecar has no `/voices` list.
+- First open is a three-step dialog (provider → voice → soul). Settings stays closed until those three are written. Mac provider step mounts the same Model tab as Settings. Greetings do not send the tool catalog. Pick does not mmap Metal; `llm_complete` loads on the first turn. Weights unload on hide-to-tray, Quit, leaving `ondevice`, and ~5 min idle.
+- On-device decode sizes `LlamaBatch` to `n_ctx` (not 512). A 512-token batch cannot hold `toolsFor()` (catalog). `nativeInvokeError` keeps the real engine message. Ignored `prove_documents_e4b_completes_with_app_tools` is the Talk-shaped complete (short + tools, one load).
+- On-device greetings: capability prompt allows chat without tools; a query-only hop does not loop; empty / “I have nothing to add” gets one speak-only follow-up.
 - Brand SSOT: Bricolage Grotesque + Ubuntu; palette in `src/lib/brand.ts` (`COLOR.brand` beige, `COLOR.quiet` gray text).
 - **UI kit:** `components.json` is `style: base-nova`, `base: base`. Wrappers use `@base-ui/react` (`render`, native `<label>`, scalar sliders). No `@radix-ui/*` in app or lockfile. Focus is `ring-inset` (inner ring). Appearance is proven by `scripts/ui-visual.test.mjs` (boot + pixel audit), not by class names.
 
 ## Left to prove by ear
 
-- System Talk in `Moya.app` after picking a GGUF. Engine load of E4B is proven (`content="ready"`, Metal, 43/43 layers). The voice was not heard this session.
+- GPU / RAM drop after close-to-tray or leaving on-device, on a **rebuilt** binary. Source and `cargo check` are not that.
 - Selected Local Kokoro voice is **heard** after sidecar restart. Not proven this session.
 - Barge-in in a live Voice session (tests cover flush; live interrupt is separate).
 
@@ -29,7 +31,7 @@
 - CI `latest-release` on `main` stays red until `v0.1.0` publishes a `.dmg`. First DMGs are unsigned until Apple Developer ID secrets are set.
 - Prebuilt GitHub DMG is optional and Gatekeeper-blocked until notarized. Install path is clone + `pnpm package:mac` on this Mac. Menu/README point at `#mac-app`, not the DMG.
 - DMG background is one full-bleed light fill (no inset card). An earlier 36px “card” sat on Finder’s own window fill and looked like two backgrounds.
-- `bundle_dmg.sh` Finder layout needs Automation → Finder for the app that launched the build. Owner terminal: -1743. Cursor agent: allowed. `package-mac.mjs` falls back to `--skip-jenkins` after a layout failure so `pnpm package:mac` still writes a DMG.
+- `bundle_dmg.sh` Finder AppleScript needs Automation → Finder. If that fails, `package-mac.mjs` still writes the 660×400 large-icon drag-to-Applications window by stamping a `.DS_Store` (icon size 128) without Finder.
 
 ## Status
 

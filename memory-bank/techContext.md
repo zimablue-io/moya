@@ -28,10 +28,8 @@ pnpm format
 
 | Id | Label | Endpoint | Speakers |
 | --- | --- | --- | --- |
-| `s2s` | Local | `http://127.0.0.1:8765/v1` | Kokoro ids only. Hidden on `onDeviceLlm` hosts; leftover rows remap to System. |
-| `xai` | Grok | `https://api.x.ai/v1` | Live `/v1/tts/voices` or preset |
-| `openai` | OpenAI | `https://api.openai.com/v1` | Realtime voices |
-| `browser` | System | — | Built-in Web Speech voices on this device |
+| `custom` | `PROVIDER_PRESETS.custom.label` | any OpenAI Realtime URL (default empty) | `GET /tts/voices` on the xAI URL, else `GET /voices` |
+| `s2s` | Local | `http://127.0.0.1:8765/v1` | `GET /voices`, then Kokoro. Desktop including Mac. |
 
 Local sidecar (human-started, example observed 2026-08-17):
 
@@ -53,7 +51,7 @@ Upstream Kokoro maps STT `"en"` → British and overwrites the session voice wit
 
 ## On-device LLM
 
-- Provider `ondevice` → `invoke("llm_complete")`. Modules: `llm/engine` (llama vs stub), `llm/paths` (resolve/list), `llm/pick` (native Open when the OS returns a real path).
+- Provider `ondevice` → `invoke("llm_complete")`. Modules: `llm/engine` (llama vs stub), `llm/paths` (resolve/list), `llm/pick` (native Open when the OS returns a real path). Decode sizes `LlamaBatch` to `n_ctx` (`src-tauri/src/llm/engine/llama.rs`). JS stringify of Tauri errors is `nativeInvokeError` in `src/lib/llm-native.ts`. Weights unload on hide-to-tray (`schedule_unload_engine`), tray Quit / `RunEvent::Exit` (`unload_engine`), leaving `ondevice` (`releaseOnDeviceEngineIfUnused`), and a 5-minute idle reaper. `Loaded` drops `model` before `backend`.
 - Linked: llama-cpp-2 Metal on macOS/iOS, Vulkan on Android. Stub: Windows/Linux (not proven).
 - Desktop + engine: Open a GGUF from disk (`pickGgufFromDisk`). `~/Documents/models` (or `%USERPROFILE%\Documents\models`) is listed. Do not copy into app data.
 - Phone/tablet: download into app `gguf/`. No Open dialog (sandbox / content URIs).

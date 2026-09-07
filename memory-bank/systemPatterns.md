@@ -15,16 +15,13 @@ Single source: `src/lib/voice-contract.ts`.
 | Concern | Function / copy |
 | --- | --- |
 | Voice-mode speaker | `conversationVoice(settings)` → `voiceBackend.voice` |
-| Typed-reply speaker | `typedReplyVoice(settings)` → `voiceURI` (Mac) |
 | Connect payload | `realtimeConnectFromSettings` |
 | Session body | `sessionUpdateFromSettings` / `buildSessionUpdate` |
 | Settings labels | `VOICE_SETTINGS_COPY` |
 
 Local Conversation speaker is **Kokoro ids only** (`af_heart`, `af_bella`, `bm_fable`, …). `localConversationVoice()` coerces Pocket / unknown ids to `af_heart`. The sidecar has **no** `/v1/voices` (404). Do not list Pocket names in the Local picker.
 
-`browser` (System) is a Voice provider, not a second settings section. Voice mode then uses Web Speech listen + the device TTS. Realtime backends never receive a system `voiceURI`.
-
-Web pickers use `voiceChoicesForHost(false)` / `providerChoicesForHost(false)`. Local (`s2s`) is desktop-without-engine only. Ollama and llama.cpp URL are **desktop OS** (`hostCaps().desktopOs`). In-process GGUF is `ondevice` when `hostCaps().onDeviceLlm` (Mac Metal, iOS Metal, Android Vulkan). Those hosts omit Local from Voice and remap leftover `s2s` to System; hydrate persists that so Talk cannot land on `:8765`. Native Open-from-disk is `hostCaps().pickGgufFromDisk` (desktop + engine — not `os === "mac"`). `liveSettings()` remaps at connect/send time; on-device hosts also persist leftover Local. `completeTurn` uses `fetch` unless `provider.id === "ondevice"`, then `invoke("llm_complete")`. Path load is shared (`llm/paths.rs`); Windows/Linux keep the engine stub.
+Web pickers use `voiceChoicesForHost(false)` / `providerChoicesForHost(false)`. Local (`s2s`) is desktop OS, including Mac `.app`. Web and phone omit Local and remap leftover `s2s` to Grok. Ollama and llama.cpp URL are **desktop OS** (`hostCaps().desktopOs`). In-process GGUF is `ondevice` when `hostCaps().onDeviceLlm` (Mac Metal, iOS Metal, Android Vulkan). Native Open-from-disk is `hostCaps().pickGgufFromDisk` (desktop + engine — not `os === "mac"`). `liveSettings()` remaps at connect/send time. `completeTurn` uses `fetch` unless `provider.id === "ondevice"`, then `invoke("llm_complete")`. Path load is shared (`llm/paths.rs`); Windows/Linux keep the engine stub. `complete()` sizes the decode batch to `n_ctx` because Talk always sends `toolsFor()`. GGUF weights live in `LOADED` until hide-to-tray, Quit, leaving `ondevice`, or ~5 min idle. `llm_complete` loads on first turn. Close-to-tray must unload; the process stays alive.
 
 Settings must `await` `settings.voice` before `restartVoiceIfNeeded()`. Fire-and-forget `void run()` then restart reads the old voice.
 
@@ -34,7 +31,7 @@ Settings must `await` `settings.voice` before `restartVoiceIfNeeded()`. Fire-and
 
 ## Persist
 
-`src/lib/persist.ts` — PGLite in IndexedDB (`idb://moya-mind`) when no `DATABASE_URL`; Neon when set. Settings are one JSON row. `normalizeSettings` heals `custom` → `s2s` and coerces Local voice to a Kokoro id. Stored `browser` stays System.
+`src/lib/persist.ts` — PGLite in IndexedDB (`idb://moya-mind`) when no `DATABASE_URL`; Neon when set. Settings are one JSON row. `normalizeSettings` maps stored Grok/OpenAI voice ids to Custom and keeps the endpoint. Unknown / stored `browser` becomes Custom. Local voice ids coerce to a Kokoro id.
 
 ## Auth
 
@@ -46,4 +43,4 @@ Better Auth at `/api/auth/*` → Grok broker (Google, X). Off on `tauri://localh
 
 ## Desktop
 
-Identifier `africa.moya`. `frontendDist` is `../dist/client`. Close-to-tray in `src-tauri/src/lib.rs`. Packaged app has no Node server.
+Identifier `africa.moya`. `frontendDist` is `../dist/client`. Close-to-tray in `src-tauri/src/lib.rs` (hide + unload GGUF). Packaged app has no Node server.
