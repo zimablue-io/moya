@@ -129,9 +129,10 @@ test("Mac app is a web menu item that points at build-from-source, not a DMG", (
 
 test("first-run copy names the product and the local-first tax", () => {
 	assert.match(FIRST_RUN_LINE, /Household assistant/)
+	assert.match(FIRST_RUN_LINE, /Voice first/)
 	assert.match(firstRunLimit(true, "mac"), /this Mac/)
 	assert.match(firstRunLimit(false, "mac"), /Build the Mac app/)
-	assert.match(firstRunHint(false), /starting line/)
+	assert.match(firstRunHint(false), /spoken/)
 	assert.deepEqual(
 		FIRST_RUN_VERBS.map((v) => v.id),
 		["talk", "remember", "today"],

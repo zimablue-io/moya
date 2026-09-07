@@ -13,7 +13,7 @@ import {
 
 export type OnboardingStepId = "provider" | "voice" | "soul"
 
-export const FIRST_RUN_LINE = "Household assistant. Stays on this device."
+export const FIRST_RUN_LINE = "Household assistant. Voice first. Stays on this device."
 
 export type FirstRunVerbId = "talk" | "remember" | "today"
 
@@ -79,7 +79,7 @@ export function firstRunLimit(desktop: boolean, os: HostOs = "other"): string {
 }
 
 export function firstRunHint(desktop: boolean, os?: HostOs): string {
-	return `${firstRunLimit(desktop, os)} Talk, type, or pick a starting line.`
+	return `${firstRunLimit(desktop, os)} Talk, or type — replies are spoken.`
 }
 
 export type MenuToolId = "history" | "memory" | "routines" | "watch" | "settings"

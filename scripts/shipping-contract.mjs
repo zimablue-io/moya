@@ -40,6 +40,43 @@ export function assertVersionsMatch(root, tag) {
 	return versions.package
 }
 
+export function assertVoiceProduct(root) {
+	const overlay = readRel(root, "AGENTS.md")
+	if (!/Voice is the product/.test(overlay.slice(0, 800))) {
+		throw new Error("AGENTS.md must open with Voice is the product — a caption-only turn is unfinished")
+	}
+	if (!/speakReply/.test(overlay) || !/prepareSpokenReply/.test(overlay)) {
+		throw new Error("AGENTS.md must name speakReply and prepareSpokenReply")
+	}
+	const ruleRel = ".agents/rules/00-voice-is-the-product.md"
+	if (!existsSync(join(root, ruleRel))) {
+		throw new Error(`${ruleRel} is the always-on Voice overlay and must exist`)
+	}
+	const rule = readRel(root, ruleRel)
+	if (!/Voice is the product/.test(rule) || !/caption/i.test(rule)) {
+		throw new Error(`${ruleRel} must say Voice is the product and that caption-only is unfinished`)
+	}
+	const turns = readRel(root, "src/lib/store-turns.ts")
+	if (!/speakReply/.test(turns) || !/prepareSpokenReply/.test(turns)) {
+		throw new Error("typed send must call prepareSpokenReply and speakReply")
+	}
+	const voiceSys = readRel(root, "scripts/voice-system.test.mjs")
+	if (!/speakReply/.test(voiceSys) || !/prepareSpokenReply/.test(voiceSys)) {
+		throw new Error("voice-system.test.mjs must stay red if typed send skips speakReply")
+	}
+	const visual = readRel(root, "scripts/ui-visual.test.mjs")
+	if (!/websocket/.test(visual) || !/\/realtime/.test(visual)) {
+		throw new Error("ui-visual typed turn must require a Realtime websocket, not a caption alone")
+	}
+	if (/text-first/i.test(readRel(root, "README.md"))) {
+		throw new Error("README must not call Moya text-first — Voice is the product")
+	}
+	const pkg = JSON.parse(readRel(root, "package.json"))
+	if (!/Voice-first/i.test(pkg.description ?? "")) {
+		throw new Error("package.json description must say Voice-first")
+	}
+}
+
 export function workflowFiles(root) {
 	const dir = join(root, ".github/workflows")
 	if (!existsSync(dir)) return []
@@ -185,6 +222,7 @@ export function assertShippingContract(root) {
 	if (!/shipping|Download|release workflow/i.test(template)) {
 		throw new Error("PR template must ask whether advertised user paths have a shipping workflow")
 	}
+	assertVoiceProduct(root)
 	return {
 		downloadUrl: DOWNLOAD_APP_URL,
 		workflows: workflowFiles(root),

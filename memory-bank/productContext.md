@@ -2,7 +2,7 @@
 
 ## Why it exists
 
-Household assistant that stays on this machine. Memory, transcript, routines, and keys are local. Voice is the primary interface, not a demo bolted onto chat.
+Household assistant that stays on this machine. Memory, transcript, routines, and keys are local. Voice is the product. A caption without speech is not a completed turn.
 
 ## How it should work
 

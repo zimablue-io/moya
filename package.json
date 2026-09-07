@@ -3,7 +3,7 @@
 	"version": "0.1.6",
 	"private": true,
 	"license": "MIT",
-	"description": "One local-first personal assistant. Memory, routines, and models stay on this machine.",
+	"description": "Voice-first household assistant. Memory, routines, and models stay on this machine.",
 	"author": "Lefa Moffat",
 	"repository": {
 		"type": "git",

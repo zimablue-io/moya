@@ -8,7 +8,7 @@ Moya is a personal assistant that runs on this machine. Memory, transcript, rout
 
 ## What it does
 
-- Voice- and text-first chat with a presence UI
+- Voice-first: Talk, or Type — the reply is spoken. Captions are optional.
 - On-device memory, transcript (list + calendar), routines, and inbox
 - OpenAI-compatible providers (xAI, OpenAI, Groq, OpenRouter, Ollama, llama.cpp). You run local servers; Moya connects to them.
 - Native Android/iOS apps (same APK on phone and tablet, same iOS app on iPhone and iPad) can pick a GGUF for in-process llama.cpp. That is optional. Web/PWA does not get it. It has not been proven on a handset in this repo.

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { existsSync } from "node:fs"
+import { existsSync, readFileSync } from "node:fs"
 import { dirname, join } from "node:path"
 import { test } from "node:test"
 import { fileURLToPath } from "node:url"
@@ -10,6 +10,7 @@ import {
 	assertReleaseWorkflow,
 	assertShippingContract,
 	assertVersionsMatch,
+	assertVoiceProduct,
 	CI_WORKFLOW,
 	EXPECTED_DOWNLOAD_URL,
 	PR_TEMPLATE,
@@ -17,6 +18,11 @@ import {
 } from "./shipping-contract.mjs"
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..")
+
+test("Voice is the product — caption-only is not a shipped turn", () => {
+	assertVoiceProduct(root)
+	assert.match(readFileSync(join(root, "AGENTS.md"), "utf8").slice(0, 800), /Voice is the product/)
+})
 
 test("app, crate, and Tauri versions stay in lockstep", () => {
 	const versions = appVersions(root)
