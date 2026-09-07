@@ -14,6 +14,7 @@ import {
 	type VoiceBackendId,
 	voiceBackendForHost,
 	voiceChoicesForHost,
+	voiceRealtimeKind,
 	voiceUrlIsEditable,
 } from "@/lib/types"
 import { resolveVoiceApiKey, voiceBackendNeedsKey } from "@/lib/voice-backend"
@@ -29,6 +30,7 @@ export function VoiceTab() {
 	const live = voiceBackendForHost(settings.voiceBackend, caps)
 	const id = choices.includes(live.id) ? live.id : (choices[0] ?? "custom")
 	const preset = VOICE_PRESETS[id]
+	const realtimeKind = voiceRealtimeKind(id, live.baseUrl)
 
 	return (
 		<div className="space-y-4 pt-2 pb-4">
@@ -68,25 +70,27 @@ export function VoiceTab() {
 			) : null}
 			<p className="text-xs text-muted-foreground">{preset.hint}</p>
 			{voiceUrlIsEditable(id) ? (
-				<>
-					<Field label="Base URL">
-						<Input
-							value={settings.voiceBackend.baseUrl}
-							onChange={(e) => setVoiceBackendField("baseUrl", e.target.value)}
-							placeholder="http://127.0.0.1:8765/v1"
-						/>
-					</Field>
-					<Field label="Model">
-						<Input
-							value={settings.voiceBackend.model}
-							onChange={(e) => setVoiceBackendField("model", e.target.value)}
-							placeholder={preset.model}
-						/>
-					</Field>
-				</>
+				<Field label="Base URL">
+					<Input
+						value={settings.voiceBackend.baseUrl}
+						onChange={(e) => setVoiceBackendField("baseUrl", e.target.value)}
+						placeholder="http://127.0.0.1:8765/v1"
+					/>
+				</Field>
 			) : (
 				<p className="text-xs text-subtle">{settings.voiceBackend.baseUrl}</p>
 			)}
+			{id === "custom" ? (
+				<Field label="Realtime model">
+					<Input
+						value={settings.voiceBackend.model}
+						onChange={(e) => setVoiceBackendField("model", e.target.value)}
+						placeholder={
+							realtimeKind === "xai" ? "grok-voice-latest" : realtimeKind === "openai" ? "gpt-realtime" : "local"
+						}
+					/>
+				</Field>
+			) : null}
 			{id === "custom" || voiceBackendNeedsKey(live) ? (
 				<Field label="API key (stored only on this device)" field="apiKey">
 					<Input

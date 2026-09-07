@@ -4,11 +4,13 @@ import { Field } from "@/components/settings-field"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { VOICE_PREVIEW_TEXT } from "@/lib/brand"
+import { base64ToPcm16, pcm16ToFloat } from "@/lib/pcm"
+import { ScheduledAudioQueue } from "@/lib/realtime-playback"
+import { REALTIME_SAMPLE_RATE } from "@/lib/realtime-protocol"
 import { speakerGender, speakersFor, type VoiceBackendId } from "@/lib/types"
 import { listRealtimeSpeakers, type SpeakerOption } from "@/lib/voice-catalog"
 import { conversationVoice, VOICE_SETTINGS_COPY } from "@/lib/voice-contract"
-import { audioBufferFromPreviewResponse, voicePreviewRequest } from "@/lib/voice-preview"
+import { openRealtimePreview, VOICE_PREVIEW_TEXT, voicePreviewPlan } from "@/lib/voice-preview"
 
 export function SpokenVoice({
 	id,
@@ -119,27 +121,24 @@ function VoicePreviewButton({
 }) {
 	const [playing, setPlaying] = useState(false)
 	const [error, setError] = useState<string | null>(null)
-	const audioRef = useRef<HTMLAudioElement | null>(null)
-	const objectUrlRef = useRef<string | null>(null)
+	const closeRef = useRef<(() => void) | null>(null)
+	const ctxRef = useRef<AudioContext | null>(null)
+	const queueRef = useRef(new ScheduledAudioQueue())
 
 	const stop = () => {
-		audioRef.current?.pause()
-		audioRef.current = null
-		if (objectUrlRef.current) {
-			URL.revokeObjectURL(objectUrlRef.current)
-			objectUrlRef.current = null
-		}
+		closeRef.current?.()
+		closeRef.current = null
+		queueRef.current.flush()
 		setPlaying(false)
 	}
 
 	useEffect(() => {
 		return () => {
-			audioRef.current?.pause()
-			audioRef.current = null
-			if (objectUrlRef.current) {
-				URL.revokeObjectURL(objectUrlRef.current)
-				objectUrlRef.current = null
-			}
+			closeRef.current?.()
+			closeRef.current = null
+			queueRef.current.flush()
+			void ctxRef.current?.close()
+			ctxRef.current = null
 		}
 	}, [])
 
@@ -168,20 +167,33 @@ function VoicePreviewButton({
 						return
 					}
 					try {
-						const req = voicePreviewRequest({ id, baseUrl, apiKey, model, voice }, VOICE_PREVIEW_TEXT)
-						const res = await fetch(req.url, req.init)
-						const buf = await audioBufferFromPreviewResponse(res)
-						const url = URL.createObjectURL(new Blob([buf]))
-						objectUrlRef.current = url
-						const audio = new Audio(url)
-						audioRef.current = audio
-						audio.onended = () => stop()
-						audio.onerror = () => {
-							setError("Could not play this preview.")
-							stop()
-						}
+						const plan = voicePreviewPlan({ id, baseUrl, apiKey, model, voice }, VOICE_PREVIEW_TEXT)
+						const ctx = ctxRef.current ?? new AudioContext({ sampleRate: REALTIME_SAMPLE_RATE })
+						ctxRef.current = ctx
+						await ctx.resume()
 						setPlaying(true)
-						await audio.play()
+						closeRef.current = openRealtimePreview(
+							plan,
+							{
+								onDelta: (b64) => {
+									const pcm = base64ToPcm16(b64)
+									if (!pcm.length) return
+									const samples = pcm16ToFloat(pcm)
+									const buf = ctx.createBuffer(1, samples.length, REALTIME_SAMPLE_RATE)
+									buf.getChannelData(0).set(samples)
+									const src = ctx.createBufferSource()
+									src.buffer = buf
+									src.connect(ctx.destination)
+									queueRef.current.schedule(src, buf.duration, ctx.currentTime)
+								},
+								onDone: () => stop(),
+								onError: (message) => {
+									setError(message)
+									stop()
+								},
+							},
+							WebSocket,
+						).close
 					} catch {
 						setError("Could not preview this voice. Check the URL and key.")
 						stop()

@@ -282,13 +282,14 @@ test("Grok speakers prefer the live /v1/tts/voices list", async () => {
 	)
 })
 
-test("OpenAI speakers prefer GET /voices on the configured URL, then the built-in fallback", async () => {
+test("OpenAI speakers are the documented Realtime set — no GET /voices", async () => {
+	const urls = []
 	const listed = await listRealtimeSpeakers(
 		{ id: "custom", baseUrl: "https://api.openai.com/v1", apiKey: "sk" },
 		{
 			fallback: speakersFor("custom", "https://api.openai.com/v1"),
 			fetch: async (url) => {
-				assert.equal(String(url), "https://api.openai.com/v1/voices")
+				urls.push(String(url))
 				return {
 					ok: true,
 					json: async () => ({ voices: [{ id: "verse", name: "Verse" }] }),
@@ -296,27 +297,19 @@ test("OpenAI speakers prefer GET /voices on the configured URL, then the built-i
 			},
 		},
 	)
-	assert.deepEqual(
-		listed.map((v) => v.id),
-		["verse"],
-	)
-
-	const silent = await listRealtimeSpeakers(
-		{ id: "custom", baseUrl: "https://api.openai.com/v1", apiKey: "sk" },
-		{
-			fallback: speakersFor("custom", "https://api.openai.com/v1"),
-			fetch: async () => ({ ok: false, json: async () => ({}) }),
-		},
-	)
-	assert.ok(silent.some((v) => v.id === "alloy"))
+	assert.deepEqual(urls, [])
+	assert.ok(listed.some((v) => v.id === "alloy"))
+	assert.ok(listed.some((v) => v.id === "marin"))
 })
 
-test("Local speakers prefer sidecar /v1/voices, then Kokoro only", async () => {
-	const fromSidecar = await listRealtimeSpeakers(
+test("Local speakers are Kokoro — the sidecar is not asked for /voices", async () => {
+	const urls = []
+	const listed = await listRealtimeSpeakers(
 		{ id: "s2s", baseUrl: "http://127.0.0.1:8765/v1", apiKey: "" },
 		{
+			fallback: speakersFor("s2s"),
 			fetch: async (url) => {
-				assert.equal(String(url), "http://127.0.0.1:8765/v1/voices")
+				urls.push(String(url))
 				return {
 					ok: true,
 					json: async () => ({ voices: ["Ryan", "Vivian"] }),
@@ -324,21 +317,14 @@ test("Local speakers prefer sidecar /v1/voices, then Kokoro only", async () => {
 			},
 		},
 	)
-	assert.deepEqual(
-		fromSidecar.map((v) => v.id),
-		["Ryan", "Vivian"],
-	)
-
-	const fromCatalog = await listRealtimeSpeakers(
-		{ id: "s2s", baseUrl: "http://127.0.0.1:8765/v1", apiKey: "" },
-		{
-			fallback: speakersFor("s2s"),
-			fetch: async () => ({ ok: false, json: async () => ({}) }),
-		},
-	)
-	assert.ok(fromCatalog.some((v) => v.id === "af_heart"))
+	assert.deepEqual(urls, [])
+	assert.ok(listed.some((v) => v.id === "af_heart"))
 	assert.equal(
-		fromCatalog.some((v) => v.id === "jean"),
+		listed.some((v) => v.id === "Ryan"),
+		false,
+	)
+	assert.equal(
+		listed.some((v) => v.id === "jean"),
 		false,
 	)
 })

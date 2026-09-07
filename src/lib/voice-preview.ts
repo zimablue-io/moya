@@ -1,4 +1,5 @@
-import { realtimeHttpBase } from "./realtime-protocol.ts"
+import { audioDeltaFromEvent } from "./realtime-events.ts"
+import { buildSessionUpdate, REALTIME_SAMPLE_RATE, realtimeSocketUrl, websocketProtocols } from "./realtime-protocol.ts"
 import { type VoiceBackendId, voiceRealtimeKind } from "./types.ts"
 
 export { VOICE_PREVIEW_TEXT } from "./brand.ts"
@@ -11,54 +12,113 @@ export type VoicePreviewTarget = {
 	voice: string
 }
 
-export function voicePreviewRequest(target: VoicePreviewTarget, text: string): { url: string; init: RequestInit } {
-	const base = realtimeHttpBase(target.baseUrl)
+export type VoicePreviewPlan = {
+	url: string
+	protocols: string[] | undefined
+	events: Record<string, unknown>[]
+}
+
+export function realtimeModelForPreview(target: VoicePreviewTarget): string {
+	if (target.model.trim()) return target.model.trim()
 	const kind = voiceRealtimeKind(target.id, target.baseUrl)
-	const headers: Record<string, string> = { "Content-Type": "application/json" }
-	if (target.apiKey.trim()) headers.Authorization = `Bearer ${target.apiKey.trim()}`
-	if (kind === "xai") {
-		return {
-			url: `${base}/tts`,
-			init: {
-				method: "POST",
-				headers,
-				body: JSON.stringify({ text, voice_id: target.voice, language: "en" }),
+	if (kind === "s2s") return "local"
+	if (kind === "xai") return "grok-voice-latest"
+	if (kind === "openai") return "gpt-realtime"
+	return ""
+}
+
+export function voicePreviewPlan(target: VoicePreviewTarget, text: string): VoicePreviewPlan {
+	const kind = voiceRealtimeKind(target.id, target.baseUrl)
+	return {
+		url: realtimeSocketUrl(target.baseUrl, realtimeModelForPreview(target)),
+		protocols: websocketProtocols(kind, target.apiKey),
+		events: [
+			buildSessionUpdate({
+				backend: kind,
+				instructions: "Speak the user's line in one short take. Do not ask a question.",
+				voice: target.voice,
+				tools: [],
+				sampleRate: REALTIME_SAMPLE_RATE,
+			}),
+			{
+				type: "conversation.item.create",
+				item: {
+					type: "message",
+					role: "user",
+					content: [{ type: "input_text", text }],
+				},
 			},
+			{ type: "response.create" },
+		],
+	}
+}
+
+type PreviewSocket = {
+	readyState: number
+	send: (data: string) => void
+	close: () => void
+	addEventListener: (type: string, fn: (ev: { data?: unknown }) => void) => void
+}
+
+type PreviewSocketCtor = new (url: string, protocols?: string | string[]) => PreviewSocket
+
+export function openRealtimePreview(
+	plan: VoicePreviewPlan,
+	handlers: {
+		onDelta: (b64: string) => void
+		onDone: () => void
+		onError: (message: string) => void
+	},
+	Socket: PreviewSocketCtor,
+): { close: () => void } {
+	const ws = plan.protocols?.length ? new Socket(plan.url, plan.protocols) : new Socket(plan.url)
+	let phase: "created" | "updated" | "streaming" = "created"
+	let closed = false
+	const close = () => {
+		if (closed) return
+		closed = true
+		try {
+			ws.close()
+		} catch {
+			/* ignore */
 		}
 	}
-	return {
-		url: `${base}/audio/speech`,
-		init: {
-			method: "POST",
-			headers,
-			body: JSON.stringify({ model: target.model, input: text, voice: target.voice }),
-		},
+	const fail = (message: string) => {
+		if (closed) return
+		close()
+		handlers.onError(message)
 	}
-}
-
-export type VoicePreviewResponse = {
-	ok: boolean
-	headers: { get: (name: string) => string | null }
-	arrayBuffer: () => Promise<ArrayBuffer>
-	json?: () => Promise<unknown>
-}
-
-export async function audioBufferFromPreviewResponse(res: VoicePreviewResponse): Promise<ArrayBuffer> {
-	if (!res.ok) throw new Error("Could not preview this voice.")
-	const type = res.headers.get("content-type") ?? ""
-	if (type.includes("json") && res.json) {
-		const json = await res.json()
-		const rec = json && typeof json === "object" ? (json as Record<string, unknown>) : {}
-		const b64 = typeof rec.audio === "string" ? rec.audio : ""
-		if (!b64) throw new Error("Could not preview this voice.")
-		return decodeBase64(b64)
-	}
-	return res.arrayBuffer()
-}
-
-function decodeBase64(b64: string): ArrayBuffer {
-	const bin = atob(b64)
-	const out = new Uint8Array(bin.length)
-	for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i)
-	return out.buffer
+	ws.addEventListener("error", () => fail("Could not preview this voice. Check the URL and key."))
+	ws.addEventListener("message", (ev) => {
+		if (closed || typeof ev.data !== "string") return
+		let event: Record<string, unknown>
+		try {
+			event = JSON.parse(ev.data) as Record<string, unknown>
+		} catch {
+			return
+		}
+		const type = String(event.type ?? "")
+		if (type === "error") {
+			fail("Could not preview this voice. Check the URL and key.")
+			return
+		}
+		if (phase === "created") {
+			ws.send(JSON.stringify(plan.events[0]))
+			phase = "updated"
+			return
+		}
+		if (phase === "updated" && type === "session.updated") {
+			ws.send(JSON.stringify(plan.events[1]))
+			ws.send(JSON.stringify(plan.events[2]))
+			phase = "streaming"
+			return
+		}
+		const delta = audioDeltaFromEvent(event)
+		if (delta) handlers.onDelta(delta)
+		if (type === "response.done") {
+			close()
+			handlers.onDone()
+		}
+	})
+	return { close }
 }

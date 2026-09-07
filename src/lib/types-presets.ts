@@ -61,14 +61,14 @@ export const VOICE_PRESETS: Record<
 		model: "local",
 		baseUrl: "http://127.0.0.1:8765/v1",
 		voice: "af_heart",
-		hint: `You start speech-to-speech. ${APP_NAME} does not.`,
+		hint: `Kokoro speaker on Talk. You start speech-to-speech. ${APP_NAME} does not.`,
 	},
 	custom: {
 		label: PROVIDER_PRESETS.custom.label,
 		model: "",
 		baseUrl: "",
 		voice: "",
-		hint: "Any OpenAI Realtime URL.",
+		hint: "Realtime WebSocket URL. Model is the speech model (gpt-realtime, grok-voice-latest), not Settings → Model.",
 	},
 }
 

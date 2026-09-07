@@ -1,4 +1,4 @@
-import { voiceRealtimeKind } from "./types.ts"
+import { type VoiceBackendId, voiceRealtimeKind } from "./types.ts"
 
 export type SpeakerOption = { id: string; label: string; group?: string }
 
@@ -38,17 +38,17 @@ export function parsePocketVoiceTree(json: unknown): SpeakerOption[] {
 }
 
 export async function listRealtimeSpeakers(
-	voice: { id: string; baseUrl: string; apiKey: string },
+	voice: { id: VoiceBackendId; baseUrl: string; apiKey: string },
 	deps?: { fetch?: CatalogFetch; fallback?: SpeakerOption[] },
 ): Promise<SpeakerOption[]> {
 	const fallback = deps?.fallback ?? []
-	const get = deps?.fetch ?? fetch
+	const kind = voiceRealtimeKind(voice.id, voice.baseUrl)
+	if (kind !== "xai") return fallback
 	const base = httpBase(voice.baseUrl)
 	if (!base) return fallback
-	const path =
-		voiceRealtimeKind(voice.id === "s2s" ? "s2s" : "custom", voice.baseUrl) === "xai" ? "/tts/voices" : "/voices"
+	const get = deps?.fetch ?? fetch
 	const listed = parseTtsVoices(
-		await fetchJson(get, `${base}${path}`, {
+		await fetchJson(get, `${base}/tts/voices`, {
 			headers: voice.apiKey ? { Authorization: `Bearer ${voice.apiKey}` } : {},
 		}),
 	)

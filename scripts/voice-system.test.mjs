@@ -75,8 +75,9 @@ test("Voice lists the provider catalog with a gender icon, not System TTS", () =
 	assert.match(picker, /<Square /)
 	assert.match(picker, /className="flex gap-2"/)
 	assert.match(picker, /SelectTrigger className="min-w-0 w-auto flex-1"/)
-	assert.match(picker, /voicePreviewRequest/)
-	assert.match(voiceSrc, /model=\{live\.model\}/)
+	assert.match(picker, /voicePreviewPlan/)
+	assert.equal(voiceSrc.includes('<Field label="Model">'), false)
+	assert.match(voiceSrc, /label="Realtime model"/)
 	assert.equal(voiceSrc.includes("speech.speak"), false)
 	assert.equal(picker.includes("speech.speak"), false)
 	const onboard = readFileSync(join(root, "src/components/setup-sheet.tsx"), "utf8")
@@ -145,7 +146,7 @@ test("switching provider to Local resets Conversation speaker to Heart", () => {
 	assert.equal(VOICE_PRESETS.custom.voice, "")
 })
 
-test("silent sidecar /v1/voices must not wipe Kokoro or fetch the Pocket Hugging Face tree", async () => {
+test("Local speakers are the Kokoro catalog — the sidecar is not asked for /voices", async () => {
 	const urls = []
 	const listed = await listRealtimeSpeakers(
 		{ id: "s2s", baseUrl: "http://127.0.0.1:8765/v1", apiKey: "" },
@@ -157,19 +158,19 @@ test("silent sidecar /v1/voices must not wipe Kokoro or fetch the Pocket Hugging
 			},
 		},
 	)
+	assert.deepEqual(urls, [])
 	assert.ok(listed.some((v) => v.id === "af_heart"))
 	assert.equal(
 		listed.some((v) => v.id === "jean"),
 		false,
 	)
-	assert.ok(urls.every((url) => !/huggingface|pocket-tts/i.test(url)))
 	assert.equal(
 		urls.some((url) => url === POCKET_VOICE_TREE_URL),
 		false,
 	)
 })
 
-test("OpenAI and Custom list speakers from GET /voices on the configured URL", async () => {
+test("OpenAI uses the documented Realtime voices; only xAI lists from GET /tts/voices", async () => {
 	const openaiUrls = []
 	const fromOpenAi = await listRealtimeSpeakers(
 		{ id: "custom", baseUrl: "https://api.openai.com/v1", apiKey: "sk" },
@@ -179,48 +180,55 @@ test("OpenAI and Custom list speakers from GET /voices on the configured URL", a
 				openaiUrls.push(String(url))
 				return {
 					ok: true,
+					json: async () => ({ voices: [{ id: "bogus", name: "Bogus" }] }),
+				}
+			},
+		},
+	)
+	assert.deepEqual(openaiUrls, [])
+	assert.ok(fromOpenAi.some((v) => v.id === "marin"))
+	assert.equal(
+		fromOpenAi.some((v) => v.id === "bogus"),
+		false,
+	)
+
+	const xaiUrls = []
+	const fromXai = await listRealtimeSpeakers(
+		{ id: "custom", baseUrl: "https://api.x.ai/v1", apiKey: "sk" },
+		{
+			fallback: speakersFor("custom", "https://api.x.ai/v1"),
+			fetch: async (url) => {
+				xaiUrls.push(String(url))
+				return {
+					ok: true,
 					json: async () => ({
 						voices: [
-							{ id: "marin", name: "Marin" },
-							{ id: "coral", name: "Coral" },
+							{ voice_id: "eve", name: "Eve" },
+							{ voice_id: "ara", name: "Ara" },
 						],
 					}),
 				}
 			},
 		},
 	)
-	assert.deepEqual(openaiUrls, ["https://api.openai.com/v1/voices"])
-	assert.equal(
-		openaiUrls.some((url) => /audio\/voices/i.test(url)),
-		false,
-	)
+	assert.deepEqual(xaiUrls, ["https://api.x.ai/v1/tts/voices"])
 	assert.deepEqual(
-		fromOpenAi.map((v) => v.id),
-		["marin", "coral"],
+		fromXai.map((v) => v.id),
+		["eve", "ara"],
 	)
 
-	const silentOpenAi = await listRealtimeSpeakers(
-		{ id: "custom", baseUrl: "https://api.openai.com/v1", apiKey: "sk" },
-		{
-			fallback: speakersFor("custom", "https://api.openai.com/v1"),
-			fetch: async () => ({ ok: false, json: async () => ({}) }),
-		},
-	)
-	assert.ok(silentOpenAi.some((v) => v.id === "alloy"))
-
+	const customUrls = []
 	const fromCustom = await listRealtimeSpeakers(
 		{ id: "custom", baseUrl: "https://proxy.example/v1", apiKey: "k" },
 		{
 			fetch: async (url) => {
-				assert.equal(String(url), "https://proxy.example/v1/voices")
+				customUrls.push(String(url))
 				return { ok: true, json: async () => ({ voices: ["Ryan", "Vivian"] }) }
 			},
 		},
 	)
-	assert.deepEqual(
-		fromCustom.map((v) => v.id),
-		["Ryan", "Vivian"],
-	)
+	assert.deepEqual(customUrls, [])
+	assert.deepEqual(fromCustom, [])
 })
 
 test("Voice tab offers Local and Custom — names match Model", () => {
@@ -369,7 +377,7 @@ test("Settings and Voice mode stay wired to the contract, not a second Speaker f
 	assert.match(storeSrc, /run\("settings\.voice"/)
 	assert.equal(VOICE_SETTINGS_COPY.conversationSpeaker, "Voice")
 	assert.match(voiceSrc, /label="Base URL"/)
-	assert.match(voiceSrc, /label="Model"/)
+	assert.match(voiceSrc, /label="Realtime model"/)
 	assert.match(voiceSrc, /voiceChoicesForHost/)
 	assert.match(voiceSrc, /id === "custom"/)
 	assert.match(modelSrc, /label="Base URL"/)

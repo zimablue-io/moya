@@ -13,7 +13,7 @@ import {
 export const VOICE_SETTINGS_COPY = {
 	conversationSpeaker: "Voice",
 	conversationTipLocal: "Kokoro ids such as af_heart. The sidecar has no /v1/voices list.",
-	conversationTipLive: "Listed from this endpoint when it answers.",
+	conversationTipLive: "xAI lists GET /tts/voices. OpenAI Realtime uses the documented set.",
 } as const
 
 export { voiceUrlIsEditable } from "./types.ts"
