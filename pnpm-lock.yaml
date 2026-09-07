@@ -129,6 +129,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.2.0
         version: 5.2.0(vite@8.2.1(@types/node@22.20.1)(jiti@2.7.0))
+      bplist-creator:
+        specifier: ^0.3.0
+        version: 0.3.0
       lightningcss:
         specifier: ^1.28.0
         version: 1.33.0
@@ -1218,6 +1221,10 @@ packages:
   body-parser@2.3.0:
     resolution: {integrity: sha512-2cGmJupaNgg+QUwVLAucDuWuoMZ6EX9iHDRswZ5lsNYEmwPaRknMPCLZz07yTzVq/83p4o/wzbDZbBrTvGGTIw==}
     engines: {node: '>=18'}
+
+  bplist-creator@0.3.0:
+    resolution: {integrity: sha512-tpB/FR5DoHotN/szYoOGCnP0/ActTO7QI21T+Z7bA3FsiQXSnm1CrklAxgFXd8wdvWnEVvo5qedvfhGwblf7RA==}
+    engines: {node: '>=20.19.0'}
 
   brace-expansion@5.0.9:
     resolution: {integrity: sha512-ScQ4IuvIEF1TMlP7Zt+vjJ//9zlPb2SDcxWxM3bk8s6t6GGdJ7KO1dCcTidOPJKePW30LE/2cT7wCyPho9/Wxg==}
@@ -2679,6 +2686,10 @@ packages:
     resolution: {integrity: sha512-UhDfHmA92YAlNnCfhmq0VeNL5bDbiZGg7sZ2IvPsXubGkiNa9EC+tUTsjBRsYUAz87btI6/1wf4XoVvQ3uRnmQ==}
     engines: {node: '>=18'}
 
+  stream-buffers@3.0.3:
+    resolution: {integrity: sha512-pqMqwQCso0PBJt2PQmDO0cFj0lyqmiwOMiMSkVtRokl7e+ZTRYgDHKnuZNbqjiJXgsg4nuqtD/zxuo9KqTp0Yw==}
+    engines: {node: '>= 0.10.0'}
+
   string-width@7.2.0:
     resolution: {integrity: sha512-tsaTIkKW9b4N+AEj+SVA+WhJzV7/zMhcSu78mLKWSk7cXMOSHsBKFWUs0fWwq8QyK3MgJBQRX6Gbi4kYbdvGkQ==}
     engines: {node: '>=18'}
@@ -4085,6 +4096,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  bplist-creator@0.3.0:
+    dependencies:
+      stream-buffers: 3.0.3
+
   brace-expansion@5.0.9:
     dependencies:
       balanced-match: 4.0.4
@@ -5389,6 +5404,8 @@ snapshots:
   statuses@2.0.2: {}
 
   stdin-discarder@0.2.2: {}
+
+  stream-buffers@3.0.3: {}
 
   string-width@7.2.0:
     dependencies:

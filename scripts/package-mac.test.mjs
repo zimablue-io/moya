@@ -1,9 +1,10 @@
 import assert from "node:assert/strict"
-import { mkdirSync, mkdtempSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { dirname, join } from "node:path"
 import { test } from "node:test"
 import { fileURLToPath } from "node:url"
+import { writeInstallerDsStore } from "./dmg-layout.mjs"
 import {
 	argsWithoutFinderLayout,
 	bundleDmgSpec,
@@ -14,6 +15,7 @@ import {
 	placeFinishedDmg,
 	retryVisibleDmg,
 	TAURI_BUILD_ARGS,
+	volumeHasInstallerLayout,
 } from "./package-mac.mjs"
 import { DMG_APP, DMG_APPLICATIONS, DMG_WINDOW } from "./write-dmg-background.mjs"
 
@@ -44,6 +46,8 @@ test("retry argv matches Tauri's bundle_dmg.sh invocation", () => {
 		"--window-size",
 		String(DMG_WINDOW.width),
 		String(DMG_WINDOW.height),
+		"--icon-size",
+		"128",
 		"--hide-extension",
 		"Moya.app",
 		"--background",
@@ -54,6 +58,8 @@ test("retry argv matches Tauri's bundle_dmg.sh invocation", () => {
 		"Moya.app",
 	])
 	assert.equal(spec.cwd, spec.macos)
+	assert.equal(spec.args.includes("--icon-size"), true)
+	assert.equal(spec.args[spec.args.indexOf("--icon-size") + 1], "128")
 })
 
 test("argsWithoutFinderLayout inserts --skip-jenkins without setting CI=true", () => {
@@ -65,7 +71,23 @@ test("argsWithoutFinderLayout inserts --skip-jenkins without setting CI=true", (
 	assert.equal(spec.args.includes("--skip-jenkins"), false)
 })
 
-test("last retry skips Finder AppleScript so a terminal without Automation still gets a DMG", () => {
+test("a DMG without .DS_Store is a default Finder folder, not the installer window", () => {
+	assert.equal(volumeHasInstallerLayout(["Moya.app", "Applications", ".background"]), false)
+	assert.equal(volumeHasInstallerLayout(["Moya.app", "Applications", ".background", ".DS_Store"]), true)
+})
+
+test("installer .DS_Store writes large icons and the app/Applications positions", async () => {
+	const dir = mkdtempSync(join(tmpdir(), "moya-dsstore-"))
+	const dest = join(dir, ".DS_Store")
+	await new Promise((resolve, reject) => {
+		writeInstallerDsStore(dest, (err) => (err ? reject(err) : resolve()))
+	})
+	const bytes = readFileSync(dest)
+	assert.ok(bytes.length > 100)
+	assert.equal(bytes.includes(Buffer.from("Moya.app", "utf16le").swap16()), true)
+})
+
+test("last retry still writes the large-icon drag-to-Applications layout", async () => {
 	const workspace = mkdtempSync(join(tmpdir(), "moya-skip-finder-"))
 	const dmgDir = join(workspace, "src-tauri/target/release/bundle/dmg")
 	const macos = join(workspace, "src-tauri/target/release/bundle/macos")
@@ -73,12 +95,16 @@ test("last retry skips Finder AppleScript so a terminal without Automation still
 	mkdirSync(macos, { recursive: true })
 	writeFileSync(join(dmgDir, "bundle_dmg.sh"), "#!/bin/bash\n")
 	const calls = []
-	const result = retryVisibleDmg({
+	const result = await retryVisibleDmg({
 		root: workspace,
 		version: "0.1.6",
 		arch: "aarch64",
 		clear: () => ({ removed: [], ejected: [] }),
 		log() {},
+		layout: (dmg) => {
+			calls.push({ layout: dmg })
+			return { ok: true }
+		},
 		run: (cmd, args, opts) => {
 			calls.push({ cmd, args, cwd: opts?.cwd })
 			if (args.includes("--skip-jenkins")) {
@@ -89,10 +115,10 @@ test("last retry skips Finder AppleScript so a terminal without Automation still
 		},
 	})
 	assert.equal(result.ok, true)
-	assert.equal(result.skipFinder, true)
 	assert.equal(
-		calls.some((call) => call.args.includes("--skip-jenkins")),
+		calls.some((call) => call.layout),
 		true,
+		"skip-jenkins still has to apply the icon-view layout",
 	)
 })
 
@@ -104,7 +130,7 @@ test("clearPartialDmgOutput removes a leftover final DMG next to Moya.app", () =
 	assert.deepEqual(removed, ["Moya_0.1.6_aarch64.dmg"])
 })
 
-test("packageMac retries bundle_dmg.sh with visible output after Tauri hides the error", () => {
+test("packageMac retries bundle_dmg.sh with visible output after Tauri hides the error", async () => {
 	const workspace = mkdtempSync(join(tmpdir(), "moya-package-mac-"))
 	const dmgDir = join(workspace, "src-tauri/target/release/bundle/dmg")
 	const macos = join(workspace, "src-tauri/target/release/bundle/macos")
@@ -112,7 +138,7 @@ test("packageMac retries bundle_dmg.sh with visible output after Tauri hides the
 	mkdirSync(macos, { recursive: true })
 	writeFileSync(join(dmgDir, "bundle_dmg.sh"), "#!/bin/bash\n")
 	const calls = []
-	const result = packageMac({
+	const result = await packageMac({
 		root: workspace,
 		version: "0.1.6",
 		run: (cmd, args, opts) => {
@@ -124,7 +150,13 @@ test("packageMac retries bundle_dmg.sh with visible output after Tauri hides the
 			}
 			return { status: 1 }
 		},
-		retry: (opts) => retryVisibleDmg({ ...opts, clear: () => ({ removed: [], ejected: [] }), log() {} }),
+		retry: (opts) =>
+			retryVisibleDmg({
+				...opts,
+				clear: () => ({ removed: [], ejected: [] }),
+				log() {},
+				layout: async () => ({ ok: true }),
+			}),
 	})
 	assert.equal(result.ok, true)
 	assert.equal(result.retried, true)

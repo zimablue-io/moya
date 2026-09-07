@@ -5,6 +5,7 @@ import { deflateSync } from "node:zlib"
 
 /** Matches the Finder window exactly — one full-bleed fill. An inset card shows as a second background. */
 export const DMG_WINDOW = { width: 660, height: 400 }
+export const DMG_ICON_SIZE = 128
 export const DMG_APP = { x: 160, y: 190 }
 export const DMG_APPLICATIONS = { x: 500, y: 190 }
 export const DMG_BACKGROUND = "dmg/background.png"

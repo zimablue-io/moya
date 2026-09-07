@@ -8,6 +8,7 @@ import {
 	DMG_APPLICATIONS,
 	DMG_BACKGROUND,
 	DMG_BG,
+	DMG_ICON_SIZE,
 	DMG_WINDOW,
 	renderDmgBackground,
 } from "./write-dmg-background.mjs"
@@ -19,6 +20,7 @@ test("DMG background is a PNG that matches the Finder window", () => {
 	assert.equal(png.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])), true)
 	assert.equal(DMG_WINDOW.width, 660)
 	assert.equal(DMG_WINDOW.height, 400)
+	assert.equal(DMG_ICON_SIZE, 128)
 	assert.ok(DMG_APP.x < DMG_APPLICATIONS.x)
 	assert.equal(DMG_BACKGROUND, "dmg/background.png")
 })

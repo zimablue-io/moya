@@ -4,7 +4,10 @@ import { createRequire } from "node:module"
 import { dirname, join, resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { clearStaleDmgWork } from "./desktop-frontend.mjs"
-import { DMG_APP, DMG_APPLICATIONS, DMG_WINDOW } from "./write-dmg-background.mjs"
+import { applyDmgInstallerLayout } from "./dmg-layout.mjs"
+import { DMG_APP, DMG_APPLICATIONS, DMG_ICON_SIZE, DMG_WINDOW } from "./write-dmg-background.mjs"
+
+export { volumeHasInstallerLayout } from "./dmg-layout.mjs"
 
 const require = createRequire(import.meta.url)
 
@@ -53,6 +56,8 @@ export function bundleDmgSpec({ root, version, arch = dmgArch() }) {
 			"--window-size",
 			String(DMG_WINDOW.width),
 			String(DMG_WINDOW.height),
+			"--icon-size",
+			String(DMG_ICON_SIZE),
 			"--hide-extension",
 			"Moya.app",
 			"--background",
@@ -89,7 +94,7 @@ export function placeFinishedDmg(spec, { exists = existsSync, rename = renameSyn
 	return spec.dest
 }
 
-export function retryVisibleDmg({
+export async function retryVisibleDmg({
 	root,
 	version,
 	arch = dmgArch(),
@@ -97,6 +102,7 @@ export function retryVisibleDmg({
 	run = spawnSync,
 	clear = clearStaleDmgWork,
 	log = console.error,
+	layout = applyDmgInstallerLayout,
 } = {}) {
 	const spec = bundleDmgSpec({ root, version, arch })
 	if (!existsSync(spec.script)) {
@@ -108,14 +114,14 @@ export function retryVisibleDmg({
 		clear(root)
 		clearPartialDmgOutput(spec.macos)
 		if (skipFinder) {
-			log(
-				"Finder AppleScript is not authorized for this terminal (Apple event -1743). Skipping the drag-to-Applications layout and writing a plain DMG. Grant System Settings → Privacy & Security → Automation → [this terminal] → Finder to get the pretty window. Cursor already has that permission — that is why the same command succeeds there.",
-			)
+			log("Finder AppleScript is not authorized. Writing icon-view layout without Finder.")
 		} else {
 			log(`retrying bundle_dmg.sh (${attempt}/${attempts}) with Finder layout`)
 		}
 		const result = run("bash", [spec.script, ...args], { cwd: spec.cwd, stdio: "inherit" })
 		if ((result.status ?? 1) === 0) {
+			const laid = await layout(spec.src)
+			if (!laid?.ok) continue
 			const dest = placeFinishedDmg(spec)
 			return { ok: true, dest, attempt, skipFinder }
 		}
@@ -130,10 +136,25 @@ export function tauriBin(root) {
 /** -vv is how Tauri prints bundle_dmg.sh stdout/stderr (log::debug in output_ok). */
 export const TAURI_BUILD_ARGS = ["build", "-vv"]
 
-export function packageMac({ root, version, run = spawnSync, retry = retryVisibleDmg } = {}) {
+export async function packageMac({
+	root,
+	version,
+	run = spawnSync,
+	retry = retryVisibleDmg,
+	layout = applyDmgInstallerLayout,
+} = {}) {
+	const spec = bundleDmgSpec({ root, version })
 	const tauri = run(tauriBin(root), TAURI_BUILD_ARGS, { cwd: root, stdio: "inherit", env: process.env })
-	if ((tauri.status ?? 1) === 0) return { ok: true, retried: false }
-	const again = retry({ root, version, run })
+	if ((tauri.status ?? 1) === 0) {
+		const dest = existsSync(spec.dest) ? spec.dest : spec.src
+		const laid = await layout(dest)
+		if (!laid?.ok) {
+			console.error(laid?.reason ?? "DMG layout failed")
+			return { ok: false, retried: false, status: 1 }
+		}
+		return { ok: true, retried: false, dest: laid.dest ?? dest }
+	}
+	const again = await retry({ root, version, run, layout })
 	if (!again.ok) {
 		console.error(again.reason)
 		return { ok: false, retried: true, status: tauri.status ?? 1 }
@@ -146,6 +167,6 @@ const invokedDirectly = process.argv[1] && resolve(process.argv[1]) === fileURLT
 if (invokedDirectly) {
 	const root = dirname(dirname(fileURLToPath(import.meta.url)))
 	const { version } = require("../package.json")
-	const result = packageMac({ root, version })
+	const result = await packageMac({ root, version })
 	process.exit(result.ok ? 0 : (result.status ?? 1))
 }
