@@ -68,7 +68,7 @@ export const VOICE_PRESETS: Record<
 		model: "",
 		baseUrl: "",
 		voice: "",
-		hint: "Realtime WebSocket URL. Model is the speech model (gpt-realtime, grok-voice-latest), not Settings → Model.",
+		hint: "Any OpenAI Realtime URL.",
 	},
 }
 
