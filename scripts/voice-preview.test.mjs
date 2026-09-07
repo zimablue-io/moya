@@ -1,7 +1,112 @@
 import assert from "node:assert/strict"
+import { readFileSync } from "node:fs"
+import { dirname, join } from "node:path"
 import { test } from "node:test"
+import { fileURLToPath } from "node:url"
 import { pcm16ToBase64 } from "../src/lib/pcm.ts"
 import { openRealtimePreview, VOICE_PREVIEW_TEXT, voicePreviewPlan } from "../src/lib/voice-preview.ts"
+import { speakReply, speakReplyTarget } from "../src/lib/voice-speak.ts"
+
+const root = join(dirname(fileURLToPath(import.meta.url)), "..")
+
+test("typed speech uses the configured Realtime voice, not System TTS", () => {
+	const target = speakReplyTarget(
+		{
+			agentName: "Moya",
+			userName: "",
+			brief: "",
+			showCaptions: true,
+			provider: { id: "ondevice", model: "a.gguf", baseUrl: "", apiKey: "" },
+			voiceBackend: {
+				id: "s2s",
+				model: "local",
+				baseUrl: "http://127.0.0.1:8765/v1",
+				apiKey: "",
+				voice: "af_heart",
+			},
+		},
+		{ id: "ondevice", model: "a.gguf", baseUrl: "", apiKey: "" },
+	)
+	assert.equal(target?.id, "s2s")
+	assert.equal(target?.voice, "af_heart")
+	assert.equal(target?.baseUrl, "http://127.0.0.1:8765/v1")
+	assert.equal(
+		speakReplyTarget(
+			{
+				agentName: "Moya",
+				userName: "",
+				brief: "",
+				showCaptions: true,
+				provider: { id: "custom", model: "local", baseUrl: "http://127.0.0.1:1234/v1", apiKey: "" },
+				voiceBackend: { id: "custom", model: "", baseUrl: "", apiKey: "", voice: "" },
+			},
+			{ id: "custom", model: "local", baseUrl: "http://127.0.0.1:1234/v1", apiKey: "" },
+		),
+		null,
+	)
+	assert.equal(
+		speakReplyTarget(
+			{
+				agentName: "Moya",
+				userName: "",
+				brief: "",
+				showCaptions: true,
+				provider: { id: "custom", model: "local", baseUrl: "http://127.0.0.1:1234/v1", apiKey: "" },
+				voiceBackend: {
+					id: "custom",
+					model: "",
+					baseUrl: "http://127.0.0.1:8765/v1",
+					apiKey: "",
+					voice: "",
+				},
+			},
+			{ id: "custom", model: "local", baseUrl: "http://127.0.0.1:1234/v1", apiKey: "" },
+		)?.voice,
+		"af_heart",
+	)
+	const speakSrc = readFileSync(join(root, "src/lib/voice-speak.ts"), "utf8")
+	assert.match(speakSrc, /prepareSpokenReply/)
+	assert.equal(speakSrc.includes("voice-backend"), false)
+})
+
+test("typed speech opens Realtime even when AudioContext.resume never resolves", () => {
+	const opened = []
+	class MockSocket {
+		constructor(url) {
+			opened.push(String(url))
+		}
+		addEventListener() {}
+		send() {}
+		close() {}
+	}
+	const previous = globalThis.AudioContext
+	globalThis.AudioContext = class {
+		state = "suspended"
+		resume() {
+			return new Promise(() => {})
+		}
+	}
+	try {
+		speakReply(
+			{
+				id: "s2s",
+				baseUrl: "http://127.0.0.1:8765/v1",
+				apiKey: "",
+				model: "local",
+				voice: "af_heart",
+			},
+			"Hello from Moya?",
+			{},
+			MockSocket,
+		)
+		assert.ok(
+			opened.some((url) => /\/realtime/.test(url)),
+			`typed speech did not open Realtime; sockets=${opened.join(",") || "(none)"}`,
+		)
+	} finally {
+		globalThis.AudioContext = previous
+	}
+})
 
 test("voice preview line is a fixed spoken sample", () => {
 	assert.equal(typeof VOICE_PREVIEW_TEXT, "string")
@@ -26,8 +131,10 @@ test("Local preview is a Realtime websocket turn, not HTTP /audio/speech", () =>
 	assert.match(plan.url, /^ws:\/\/127\.0\.0\.1:8765\/v1\/realtime/)
 	assert.match(plan.url, /model=local/)
 	assert.equal(plan.events[0]?.type, "session.update")
+	assert.match(JSON.stringify(plan.events[0]), /verbatim/)
 	assert.equal(plan.events[1]?.type, "conversation.item.create")
 	assert.equal(plan.events[2]?.type, "response.create")
+	assert.match(JSON.stringify(plan.events[1]), /Hello from Moya\?/)
 	const item = plan.events[1]?.item
 	assert.equal(item && typeof item === "object" && item.role, "user")
 })

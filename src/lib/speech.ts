@@ -3,6 +3,7 @@ import { systemSettingsLabel } from "./host"
 import { captureDenied, ensureMediaAccess, type MicFix } from "./media-permission"
 import { friendlySpeechError, getRecognizerCtor, livingBands, padBands, type Recog } from "./speech-helpers"
 import { clamp } from "./utils"
+import { stopSpokenReply } from "./voice-speak"
 
 export type SpeechHandlers = {
 	onInterim?: (text: string) => void
@@ -35,10 +36,6 @@ export class SpeechEngine {
 
 	get supported() {
 		return Boolean(getRecognizerCtor())
-	}
-
-	get ttsSupported() {
-		return typeof window !== "undefined" && "speechSynthesis" in window
 	}
 
 	async startListen(opts: { continuous?: boolean } = {}) {
@@ -135,8 +132,7 @@ export class SpeechEngine {
 	}
 
 	stopSpeak() {
-		if (!this.ttsSupported) return
-		window.speechSynthesis.cancel()
+		stopSpokenReply()
 	}
 
 	dispose() {

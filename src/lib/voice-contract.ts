@@ -4,7 +4,6 @@ import {
 	type PresenceState,
 	type Settings,
 	speakersFor,
-	VOICE_PRESETS,
 	type VoiceBackendId,
 	voiceRealtimeKind,
 } from "./types.ts"
@@ -22,7 +21,9 @@ export function conversationVoice(settings: Pick<Settings, "voiceBackend">): str
 	const stored = settings.voiceBackend.voice.trim()
 	if (settings.voiceBackend.id === "s2s") return localConversationVoice(stored)
 	if (stored) return stored
-	return VOICE_PRESETS[settings.voiceBackend.id]?.voice ?? ""
+	const catalog = speakersFor(settings.voiceBackend.id, settings.voiceBackend.baseUrl)
+	if (catalog[0]?.id) return catalog[0].id
+	return localConversationVoice("")
 }
 
 export function sessionUpdateFromSettings(

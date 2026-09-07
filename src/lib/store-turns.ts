@@ -3,8 +3,9 @@ import { dispatch, runTurn } from "./environment"
 import { liveSettings, notify } from "./host"
 import { completeTurn } from "./llm"
 import { applyEnv, envFromStore, type Live } from "./store-env"
-import type { Artifact, Message, Snapshot } from "./types"
+import type { Artifact, Emotion, Message, Snapshot } from "./types"
 import { nowIso, uid } from "./utils"
+import { prepareSpokenReply, speakReply, speakReplyTarget, stopSpokenReply } from "./voice-speak"
 
 type StoreApi = Snapshot &
 	Live & {
@@ -65,6 +66,8 @@ export function createTurnActions(get: Get, set: Set) {
 			if (!trimmed) return
 			const store = get()
 			if (store.presence === "thinking") return
+			stopSpokenReply()
+			prepareSpokenReply()
 			store.addUserMessage(trimmed)
 			set({ presence: "thinking", caption: "", interim: "", error: null, emotion: "focused" })
 
@@ -78,21 +81,35 @@ export function createTurnActions(get: Get, set: Set) {
 			})
 
 			const spoken = result.spoken
-			const em = /sorry|cannot|can't|blocked|urgent/i.test(spoken)
+			const em: Emotion = /sorry|cannot|can't|blocked|urgent/i.test(spoken)
 				? "concerned"
 				: /good|glad|nice|yes/i.test(spoken)
 					? "warm"
 					: "calm"
-			set({
+			const live = liveSettings(get().settings)
+			const target = !get().voiceMode && spoken ? speakReplyTarget(live, live.provider) : null
+			const patch = {
 				...applyEnv(result.env),
 				emotion: em,
 				caption: spoken,
 				error: result.error ?? null,
-				presence: get().voiceMode ? "listening" : "idle",
-			})
+			}
+			if (target) set({ ...patch, presence: "speaking" })
+			else set({ ...patch, presence: get().voiceMode ? "listening" : "idle" })
 			get().persist()
 			const added = result.env.snapshot.inbox.filter((i) => !i.resolvedAt && !beforeInbox.some((x) => x.id === i.id))
 			if (added[0]) void notify(added[0].title, added[0].body)
+			if (target) {
+				speakReply(target, spoken, {
+					onEnd: () => {
+						if (get().presence === "speaking") set({ presence: "idle" })
+					},
+					onError: (message) => {
+						if (get().presence === "thinking") return
+						set({ presence: "idle", error: get().error ?? message })
+					},
+				})
+			}
 		},
 
 		runAutomation: async (id: string) => {

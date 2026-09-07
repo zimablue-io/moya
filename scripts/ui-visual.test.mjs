@@ -97,7 +97,7 @@ describe("visual UI audit", { concurrency: 1 }, () => {
 		assert.ok(hearBox.x > pickerBox.x + pickerBox.width - 8, "preview is not to the right of the voice")
 	})
 
-	test("a typed turn paints a reply or error on the home canvas", async () => {
+	test("a typed turn is heard on Realtime, or shows an error", async () => {
 		assert.ok(session)
 		const { page } = session
 		await completeOnboarding(page)
@@ -112,10 +112,22 @@ describe("visual UI audit", { concurrency: 1 }, () => {
 		const box = page.getByPlaceholder("Edit, then send")
 		await box.waitFor({ state: "visible" })
 		await box.fill("hello")
+		const sockets = []
+		page.on("websocket", (ws) => sockets.push(ws.url()))
 		await page.getByRole("button", { name: "Send" }).click()
 		const reply = page.locator("p.mt-3.max-w-md")
 		const err = page.locator("p.text-xs.text-subtle")
 		await reply.or(err).first().waitFor({ state: "visible", timeout: 45_000 })
 		assert.equal(await page.getByText("Tap the core for voice").isVisible(), false)
+		if (await reply.isVisible()) {
+			const deadline = Date.now() + 5_000
+			while (Date.now() < deadline && !sockets.some((url) => /\/realtime/.test(url))) {
+				await page.waitForTimeout(50)
+			}
+			assert.ok(
+				sockets.some((url) => /\/realtime/.test(url)),
+				`typed reply was silent; sockets=${sockets.join(",") || "(none)"}`,
+			)
+		}
 	})
 })

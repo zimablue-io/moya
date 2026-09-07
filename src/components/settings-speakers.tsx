@@ -4,13 +4,11 @@ import { Field } from "@/components/settings-field"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { base64ToPcm16, pcm16ToFloat } from "@/lib/pcm"
-import { ScheduledAudioQueue } from "@/lib/realtime-playback"
-import { REALTIME_SAMPLE_RATE } from "@/lib/realtime-protocol"
 import { speakerGender, speakersFor, type VoiceBackendId } from "@/lib/types"
 import { listRealtimeSpeakers, type SpeakerOption } from "@/lib/voice-catalog"
 import { conversationVoice, VOICE_SETTINGS_COPY } from "@/lib/voice-contract"
-import { openRealtimePreview, VOICE_PREVIEW_TEXT, voicePreviewPlan } from "@/lib/voice-preview"
+import { VOICE_PREVIEW_TEXT } from "@/lib/voice-preview"
+import { prepareSpokenReply, speakReply, stopSpokenReply } from "@/lib/voice-speak"
 
 export function SpokenVoice({
 	id,
@@ -121,25 +119,17 @@ function VoicePreviewButton({
 }) {
 	const [playing, setPlaying] = useState(false)
 	const [error, setError] = useState<string | null>(null)
-	const closeRef = useRef<(() => void) | null>(null)
-	const ctxRef = useRef<AudioContext | null>(null)
-	const queueRef = useRef(new ScheduledAudioQueue())
+	const playingRef = useRef(false)
+	playingRef.current = playing
 
 	const stop = () => {
-		closeRef.current?.()
-		closeRef.current = null
-		queueRef.current.flush()
+		stopSpokenReply()
 		setPlaying(false)
 	}
 
 	useEffect(() => {
-		queueRef.current.onIdle = () => setPlaying(false)
 		return () => {
-			closeRef.current?.()
-			closeRef.current = null
-			queueRef.current.flush()
-			void ctxRef.current?.close()
-			ctxRef.current = null
+			if (playingRef.current) stopSpokenReply()
 		}
 	}, [])
 
@@ -158,51 +148,23 @@ function VoicePreviewButton({
 					stop()
 					return
 				}
-				void (async () => {
-					setError(null)
-					const voice = conversationVoice({
-						voiceBackend: { id, baseUrl, apiKey, model, voice: value },
-					})
-					if (!voice) {
-						setError("Pick a voice first.")
-						return
-					}
-					try {
-						const plan = voicePreviewPlan({ id, baseUrl, apiKey, model, voice }, VOICE_PREVIEW_TEXT)
-						const ctx = ctxRef.current ?? new AudioContext({ sampleRate: REALTIME_SAMPLE_RATE })
-						ctxRef.current = ctx
-						await ctx.resume()
-						setPlaying(true)
-						closeRef.current = openRealtimePreview(
-							plan,
-							{
-								onDelta: (b64) => {
-									const pcm = base64ToPcm16(b64)
-									if (!pcm.length) return
-									const samples = pcm16ToFloat(pcm)
-									const buf = ctx.createBuffer(1, samples.length, REALTIME_SAMPLE_RATE)
-									buf.getChannelData(0).set(samples)
-									const src = ctx.createBufferSource()
-									src.buffer = buf
-									src.connect(ctx.destination)
-									queueRef.current.schedule(src, buf.duration, ctx.currentTime)
-								},
-								onDone: () => {
-									closeRef.current = null
-									if (queueRef.current.liveCount === 0) setPlaying(false)
-								},
-								onError: (message) => {
-									setError(message)
-									stop()
-								},
-							},
-							WebSocket,
-						).close
-					} catch {
-						setError("Could not preview this voice. Check the URL and key.")
-						stop()
-					}
-				})()
+				setError(null)
+				const voice = conversationVoice({
+					voiceBackend: { id, baseUrl, apiKey, model, voice: value },
+				})
+				if (!voice) {
+					setError("Pick a voice first.")
+					return
+				}
+				prepareSpokenReply()
+				setPlaying(true)
+				speakReply({ id, baseUrl, apiKey, model, voice }, VOICE_PREVIEW_TEXT, {
+					onEnd: () => setPlaying(false),
+					onError: (message) => {
+						setError(message)
+						setPlaying(false)
+					},
+				})
 			}}
 		>
 			{playing ? <Square className="size-4" /> : <Play className="size-4" />}

@@ -75,7 +75,7 @@ test("Voice lists the provider catalog with a gender icon, not System TTS", () =
 	assert.match(picker, /<Square /)
 	assert.match(picker, /className="flex gap-2"/)
 	assert.match(picker, /SelectTrigger className="min-w-0 w-auto flex-1"/)
-	assert.match(picker, /voicePreviewPlan/)
+	assert.match(picker, /speakReply/)
 	assert.equal(voiceSrc.includes('<Field label="Model">'), false)
 	assert.match(voiceSrc, /label="Realtime model"/)
 	assert.equal(voiceSrc.includes("speech.speak"), false)
@@ -87,9 +87,12 @@ test("Voice lists the provider catalog with a gender icon, not System TTS", () =
 
 test("Hear this voice keeps playing after the Realtime response ends", () => {
 	const picker = readFileSync(join(root, "src/components/settings-speakers.tsx"), "utf8")
-	assert.equal(/onDone:\s*\(\)\s*=>\s*stop\(\)/.test(picker), false)
-	assert.match(picker, /onIdle/)
-	assert.match(picker, /queueRef\.current\.flush\(\)/)
+	const speakSrc = readFileSync(join(root, "src/lib/voice-speak.ts"), "utf8")
+	assert.match(picker, /speakReply/)
+	assert.match(picker, /prepareSpokenReply/)
+	assert.equal(picker.includes("ScheduledAudioQueue"), false)
+	assert.equal(/onDone:\s*\(\)\s*=>\s*stop\(\)/.test(speakSrc), false)
+	assert.match(speakSrc, /onIdle/)
 })
 
 test("Voice mode sends Conversation speaker, never a system voiceURI", () => {
@@ -109,6 +112,12 @@ test("empty Local voice still sends Kokoro Heart so the sidecar cannot stay on b
 	})
 	assert.equal(empty.voiceBackend.voice, "af_heart")
 	assert.equal(conversationVoice({ voiceBackend: { ...empty.voiceBackend, voice: "" } }), "af_heart")
+	assert.equal(
+		conversationVoice({
+			voiceBackend: { id: "custom", model: "", baseUrl: "http://127.0.0.1:8765/v1", apiKey: "", voice: "" },
+		}),
+		"af_heart",
+	)
 	assert.equal(
 		sessionOutputVoice(buildSessionUpdate({ backend: "s2s", instructions: "", voice: "", tools: [] })),
 		"af_heart",
@@ -380,6 +389,13 @@ test("Settings and Voice mode stay wired to the contract, not a second Speaker f
 	assert.equal(storeSrc.includes("shouldSpeakTypedReply"), false)
 	assert.equal(storeSrc.includes("typedReplyVoice"), false)
 	assert.equal(storeSrc.includes("speech.speak"), false)
+	const turnsSrc = readFileSync(join(root, "src/lib/store-turns.ts"), "utf8")
+	assert.match(turnsSrc, /speakReply/)
+	assert.match(turnsSrc, /prepareSpokenReply/)
+	assert.match(turnsSrc, /presence: "speaking"/)
+	const prepAt = turnsSrc.indexOf("prepareSpokenReply")
+	const runAt = turnsSrc.indexOf("await runTurn")
+	assert.ok(prepAt >= 0 && prepAt < runAt, "typed send must unlock audio on the click, before the model returns")
 	assert.match(storeSrc, /liveSettings/)
 	assert.match(storeSrc, /hostCaps\(\)\.onDeviceLlm/)
 	assert.match(storeSrc, /isLocalOnlyProvider/)

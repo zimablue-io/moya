@@ -35,7 +35,7 @@ export function voicePreviewPlan(target: VoicePreviewTarget, text: string): Voic
 		events: [
 			buildSessionUpdate({
 				backend: kind,
-				instructions: "Speak the user's line in one short take. Do not ask a question.",
+				instructions: "Read the user's message aloud verbatim. Do not answer or add words.",
 				voice: target.voice,
 				tools: [],
 				sampleRate: REALTIME_SAMPLE_RATE,
@@ -88,7 +88,7 @@ export function openRealtimePreview(
 		close()
 		handlers.onError(message)
 	}
-	ws.addEventListener("error", () => fail("Could not preview this voice. Check the URL and key."))
+	ws.addEventListener("error", () => fail("Could not play this voice. Check the URL and key."))
 	ws.addEventListener("message", (ev) => {
 		if (closed || typeof ev.data !== "string") return
 		let event: Record<string, unknown>
@@ -99,7 +99,7 @@ export function openRealtimePreview(
 		}
 		const type = String(event.type ?? "")
 		if (type === "error") {
-			fail("Could not preview this voice. Check the URL and key.")
+			fail("Could not play this voice. Check the URL and key.")
 			return
 		}
 		if (phase === "created") {

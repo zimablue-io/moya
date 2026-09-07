@@ -105,7 +105,7 @@ export function RoutinesDialog() {
 												variant="ghost"
 												aria-label="Run now"
 												disabled={Boolean(running)}
-												onClick={() => void runAutomation(a.id, { speak: true })}
+												onClick={() => void runAutomation(a.id)}
 											>
 												<Play className="size-4" />
 											</Button>
