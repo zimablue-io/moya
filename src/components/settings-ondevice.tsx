@@ -12,7 +12,6 @@ import {
 	type LlmStatus,
 	llmDownload,
 	llmList,
-	llmLoad,
 	llmPick,
 	llmStatus,
 	onLlmDownloadProgress,
@@ -89,7 +88,6 @@ export function OnDeviceModels({
 		setBusy("load")
 		try {
 			await dispatch("settings.provider", { id: "ondevice", model: filename })
-			await llmLoad(filename)
 			await refresh()
 		} catch (err) {
 			setError(err instanceof Error ? err.message : "Could not load that GGUF.")
@@ -136,7 +134,7 @@ export function OnDeviceModels({
 					{busy === "pick"
 						? "Opening…"
 						: busy === "load"
-							? "Loading…"
+							? "Saving…"
 							: model
 								? "Choose a different GGUF"
 								: `Open a GGUF on ${device}`}

@@ -208,6 +208,8 @@ test("desktop tray and autostart stay desktop-only; mobile uses the same llm com
 	const lib = readFileSync(join(tauriDir, "src/lib.rs"), "utf8")
 	assert.match(lib, /#\[cfg\(desktop\)\]/)
 	assert.match(lib, /llm::llm_complete/)
+	assert.match(lib, /llm::unload_engine/)
+	assert.match(lib, /RunEvent::Exit/)
 	assert.match(lib, /tauri_plugin_autostart/)
 	assert.equal(existsSync(join(tauriDir, "src/llm.rs")), true)
 	assert.equal(existsSync(join(tauriDir, "src/llm/paths.rs")), true)

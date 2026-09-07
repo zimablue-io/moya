@@ -34,8 +34,6 @@ pub fn complete(
         ok: false,
         content: String::new(),
         tool_calls: vec![],
-        error: Some(
-            "On-device GGUF is not available on this OS.".into(),
-        ),
+        error: Some("On-device GGUF is not available on this OS.".into()),
     })
 }

@@ -1,6 +1,7 @@
 use std::num::NonZeroU32;
 use std::path::Path;
-use std::sync::Mutex;
+use std::sync::{Mutex, Once};
+use std::time::{Duration, Instant};
 
 use llama_cpp_2::context::params::LlamaContextParams;
 use llama_cpp_2::llama_backend::LlamaBackend;
@@ -11,13 +12,23 @@ use llama_cpp_2::sampling::LlamaSampler;
 
 use crate::llm::{parse_tool_calls, tools_preamble, CompleteResult, LlmMessage, LlmTool};
 
+/// Drop order is declaration order. llama.cpp must `llama_free_model` before
+/// `llama_backend_free` or Metal/Vulkan weights can stay allocated.
+/// llama-cpp-2's `LlamaBackend::init` is a process-wide AtomicBool; Drop is
+/// what clears it, so a second load without dropping the first is
+/// `BackendAlreadyInitialized`.
 struct Loaded {
-    backend: LlamaBackend,
     model: LlamaModel,
     filename: String,
+    last_used: Instant,
+    backend: LlamaBackend,
 }
 
 static LOADED: Mutex<Option<Loaded>> = Mutex::new(None);
+
+/// Weights stay on the GPU until we drop the model. Five quiet minutes is long
+/// enough that a pause does not reload, short enough the tray is not 5GB idle.
+const IDLE_UNLOAD: Duration = Duration::from_secs(5 * 60);
 
 pub fn available() -> bool {
     true
@@ -93,15 +104,18 @@ pub fn loaded_name() -> Option<String> {
 }
 
 pub fn load(path: &Path, filename: String) -> Result<(), String> {
+    let mut slot = LOADED.lock().map_err(|e| e.to_string())?;
+    *slot = None;
     let backend = LlamaBackend::init().map_err(|e| e.to_string())?;
     let params = LlamaModelParams::default().with_n_gpu_layers(99);
     let model = LlamaModel::load_from_file(&backend, path, &params).map_err(|e| e.to_string())?;
-    let mut slot = LOADED.lock().map_err(|e| e.to_string())?;
     *slot = Some(Loaded {
-        backend,
         model,
         filename,
+        last_used: Instant::now(),
+        backend,
     });
+    start_idle_reaper();
     Ok(())
 }
 
@@ -111,20 +125,41 @@ pub fn unload() {
     }
 }
 
+fn start_idle_reaper() {
+    static START: Once = Once::new();
+    START.call_once(|| {
+        let _ = std::thread::Builder::new()
+            .name("moya-gguf-idle".into())
+            .spawn(|| loop {
+                std::thread::sleep(Duration::from_secs(20));
+                let Ok(mut slot) = LOADED.lock() else { continue };
+                let Some(loaded) = slot.as_ref() else { continue };
+                if loaded.last_used.elapsed() >= IDLE_UNLOAD {
+                    *slot = None;
+                }
+            });
+    });
+}
+
 pub fn complete(
     messages: &[LlmMessage],
     tools: &[LlmTool],
     max_tokens: u32,
     temperature: f32,
 ) -> Result<CompleteResult, String> {
-    let slot = LOADED.lock().map_err(|e| e.to_string())?;
+    let mut slot = LOADED.lock().map_err(|e| e.to_string())?;
     let loaded = slot
-        .as_ref()
+        .as_mut()
         .ok_or_else(|| "Load a GGUF first.".to_string())?;
+    loaded.last_used = Instant::now();
     let prompt = build_prompt(&loaded.model, messages, tools)?;
     let n_ctx = if ram_hint_mb() >= 6144 { 4096 } else { 2048 };
-    let ctx_params =
-        LlamaContextParams::default().with_n_ctx(Some(NonZeroU32::new(n_ctx).unwrap()));
+    // Default llama.cpp n_batch is 2048. The Rust LlamaBatch was hard-capped at 512, so
+    // Talk (catalog tools in every prompt) died with `Insufficient Space of 512`.
+    let n_batch = n_ctx;
+    let ctx_params = LlamaContextParams::default()
+        .with_n_ctx(Some(NonZeroU32::new(n_ctx).unwrap()))
+        .with_n_batch(n_batch);
     let mut ctx = loaded
         .model
         .new_context(&loaded.backend, ctx_params)
@@ -136,11 +171,18 @@ pub fn complete(
     if tokens.is_empty() {
         return Err("Empty prompt.".into());
     }
-    let mut batch = LlamaBatch::new(512, 1);
+    if tokens.len() >= n_ctx as usize {
+        return Err(format!(
+            "Prompt is {} tokens; context is {}. Shorten the conversation or pick a smaller model.",
+            tokens.len(),
+            n_ctx
+        ));
+    }
+    let mut batch = LlamaBatch::new(n_batch as usize, 1);
     let last = (tokens.len() - 1) as i32;
-    for (i, token) in (0_i32..).zip(tokens.into_iter()) {
+    for (i, token) in tokens.iter().copied().enumerate() {
         batch
-            .add(token, i, &[0], i == last)
+            .add(token, i as i32, &[0], i as i32 == last)
             .map_err(|e| e.to_string())?;
     }
     ctx.decode(&mut batch).map_err(|e| e.to_string())?;
@@ -150,9 +192,10 @@ pub fn complete(
         LlamaSampler::chain_simple([LlamaSampler::temp(temperature), LlamaSampler::dist(1234)])
     };
     let mut decoder = encoding_rs::UTF_8.new_decoder();
-    let mut n_cur = batch.n_tokens();
+    let mut n_cur = tokens.len() as i32;
     let mut pieces = String::new();
-    let limit = n_cur + max_tokens as i32;
+    let room = n_ctx as i32 - n_cur;
+    let limit = n_cur + (max_tokens as i32).min(room);
     while n_cur < limit {
         let token = sampler.sample(&ctx, batch.n_tokens() - 1);
         sampler.accept(token);
@@ -172,6 +215,7 @@ pub fn complete(
         n_cur += 1;
     }
     let (content, tool_calls) = parse_tool_calls(&pieces);
+    loaded.last_used = Instant::now();
     Ok(CompleteResult {
         ok: true,
         content,

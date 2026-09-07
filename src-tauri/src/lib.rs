@@ -23,9 +23,17 @@ pub fn run() {
     #[cfg(desktop)]
     let builder = attach_desktop(builder);
 
-    builder
-        .run(tauri::generate_context!())
+    let app = builder
+        .build(tauri::generate_context!())
         .expect("error while running Moya");
+    app.run(|_handle, event| {
+        if matches!(
+            event,
+            tauri::RunEvent::Exit | tauri::RunEvent::ExitRequested { .. }
+        ) {
+            llm::unload_engine();
+        }
+    });
 }
 
 #[cfg(desktop)]
@@ -51,6 +59,7 @@ fn attach_desktop(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::
                 .tooltip("Moya")
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "quit" => {
+                        llm::unload_engine();
                         app.exit(0);
                     }
                     "show" => {
@@ -66,6 +75,7 @@ fn attach_desktop(builder: tauri::Builder<tauri::Wry>) -> tauri::Builder<tauri::
         })
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
+                llm::schedule_unload_engine();
                 let _ = window.hide();
                 api.prevent_close();
             }

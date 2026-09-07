@@ -95,7 +95,17 @@ export const useApp = create<AppStore>((set, get) => {
 			})
 		}, 180)
 	}
-	const run = (name: string, args: Record<string, unknown> = {}) => applyAct(get, set, name, args, persist)
+	const run = async (name: string, args: Record<string, unknown> = {}) => {
+		await applyAct(get, set, name, args, persist)
+		if (name === "settings.provider" && get().settings.provider.id !== "ondevice") {
+			try {
+				const { releaseOnDeviceEngineIfUnused } = await import("./llm-native.ts")
+				await releaseOnDeviceEngineIfUnused(get().settings.provider.id)
+			} catch {
+				/* native runtime missing in tests */
+			}
+		}
+	}
 
 	return {
 		...emptySnapshot(),
@@ -116,8 +126,9 @@ export const useApp = create<AppStore>((set, get) => {
 			const snap = normalizeSnapshot(await loadSnapshot())
 			if (isTauri()) {
 				try {
-					const { llmStatus } = await import("./llm-native.ts")
+					const { llmStatus, watchOnDeviceEngineLifetime } = await import("./llm-native.ts")
 					await llmStatus()
+					watchOnDeviceEngineLifetime()
 				} catch {
 					/* native runtime missing in tests */
 				}

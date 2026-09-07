@@ -70,6 +70,28 @@ export async function llmUnload(): Promise<LlmStatus> {
 	return invoke<LlmStatus>("llm_unload")
 }
 
+/** Drop Metal/Vulkan weights when Model is no longer on-device. */
+export async function releaseOnDeviceEngineIfUnused(providerId: string): Promise<void> {
+	if (providerId === "ondevice") return
+	try {
+		await llmUnload()
+	} catch {
+		/* web tests / missing invoke */
+	}
+}
+
+let watchingLifetime = false
+
+/** Hide-to-tray is handled in Rust. This covers webview teardown on Quit. */
+export function watchOnDeviceEngineLifetime(): void {
+	if (watchingLifetime || typeof window === "undefined") return
+	watchingLifetime = true
+	const release = () => {
+		void llmUnload().catch(() => {})
+	}
+	window.addEventListener("pagehide", release)
+}
+
 export async function onLlmDownloadProgress(handler: (progress: LlmDownloadProgress) => void): Promise<() => void> {
 	const { listen } = await import("@tauri-apps/api/event")
 	const unlisten = await listen<LlmDownloadProgress>("llm-download-progress", (event) => {
@@ -90,6 +112,24 @@ export async function listNativeModels(): Promise<ProviderModels> {
 	}
 }
 
+/** Tauri 2 invoke failures are often a `{ message }` object, not `Error`. */
+export function nativeInvokeError(err: unknown): string {
+	if (err instanceof Error && err.message.trim()) return err.message
+	if (typeof err === "string" && err.trim()) return err
+	if (err && typeof err === "object") {
+		const rec = err as Record<string, unknown>
+		if (typeof rec.message === "string" && rec.message.trim()) return rec.message
+		if (typeof rec.error === "string" && rec.error.trim()) return rec.error
+	}
+	try {
+		const dumped = JSON.stringify(err)
+		if (dumped && dumped !== "{}" && dumped !== "null") return dumped
+	} catch {
+		/* ignore */
+	}
+	return "On-device model failed."
+}
+
 export async function completeNativeTurn(data: ChatRequest): Promise<ChatResponse> {
 	const model = data.provider.model.trim()
 	if (!model) return { ok: false, error: "Pick a GGUF in Settings." }
@@ -105,7 +145,7 @@ export async function completeNativeTurn(data: ChatRequest): Promise<ChatRespons
 		if (!result.ok) {
 			return {
 				ok: false,
-				error: result.error ?? "On-device model failed. Pick a GGUF in Settings.",
+				error: result.error?.trim() || "On-device model failed.",
 			}
 		}
 		return {
@@ -116,7 +156,7 @@ export async function completeNativeTurn(data: ChatRequest): Promise<ChatRespons
 	} catch (err) {
 		return {
 			ok: false,
-			error: `${err instanceof Error ? err.message : "On-device model failed."} Pick a GGUF in Settings.`,
+			error: nativeInvokeError(err),
 		}
 	}
 }

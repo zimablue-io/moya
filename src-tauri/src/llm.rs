@@ -104,6 +104,16 @@ fn unavailable() -> String {
     "On-device GGUF is not available on this OS.".into()
 }
 
+/// Rust `static`s skip Drop on process exit. Hide-to-tray also never exits.
+/// Call this so `llama_free_model` / `llama_backend_free` actually run.
+pub fn unload_engine() {
+    engine::unload();
+}
+
+pub fn schedule_unload_engine() {
+    let _ = tauri::async_runtime::spawn_blocking(engine::unload);
+}
+
 fn status_now(loaded: Option<String>) -> LlmStatus {
     LlmStatus {
         available: engine::available(),
@@ -277,11 +287,20 @@ pub async fn llm_complete(
     }
     let max_tokens = max_tokens.unwrap_or(900).min(2048);
     let temperature = temperature.unwrap_or(0.6);
-    tauri::async_runtime::spawn_blocking(move || {
+    match tauri::async_runtime::spawn_blocking(move || {
         engine::complete(&messages, &tools, max_tokens, temperature)
     })
     .await
     .map_err(|e| e.to_string())?
+    {
+        Ok(result) => Ok(result),
+        Err(err) => Ok(CompleteResult {
+            ok: false,
+            content: String::new(),
+            tool_calls: vec![],
+            error: Some(err),
+        }),
+    }
 }
 
 #[allow(dead_code)]
@@ -384,25 +403,77 @@ mod tests {
         assert_eq!(calls[0].name, "memory.write");
     }
 
+    /// Talk always sends `toolsFor()` (catalog JSON). A 512-token LlamaBatch cannot
+    /// hold that prompt. Load once — llama.cpp allows one backend per process.
     #[test]
     #[ignore]
-    fn prove_documents_e4b_loads() {
+    fn prove_documents_e4b_completes_with_app_tools() {
         let path = PathBuf::from(std::env::var("HOME").unwrap())
             .join("Documents/models/gemma/gemma-4-E4B-it-UD-Q4_K_XL.gguf");
         assert!(path.is_file(), "missing {}", path.display());
         engine::load(&path, path.to_string_lossy().into_owned()).expect("load E4B");
-        let messages = vec![LlmMessage {
-            role: "user".into(),
-            content: "Reply with the single word: ready".into(),
-            tool_calls: None,
-        }];
-        let out = engine::complete(&messages, &[], 32, 0.1).expect("complete");
+        let short = engine::complete(
+            &[LlmMessage {
+                role: "user".into(),
+                content: "Reply with the single word: ready".into(),
+                tool_calls: None,
+            }],
+            &[],
+            32,
+            0.1,
+        )
+        .expect("short complete");
         eprintln!(
-            "e4b ok={} content={:?} error={:?}",
-            out.ok, out.content, out.error
+            "e4b short ok={} content={:?} error={:?}",
+            short.ok, short.content, short.error
         );
-        assert!(out.ok, "{:?}", out.error);
-        assert!(!out.content.trim().is_empty());
+        assert!(short.ok, "{:?}", short.error);
+        assert!(!short.content.trim().is_empty());
+
+        let tools: Vec<LlmTool> = (0..35)
+            .map(|i| LlmTool {
+                function: LlmFunction {
+                    name: format!("memory.write.{i}"),
+                    description: "Store or reinforce a durable memory. Requires kind and text."
+                        .into(),
+                    parameters: serde_json::json!({
+                        "type": "object",
+                        "properties": {
+                            "kind": { "type": "string" },
+                            "text": { "type": "string" },
+                            "pinned": { "type": "boolean" }
+                        },
+                        "required": ["kind", "text"]
+                    }),
+                },
+            })
+            .collect();
+        let messages = vec![
+            LlmMessage {
+                role: "system".into(),
+                content: "You are Moya. Do not call tools. Reply with the single word: ready."
+                    .into(),
+                tool_calls: None,
+            },
+            LlmMessage {
+                role: "user".into(),
+                content: "Reply with the single word: ready".into(),
+                tool_calls: None,
+            },
+        ];
+        let out = engine::complete(&messages, &tools, 32, 0.1).expect("tools complete");
+        eprintln!(
+            "e4b tools ok={} content={:?} tool_calls={} error={:?}",
+            out.ok,
+            out.content,
+            out.tool_calls.len(),
+            out.error
+        );
         engine::unload();
+        assert!(out.ok, "{:?}", out.error);
+        assert!(
+            !out.content.trim().is_empty() || !out.tool_calls.is_empty(),
+            "empty complete: {out:?}"
+        );
     }
 }
