@@ -247,6 +247,9 @@ export async function runTurn(input: TurnInput): Promise<TurnResult> {
 	let spoken = compileSpeech(receipts, modelText)
 	if (!spoken || /^done\.?$/i.test(spoken)) spoken = summarizeReceipts(receipts)
 	spoken = honestyFromWorld(text, receipts, spoken)
+	if (error && isDeadSpoken(spoken)) {
+		return { env, spoken: "", receipts, error }
+	}
 	if (input.kind === "routine" && !receipts.some((r) => r.ok && r.command !== "query")) {
 		spoken = "The routine produced no changes."
 	}

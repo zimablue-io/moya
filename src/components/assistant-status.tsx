@@ -25,7 +25,9 @@ export function AssistantStatus({
 	onVerb: (verb: FirstRunVerb) => void
 }) {
 	const showCaptions = useApp((s) => s.settings.showCaptions)
-	const shown = displayVoiceCaption({ showCaptions, liveLine: interim })
+	const caption = useApp((s) => s.caption)
+	const live = displayVoiceCaption({ showCaptions, liveLine: interim })
+	const shown = live || caption.trim()
 
 	return (
 		<div className="pointer-events-none absolute inset-x-0 top-[58%] z-10 flex flex-col items-center px-6 text-center sm:top-[54%]">

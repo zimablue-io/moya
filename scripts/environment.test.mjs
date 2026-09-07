@@ -117,6 +117,21 @@ test("a greeting that only queries is not spoken as I have nothing to add", asyn
 	assert.match(result.spoken, /here|need/i)
 })
 
+test("a failed model turn keeps the error and does not say I have nothing to add", async () => {
+	const result = await runTurn({
+		env: emptyEnv(),
+		text: "hello",
+		kind: "text",
+		complete: async () => ({ ok: false, error: "On-device GGUF is not available on this OS." }),
+	})
+	assert.equal(result.error, "On-device GGUF is not available on this OS.")
+	assert.notEqual(result.spoken, "I have nothing to add.")
+	assert.equal(
+		result.env.snapshot.messages.some((m) => m.role === "assistant" && m.content === "I have nothing to add."),
+		false,
+	)
+})
+
 test("a greeting does not send the tool catalog", async () => {
 	let toolCount = -1
 	const result = await runTurn({

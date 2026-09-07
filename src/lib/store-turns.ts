@@ -87,8 +87,7 @@ export function createTurnActions(get: Get, set: Set) {
 				...applyEnv(result.env),
 				emotion: em,
 				caption: spoken,
-				error:
-					result.error && !/not available|Add a key|Add an API key/i.test(result.error) ? result.error : get().error,
+				error: result.error ?? null,
 				presence: get().voiceMode ? "listening" : "idle",
 			})
 			get().persist()

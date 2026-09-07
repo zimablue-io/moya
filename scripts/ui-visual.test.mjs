@@ -96,4 +96,26 @@ describe("visual UI audit", { concurrency: 1 }, () => {
 		assert.ok(overlapY > hearBox.height * 0.5, `preview sat on another row (overlap ${overlapY})`)
 		assert.ok(hearBox.x > pickerBox.x + pickerBox.width - 8, "preview is not to the right of the voice")
 	})
+
+	test("a typed turn paints a reply or error on the home canvas", async () => {
+		assert.ok(session)
+		const { page } = session
+		await completeOnboarding(page)
+		const settingsHeading = page.getByRole("heading", { name: "Settings" })
+		if (await settingsHeading.isVisible()) {
+			await page.keyboard.press("Escape")
+			await settingsHeading.waitFor({ state: "hidden" })
+		}
+		const typeBtn = page.getByRole("button", { name: "Type" })
+		await typeBtn.waitFor({ state: "visible" })
+		await typeBtn.click()
+		const box = page.getByPlaceholder("Edit, then send")
+		await box.waitFor({ state: "visible" })
+		await box.fill("hello")
+		await page.getByRole("button", { name: "Send" }).click()
+		const reply = page.locator("p.mt-3.max-w-md")
+		const err = page.locator("p.text-xs.text-subtle")
+		await reply.or(err).first().waitFor({ state: "visible", timeout: 45_000 })
+		assert.equal(await page.getByText("Tap the core for voice").isVisible(), false)
+	})
 })

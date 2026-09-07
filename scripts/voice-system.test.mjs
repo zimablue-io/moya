@@ -369,6 +369,9 @@ test("Settings and Voice mode stay wired to the contract, not a second Speaker f
 	assert.match(shellSrc, /shouldStartHoldListen/)
 	assert.equal(shellSrc.includes("interim || caption"), false)
 	assert.equal(shellSrc.includes("lastAssistant"), false)
+	const statusSrc = readFileSync(join(root, "src/components/assistant-status.tsx"), "utf8")
+	assert.match(statusSrc, /s\.caption/)
+	assert.match(readFileSync(join(root, "src/lib/store-turns.ts"), "utf8"), /error:\s*result\.error\s*\?\?\s*null/)
 
 	assert.match(modeSrc, /realtimeConnectFromSettings/)
 	assert.match(modeSrc, /liveSettings/)
