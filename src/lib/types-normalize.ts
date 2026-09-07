@@ -14,6 +14,7 @@ import {
 	type Snapshot,
 	type Source,
 	type TimeLog,
+	type VoiceBackendId,
 	type VoiceConfig,
 	type WorkItem,
 } from "./types.ts"
@@ -56,15 +57,25 @@ export function normalizeSettings(raw: unknown): Settings {
 
 	const rawVoice = (s.voiceBackend ?? {}) as Partial<VoiceConfig>
 	const storedId = String(rawVoice.id ?? "")
-	const rawVoiceId = storedId === "custom" ? "s2s" : storedId
-	const voiceId = isVoiceBackendId(rawVoiceId) ? rawVoiceId : DEFAULT_SETTINGS.voiceBackend.id
+	const alias =
+		storedId === "xai"
+			? { model: "grok-voice-latest", baseUrl: PROVIDER_PRESETS.xai.baseUrl, voice: "eve" }
+			: storedId === "openai"
+				? { model: "gpt-realtime", baseUrl: PROVIDER_PRESETS.openai.baseUrl, voice: "alloy" }
+				: null
+	const voiceId: VoiceBackendId =
+		storedId === "xai" || storedId === "openai"
+			? "custom"
+			: isVoiceBackendId(storedId)
+				? storedId
+				: DEFAULT_SETTINGS.voiceBackend.id
 	const voicePreset = VOICE_PRESETS[voiceId]
-	const keepStoredUrl = storedId === "s2s" || storedId === "custom" || storedId === "xai" || storedId === "openai"
-	const storedVoice = rawVoice.voice?.trim() || voicePreset.voice
+	const keepStored = Boolean(alias) || isVoiceBackendId(storedId)
+	const storedVoice = rawVoice.voice?.trim() || alias?.voice || voicePreset.voice
 	const voiceBackend: VoiceConfig = {
 		id: voiceId,
-		model: rawVoice.model?.trim() || voicePreset.model,
-		baseUrl: (keepStoredUrl && rawVoice.baseUrl?.trim()) || voicePreset.baseUrl,
+		model: rawVoice.model?.trim() || alias?.model || voicePreset.model,
+		baseUrl: (keepStored && rawVoice.baseUrl?.trim()) || alias?.baseUrl || voicePreset.baseUrl,
 		apiKey: rawVoice.apiKey ?? DEFAULT_SETTINGS.voiceBackend.apiKey,
 		voice: voiceId === "s2s" ? localConversationVoice(storedVoice) : storedVoice,
 	}
@@ -73,10 +84,6 @@ export function normalizeSettings(raw: unknown): Settings {
 		agentName: s.agentName ?? DEFAULT_SETTINGS.agentName,
 		userName: s.userName ?? DEFAULT_SETTINGS.userName,
 		brief: s.brief ?? DEFAULT_SETTINGS.brief,
-		autoSpeak: s.autoSpeak ?? DEFAULT_SETTINGS.autoSpeak,
-		voiceURI: s.voiceURI ?? DEFAULT_SETTINGS.voiceURI,
-		rate: s.rate ?? DEFAULT_SETTINGS.rate,
-		pitch: s.pitch ?? DEFAULT_SETTINGS.pitch,
 		showCaptions: s.showCaptions ?? DEFAULT_SETTINGS.showCaptions,
 		provider,
 		voiceBackend,

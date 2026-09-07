@@ -2,7 +2,7 @@ import { captureDenied } from "./media-permission"
 import { base64ToPcm16, capturePcm16Base64, pcm16ToFloat, rmsLevel } from "./pcm"
 import type { ScheduledAudioQueue } from "./realtime-playback"
 import { realtimeHttpBase, shouldSendInputAudio } from "./realtime-protocol"
-import type { VoiceBackendId } from "./types"
+import type { VoiceRealtimeKind } from "./types"
 import { clamp } from "./utils"
 
 export type RealtimeMicOpts = {
@@ -22,7 +22,11 @@ export function padBands(bands: number[]): number[] {
 	return out
 }
 
-export async function mintClientSecret(id: VoiceBackendId, baseUrl: string, apiKey: string): Promise<string | null> {
+export async function mintClientSecret(
+	kind: VoiceRealtimeKind,
+	baseUrl: string,
+	apiKey: string,
+): Promise<string | null> {
 	const http = realtimeHttpBase(baseUrl)
 	try {
 		const res = await fetch(`${http}/realtime/client_secrets`, {
@@ -32,7 +36,7 @@ export async function mintClientSecret(id: VoiceBackendId, baseUrl: string, apiK
 				"Content-Type": "application/json",
 			},
 			body: JSON.stringify(
-				id === "openai"
+				kind === "openai"
 					? { expires_after: { seconds: 300 }, session: { type: "realtime" } }
 					: { expires_after: { seconds: 300 } },
 			),

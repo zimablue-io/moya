@@ -19,7 +19,7 @@ const DIALOG_TOOLS: {
 	{ id: "settings", label: "Settings", hint: "Name, voice, model", icon: Settings },
 ]
 
-export function AssistantMenu({ pending }: { pending: number }) {
+export function AssistantMenu({ pending, onSettings }: { pending: number; onSettings: () => void }) {
 	const menuOpen = useApp((s) => s.menuOpen)
 	const setMenuOpen = useApp((s) => s.setMenuOpen)
 	const openDialog = useApp((s) => s.openDialog)
@@ -47,7 +47,8 @@ export function AssistantMenu({ pending }: { pending: number }) {
 						key={tool.id}
 						type="button"
 						onClick={() => {
-							openDialog(tool.id)
+							if (tool.id === "settings") onSettings()
+							else openDialog(tool.id)
 						}}
 						style={{ transitionDelay: menuOpen ? `${i * 45}ms` : "0ms" }}
 						className={cn(

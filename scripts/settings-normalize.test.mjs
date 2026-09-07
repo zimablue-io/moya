@@ -13,19 +13,49 @@ import {
 
 test("defaults when given empty input", () => {
 	const settings = normalizeSettings({})
-	assert.equal(settings.provider.id, "xai")
-	assert.equal(settings.provider.baseUrl, PROVIDER_PRESETS.xai.baseUrl)
-	assert.equal(settings.voiceBackend.id, "browser")
+	assert.equal(settings.provider.id, "ondevice")
+	assert.equal(settings.provider.baseUrl, "")
+	assert.equal(settings.voiceBackend.id, "custom")
 	assert.equal(settings.voiceBackend.baseUrl, "")
 	assert.equal(settings.voiceBackend.voice, "")
 	assert.equal("engine" in settings, false)
 })
 
-test("stored System voice stays System", () => {
+test("stored System voice becomes Custom", () => {
 	const settings = normalizeSettings({
 		voiceBackend: { id: "browser", model: "", baseUrl: "", apiKey: "", voice: "" },
 	})
-	assert.equal(settings.voiceBackend.id, "browser")
+	assert.equal(settings.voiceBackend.id, "custom")
+	assert.equal(settings.voiceBackend.baseUrl, "")
+})
+
+test("stored Grok and OpenAI voice backends become Custom and keep the endpoint", () => {
+	const grok = normalizeSettings({
+		voiceBackend: {
+			id: "xai",
+			model: "grok-voice-latest",
+			baseUrl: "https://api.x.ai/v1",
+			apiKey: "sk",
+			voice: "eve",
+		},
+	})
+	assert.equal(grok.voiceBackend.id, "custom")
+	assert.equal(grok.voiceBackend.baseUrl, "https://api.x.ai/v1")
+	assert.equal(grok.voiceBackend.model, "grok-voice-latest")
+	assert.equal(grok.voiceBackend.voice, "eve")
+	assert.equal(grok.voiceBackend.apiKey, "sk")
+	const openai = normalizeSettings({
+		voiceBackend: {
+			id: "openai",
+			model: "gpt-realtime",
+			baseUrl: "https://api.openai.com/v1",
+			apiKey: "ok",
+			voice: "marin",
+		},
+	})
+	assert.equal(openai.voiceBackend.id, "custom")
+	assert.equal(openai.voiceBackend.baseUrl, "https://api.openai.com/v1")
+	assert.equal(openai.voiceBackend.voice, "marin")
 })
 
 test("llama.cpp defaults to llama-server's own port", () => {
@@ -104,7 +134,7 @@ test("local speech-to-speech defaults to Kokoro Heart so the picker matches what
 	assert.equal(settings.voiceBackend.voice, "af_heart")
 })
 
-test("Custom voice settings that pointed at local s2s become Local", () => {
+test("Custom voice settings stay Custom and keep the listed speaker", () => {
 	const settings = normalizeSettings({
 		voiceBackend: {
 			id: "custom",
@@ -114,16 +144,16 @@ test("Custom voice settings that pointed at local s2s become Local", () => {
 			voice: "Ryan",
 		},
 	})
-	assert.equal(settings.voiceBackend.id, "s2s")
-	assert.equal(settings.voiceBackend.voice, "af_heart")
+	assert.equal(settings.voiceBackend.id, "custom")
+	assert.equal(settings.voiceBackend.voice, "Ryan")
 	assert.equal(settings.voiceBackend.baseUrl, "http://127.0.0.1:8765/v1")
 })
 
-test("the Voice tab offers Local, Grok, OpenAI, and System", () => {
-	assert.deepEqual(VOICE_CHOICES, ["s2s", "xai", "openai", "browser"])
+test("the Voice tab offers Local and Custom with Model's Custom label", () => {
+	assert.deepEqual(VOICE_CHOICES, ["s2s", "custom"])
 	assert.deepEqual(
 		VOICE_CHOICES.map((id) => VOICE_PRESETS[id].label),
-		["Local", "Grok", "OpenAI", "System"],
+		["Local", PROVIDER_PRESETS.custom.label],
 	)
 })
 
@@ -136,11 +166,11 @@ test("web Model and Voice pickers drop localhost-only options", () => {
 	assert.equal(providerChoicesForHost(true).includes("ollama"), true)
 })
 
-test("an unknown voice backend becomes System", () => {
+test("an unknown voice backend becomes Custom", () => {
 	const settings = normalizeSettings({
 		voiceBackend: { id: "moshi", baseUrl: "http://127.0.0.1:8998" },
 	})
-	assert.equal(settings.voiceBackend.id, "browser")
+	assert.equal(settings.voiceBackend.id, "custom")
 	assert.equal(settings.voiceBackend.baseUrl, "")
 })
 

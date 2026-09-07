@@ -3,7 +3,6 @@ import { detectHostOs, isDesktop, systemSettingsLabel } from "@/lib/host"
 import { allowMicrophone } from "@/lib/media-permission"
 import { displayVoiceCaption } from "@/lib/realtime-protocol"
 import { useApp } from "@/lib/store"
-import { localSidecarConnectFailed } from "@/lib/voice-contract"
 import { restartVoiceIfNeeded } from "@/lib/voice-mode"
 
 export function AssistantStatus({
@@ -15,7 +14,6 @@ export function AssistantStatus({
 	onMicFix,
 	firstRun,
 	onVerb,
-	onUseSystemVoice,
 }: {
 	ready: boolean
 	status: string
@@ -25,7 +23,6 @@ export function AssistantStatus({
 	onMicFix: (next: "allow" | "settings" | null) => void
 	firstRun: boolean
 	onVerb: (verb: FirstRunVerb) => void
-	onUseSystemVoice: () => void
 }) {
 	const showCaptions = useApp((s) => s.settings.showCaptions)
 	const shown = displayVoiceCaption({ showCaptions, liveLine: interim })
@@ -76,14 +73,6 @@ export function AssistantStatus({
 							}}
 						>
 							{micFix === "settings" ? `Open ${systemSettingsLabel()}` : "Allow microphone"}
-						</button>
-					) : localSidecarConnectFailed(error) ? (
-						<button
-							type="button"
-							className="pointer-events-auto text-xs text-fg underline decoration-border underline-offset-4 outline-none ring-inset focus-visible:ring-3 focus-visible:ring-ring/50"
-							onClick={() => onUseSystemVoice()}
-						>
-							Use this device’s voice
 						</button>
 					) : null}
 				</div>

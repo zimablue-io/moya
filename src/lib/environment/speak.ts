@@ -47,6 +47,11 @@ export function honestyFromWorld(text: string, receipts: Receipt[], spoken: stri
 	return spoken
 }
 
+export function isDeadSpoken(text: string): boolean {
+	const raw = text.trim()
+	return !raw || DONE.test(raw) || /^i have nothing to add\.?$/i.test(raw)
+}
+
 export function compileSpeech(receipts: Receipt[], modelText: string): string {
 	const raw = modelText.trim()
 	if (!raw || DONE.test(raw)) return summarizeReceipts(receipts)
@@ -63,6 +68,13 @@ export function compileSpeech(receipts: Receipt[], modelText: string): string {
 
 export function needsWorldFacts(text: string): boolean {
 	return /project|overview|what.?s on|today|this week|calendar|what do you (?:remember|know)|memories|inbox|board|my (?:projects|schedule|work)|open loops|how am i spending/i.test(
+		text,
+	)
+}
+
+export function needsStoreTools(text: string): boolean {
+	if (needsWorldFacts(text)) return true
+	return /remember|forget|inbox|board|routine|open |close |log |wipe|source|settings|watch|memory|remind|analyze|insight/i.test(
 		text,
 	)
 }

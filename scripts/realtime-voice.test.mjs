@@ -50,7 +50,7 @@ test("xAI reuses the chat key when the voice key is blank", () => {
 	assert.equal(
 		resolveVoiceApiKey(
 			{
-				id: "xai",
+				id: "custom",
 				model: "grok-voice-latest",
 				baseUrl: "https://api.x.ai/v1",
 				apiKey: "",
@@ -85,11 +85,11 @@ test("local realtime lists Kokoro speakers only", () => {
 	)
 	assert.deepEqual(speakersFor("custom"), [])
 	assert.deepEqual(
-		speakersFor("xai").map((v) => v.id),
+		speakersFor("custom", "https://api.x.ai/v1").map((v) => v.id),
 		["eve", "ara", "leo", "rex", "sal"],
 	)
-	assert.ok(speakersFor("openai").some((v) => v.id === "marin"))
-	assert.ok(speakersFor("openai").some((v) => v.id === "cedar"))
+	assert.ok(speakersFor("custom", "https://api.openai.com/v1").some((v) => v.id === "marin"))
+	assert.ok(speakersFor("custom", "https://api.openai.com/v1").some((v) => v.id === "cedar"))
 })
 
 test("GA and beta audio delta names both yield PCM", () => {
@@ -260,7 +260,7 @@ test("Pocket embedding filenames become speaker ids", () => {
 
 test("Grok speakers prefer the live /v1/tts/voices list", async () => {
 	const listed = await listRealtimeSpeakers(
-		{ id: "xai", baseUrl: "https://api.x.ai/v1", apiKey: "sk" },
+		{ id: "custom", baseUrl: "https://api.x.ai/v1", apiKey: "sk" },
 		{
 			fetch: async (url) => {
 				assert.equal(String(url), "https://api.x.ai/v1/tts/voices")
@@ -280,6 +280,35 @@ test("Grok speakers prefer the live /v1/tts/voices list", async () => {
 		listed.map((v) => v.id),
 		["carina", "eve"],
 	)
+})
+
+test("OpenAI speakers prefer GET /voices on the configured URL, then the built-in fallback", async () => {
+	const listed = await listRealtimeSpeakers(
+		{ id: "custom", baseUrl: "https://api.openai.com/v1", apiKey: "sk" },
+		{
+			fallback: speakersFor("custom", "https://api.openai.com/v1"),
+			fetch: async (url) => {
+				assert.equal(String(url), "https://api.openai.com/v1/voices")
+				return {
+					ok: true,
+					json: async () => ({ voices: [{ id: "verse", name: "Verse" }] }),
+				}
+			},
+		},
+	)
+	assert.deepEqual(
+		listed.map((v) => v.id),
+		["verse"],
+	)
+
+	const silent = await listRealtimeSpeakers(
+		{ id: "custom", baseUrl: "https://api.openai.com/v1", apiKey: "sk" },
+		{
+			fallback: speakersFor("custom", "https://api.openai.com/v1"),
+			fetch: async () => ({ ok: false, json: async () => ({}) }),
+		},
+	)
+	assert.ok(silent.some((v) => v.id === "alloy"))
 })
 
 test("Local speakers prefer sidecar /v1/voices, then Kokoro only", async () => {

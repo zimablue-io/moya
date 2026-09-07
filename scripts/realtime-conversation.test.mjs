@@ -157,7 +157,21 @@ test("mock sidecar WebSocket plays a full local turn the client can caption", as
 		ws.addEventListener("message", (ev) => {
 			if (typeof ev.data === "string") events.push(JSON.parse(ev.data))
 		})
-		ws.send(JSON.stringify(sessionUpdateFromSettings(normalizeSettings({}))))
+		ws.send(
+			JSON.stringify(
+				sessionUpdateFromSettings(
+					normalizeSettings({
+						voiceBackend: {
+							id: "s2s",
+							model: "local",
+							baseUrl: "http://127.0.0.1:8765/v1",
+							apiKey: "",
+							voice: "af_heart",
+						},
+					}),
+				),
+			),
+		)
 		const deadline = Date.now() + 4000
 		while (!events.some((event) => event.type === "response.done") && Date.now() < deadline) {
 			await new Promise((resolve) => setTimeout(resolve, 40))

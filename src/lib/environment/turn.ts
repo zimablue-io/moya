@@ -3,11 +3,18 @@ import { type ChatMessage, type ChatTool, completeTurn } from "../llm.ts"
 import type { Message } from "../types.ts"
 import { nowIso, uid } from "../utils.ts"
 import { dispatch, runLocalRoutine } from "./act.ts"
-import { catalogTools } from "./catalog.ts"
+import { catalogTools, resolveCommandName } from "./catalog.ts"
 import { applyLocalIntent } from "./intent.ts"
 import { buildCapabilityPrompt } from "./prompt.ts"
 import { runQuery } from "./query.ts"
-import { compileSpeech, honestyFromWorld, needsWorldFacts, summarizeReceipts } from "./speak.ts"
+import {
+	compileSpeech,
+	honestyFromWorld,
+	isDeadSpoken,
+	needsStoreTools,
+	needsWorldFacts,
+	summarizeReceipts,
+} from "./speak.ts"
 import { cloneEnv } from "./state.ts"
 import type { EnvState, Receipt } from "./types.ts"
 
@@ -137,12 +144,13 @@ export async function runTurn(input: TurnInput): Promise<TurnResult> {
 
 	let modelText = ""
 	let error: string | undefined
+	const useTools = input.kind === "routine" || needsStoreTools(text)
 	try {
 		for (let hop = 0; hop < 4; hop++) {
 			const res = await complete({
 				provider: env.snapshot.settings.provider,
 				messages: chat,
-				tools: toolsFor(env),
+				tools: useTools ? toolsFor(env) : [],
 			})
 			if (!res.ok) {
 				error = res.error
@@ -185,6 +193,10 @@ export async function runTurn(input: TurnInput): Promise<TurnResult> {
 						},
 					]
 				}
+				if (res.toolCalls.every((c) => resolveCommandName(c.name) === "query")) {
+					modelText = (res.content ?? "").trim()
+					break
+				}
 				continue
 			}
 			modelText = (res.content ?? "").trim()
@@ -192,6 +204,29 @@ export async function runTurn(input: TurnInput): Promise<TurnResult> {
 		}
 	} catch (err) {
 		error = err instanceof Error ? err.message : "Something went wrong."
+	}
+
+	if (input.kind !== "routine" && !error && text && isDeadSpoken(modelText) && !needsWorldFacts(text)) {
+		try {
+			const wrap = await complete({
+				provider: env.snapshot.settings.provider,
+				messages: [
+					...chat,
+					{
+						role: "user",
+						content:
+							"Answer the human in a natural spoken voice. Do not call tools. Do not say you have nothing to add.",
+					},
+				],
+				tools: [],
+			})
+			if (wrap.ok) {
+				const next = (wrap.content ?? "").trim()
+				if (next) modelText = next
+			}
+		} catch {
+			/* keep modelText */
+		}
 	}
 
 	if (needsWorldFacts(text) && !receipts.some((r) => r.command === "query")) {

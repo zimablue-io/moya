@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect } from "react"
 import { Field } from "@/components/settings-field"
 import { ModelTab } from "@/components/settings-model"
 import { SourcesPanel } from "@/components/settings-sources"
@@ -12,7 +12,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { authEnabled } from "@/lib/auth/client"
 import { UserButton } from "@/lib/auth/gates"
 import type { SettingsTab } from "@/lib/environment/types"
-import { speech } from "@/lib/speech"
+import { onboardingNeeded } from "@/lib/first-run"
+import { hostCaps, liveSettings } from "@/lib/host"
 import { useApp } from "@/lib/store"
 
 export function SettingsDialog() {
@@ -28,21 +29,6 @@ export function SettingsDialog() {
 	const connectSource = useApp((s) => s.connectSource)
 	const removeSource = useApp((s) => s.removeSource)
 	const syncSource = useApp((s) => s.syncSource)
-	const setPresence = useApp((s) => s.setPresence)
-	const voiceMode = useApp((s) => s.voiceMode)
-
-	const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([])
-	const [previewing, setPreviewing] = useState(false)
-	const previewingRef = useRef(false)
-	const previewGen = useRef(0)
-
-	useEffect(() => {
-		const load = () => setVoices(speech.listVoices())
-		load()
-		window.speechSynthesis?.addEventListener("voiceschanged", load)
-		return () => window.speechSynthesis?.removeEventListener("voiceschanged", load)
-	}, [])
-
 	useEffect(() => {
 		if (dialog !== "settings" || !focusField) return
 		const root = document.querySelector(`[data-field="${CSS.escape(focusField)}"]`)
@@ -53,45 +39,10 @@ export function SettingsDialog() {
 		}
 	}, [dialog, focusField, settingsTab])
 
-	useEffect(() => {
-		if (dialog === "settings") return
-		if (!previewingRef.current) return
-		previewGen.current += 1
-		speech.stopSpeak()
-		previewingRef.current = false
-		setPreviewing(false)
-		setPresence({ presence: voiceMode ? "listening" : "idle" })
-	}, [dialog, setPresence, voiceMode])
-
-	const playVoicePreview = (override?: { voiceURI?: string; rate?: number; pitch?: number }) => {
-		if (!speech.ttsSupported) return
-		const gen = ++previewGen.current
-		previewingRef.current = true
-		setPreviewing(true)
-		setPresence({ presence: "speaking" })
-		speech.previewVoice({
-			voiceURI: override?.voiceURI ?? settings.voiceURI,
-			rate: override?.rate ?? settings.rate,
-			pitch: override?.pitch ?? settings.pitch,
-			onEnd: () => {
-				if (previewGen.current !== gen) return
-				previewingRef.current = false
-				setPreviewing(false)
-			},
-		})
-	}
-
-	const stopVoicePreview = () => {
-		if (!previewingRef.current) return
-		previewGen.current += 1
-		speech.stopSpeak()
-		previewingRef.current = false
-		setPreviewing(false)
-		setPresence({ presence: voiceMode ? "listening" : "idle" })
-	}
+	const setupNeeded = onboardingNeeded(liveSettings(settings), hostCaps())
 
 	return (
-		<Dialog open={dialog === "settings"} onOpenChange={(o) => openDialog(o ? "settings" : null)}>
+		<Dialog open={dialog === "settings" && !setupNeeded} onOpenChange={(o) => openDialog(o ? "settings" : null)}>
 			<DialogContent className="grid-rows-[auto_1fr] sm:max-w-2xl">
 				<DialogHeader>
 					<DialogTitle>Settings</DialogTitle>
@@ -129,12 +80,7 @@ export function SettingsDialog() {
 							) : null}
 						</TabsContent>
 						<TabsContent value="voice">
-							<VoiceTab
-								voices={voices}
-								previewing={previewing}
-								onPreview={playVoicePreview}
-								onStop={stopVoicePreview}
-							/>
+							<VoiceTab />
 						</TabsContent>
 						<TabsContent value="model">
 							<ModelTab />

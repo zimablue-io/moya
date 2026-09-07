@@ -1,4 +1,5 @@
 import { applyTranscriptBit } from "./realtime-events.ts"
+import type { VoiceRealtimeKind } from "./types.ts"
 
 export const REALTIME_SAMPLE_RATE = 24_000
 
@@ -51,14 +52,14 @@ export function realtimeHttpBase(baseUrl: string): string {
 }
 
 export function resolveVoiceApiKey(
-	voice: { id: string; apiKey: string },
-	provider: { id: string; apiKey: string },
+	voice: { id: string; apiKey: string; baseUrl?: string },
+	provider: { id: string; apiKey: string; baseUrl?: string },
 ): string {
 	const own = voice.apiKey.trim()
 	if (own) return own
-	if (voice.id === provider.id && (voice.id === "xai" || voice.id === "openai")) {
-		return provider.apiKey.trim()
-	}
+	const voiceBase = voice.baseUrl ? realtimeHttpBase(voice.baseUrl) : ""
+	const providerBase = provider.baseUrl ? realtimeHttpBase(provider.baseUrl) : ""
+	if (voiceBase && providerBase && voiceBase === providerBase) return provider.apiKey.trim()
 	return ""
 }
 
@@ -67,7 +68,7 @@ export function buildSessionUpdate(opts: {
 	voice: string
 	tools: RealtimeTool[]
 	sampleRate?: number
-	backend?: "s2s" | "xai" | "openai" | "custom"
+	backend?: VoiceRealtimeKind
 }): Record<string, unknown> {
 	const rate = opts.sampleRate ?? REALTIME_SAMPLE_RATE
 	const backend = opts.backend ?? "s2s"

@@ -1,16 +1,8 @@
 import { micBlockedInSettings } from "./brand"
 import { systemSettingsLabel } from "./host"
 import { captureDenied, ensureMediaAccess, type MicFix } from "./media-permission"
-import {
-	envelopeFromText,
-	friendlySpeechError,
-	getRecognizerCtor,
-	livingBands,
-	padBands,
-	type Recog,
-} from "./speech-helpers"
+import { friendlySpeechError, getRecognizerCtor, livingBands, padBands, type Recog } from "./speech-helpers"
 import { clamp } from "./utils"
-import { VOICE_PREVIEW_TEXT } from "./voice-preview"
 
 export type SpeechHandlers = {
 	onInterim?: (text: string) => void
@@ -34,8 +26,6 @@ export class SpeechEngine {
 	private micStream: MediaStream | null = null
 	private raf = 0
 	private handlers: SpeechHandlers = {}
-	private speaking = false
-	private speakGen = 0
 	private listenStarted = 0
 	micFix: MicFix = null
 
@@ -49,11 +39,6 @@ export class SpeechEngine {
 
 	get ttsSupported() {
 		return typeof window !== "undefined" && "speechSynthesis" in window
-	}
-
-	listVoices(): SpeechSynthesisVoice[] {
-		if (!this.ttsSupported) return []
-		return window.speechSynthesis.getVoices()
 	}
 
 	async startListen(opts: { continuous?: boolean } = {}) {
@@ -149,52 +134,8 @@ export class SpeechEngine {
 		this.detachMic()
 	}
 
-	previewVoice(opts: { voiceURI?: string; rate?: number; pitch?: number; onEnd?: () => void }) {
-		this.speak(VOICE_PREVIEW_TEXT, opts)
-	}
-
-	speak(text: string, opts: { voiceURI?: string; rate?: number; pitch?: number; onEnd?: () => void }) {
-		if (!this.ttsSupported) {
-			this.handlers.onSpeakEnd?.()
-			return
-		}
-		this.stopSpeak()
-		const gen = ++this.speakGen
-		const u = new SpeechSynthesisUtterance(text)
-		u.rate = opts.rate ?? 1
-		u.pitch = opts.pitch ?? 1
-		const voices = window.speechSynthesis.getVoices()
-		const chosen =
-			voices.find((v) => v.voiceURI === opts.voiceURI) ??
-			voices.find((v) => /en[-_]/i.test(v.lang) && /female|samantha|victoria|karen|moira|zira/i.test(v.name)) ??
-			voices.find((v) => /en[-_]/i.test(v.lang)) ??
-			voices[0]
-		if (chosen) u.voice = chosen
-		this.speaking = true
-		const env = envelopeFromText(text)
-		u.onboundary = (e) => {
-			const idx = "charIndex" in e ? Number((e as { charIndex: number }).charIndex) : 0
-			const local = env[Math.min(idx, env.length - 1)] ?? 0.3
-			const bands = env.slice(idx, idx + 16)
-			this.handlers.onLevel?.(local, padBands(bands))
-			this.handlers.onSpeakBoundary?.(idx, text)
-		}
-		const finish = () => {
-			if (this.speakGen !== gen) return
-			this.speaking = false
-			opts.onEnd?.()
-			this.handlers.onSpeakEnd?.()
-		}
-		u.onend = finish
-		u.onerror = finish
-		window.speechSynthesis.speak(u)
-		this.simulateSpeechIfNoBoundary(env)
-	}
-
 	stopSpeak() {
 		if (!this.ttsSupported) return
-		this.speakGen += 1
-		this.speaking = false
 		window.speechSynthesis.cancel()
 	}
 
@@ -211,18 +152,6 @@ export class SpeechEngine {
 			/* ignore */
 		}
 		this.rec = null
-	}
-
-	private simulateSpeechIfNoBoundary(env: number[]) {
-		let i = 0
-		const tick = () => {
-			if (!this.speaking) return
-			const v = env[i % env.length] ?? 0.2
-			this.handlers.onLevel?.(v, padBands(env.slice(i, i + 16)))
-			i += 1
-			window.setTimeout(tick, 70)
-		}
-		window.setTimeout(tick, 80)
 	}
 
 	private async attachMic() {

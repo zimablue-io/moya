@@ -2,17 +2,15 @@ import { type AutomationDraft, isDue, makeAutomation, quietReply } from "./autom
 import { dispatch, runTurn } from "./environment"
 import { liveSettings, notify } from "./host"
 import { completeTurn } from "./llm"
-import { speech } from "./speech"
 import { applyEnv, envFromStore, type Live } from "./store-env"
 import type { Artifact, Message, Snapshot } from "./types"
 import { nowIso, uid } from "./utils"
-import { shouldSpeakTypedReply } from "./voice-contract"
 
 type StoreApi = Snapshot &
 	Live & {
 		persist: () => void
 		addUserMessage: (text: string) => Message
-		runAutomation: (id: string, opts?: { speak?: boolean }) => Promise<void>
+		runAutomation: (id: string) => Promise<void>
 	}
 
 type Get = () => StoreApi
@@ -85,37 +83,22 @@ export function createTurnActions(get: Get, set: Set) {
 				: /good|glad|nice|yes/i.test(spoken)
 					? "warm"
 					: "calm"
-			const speakBrowser = shouldSpeakTypedReply({
-				autoSpeak: get().settings.autoSpeak,
-				voiceMode: get().voiceMode,
-				backend: liveSettings(get().settings).voiceBackend.id,
-			})
 			set({
 				...applyEnv(result.env),
 				emotion: em,
 				caption: spoken,
 				error:
 					result.error && !/not available|Add a key|Add an API key/i.test(result.error) ? result.error : get().error,
-				presence: speakBrowser ? "speaking" : get().voiceMode ? "listening" : "idle",
+				presence: get().voiceMode ? "listening" : "idle",
 			})
 			get().persist()
 			const added = result.env.snapshot.inbox.filter((i) => !i.resolvedAt && !beforeInbox.some((x) => x.id === i.id))
 			if (added[0]) void notify(added[0].title, added[0].body)
-
-			if (speakBrowser) {
-				if (liveSettings(get().settings).voiceBackend.id === "browser") speech.stopListen()
-				speech.speak(spoken, {
-					voiceURI: get().settings.voiceURI,
-					rate: get().settings.rate,
-					pitch: get().settings.pitch,
-				})
-			}
 		},
 
-		runAutomation: async (id: string, opts?: { speak?: boolean }) => {
+		runAutomation: async (id: string) => {
 			const auto = get().automations.find((a) => a.id === id)
 			if (!auto || get().runningAutomation) return
-			const speak = opts?.speak ?? false
 			const beforeInbox = get().inbox
 			set({
 				runningAutomation: id,
@@ -136,7 +119,7 @@ export function createTurnActions(get: Get, set: Set) {
 			set({
 				...applyEnv(result.env),
 				runningAutomation: null,
-				presence: speak && keep && get().settings.autoSpeak ? "speaking" : get().voiceMode ? "listening" : "idle",
+				presence: get().voiceMode ? "listening" : "idle",
 				caption: keep ? result.spoken : get().caption,
 			})
 			get().persist()
@@ -144,22 +127,6 @@ export function createTurnActions(get: Get, set: Set) {
 				(i) => !i.resolvedAt && !beforeInbox.some((x) => x.id === i.id),
 			)
 			if (addedAuto[0]) void notify(addedAuto[0].title, addedAuto[0].body)
-
-			if (
-				speak &&
-				keep &&
-				shouldSpeakTypedReply({
-					autoSpeak: get().settings.autoSpeak,
-					voiceMode: get().voiceMode,
-					backend: liveSettings(get().settings).voiceBackend.id,
-				})
-			) {
-				speech.speak(result.spoken, {
-					voiceURI: get().settings.voiceURI,
-					rate: get().settings.rate,
-					pitch: get().settings.pitch,
-				})
-			}
 		},
 
 		tickAutomations: async () => {
@@ -167,8 +134,7 @@ export function createTurnActions(get: Get, set: Set) {
 			if (!s.ready || s.presence === "thinking" || s.runningAutomation) return
 			const due = s.automations.find((a) => isDue(a))
 			if (!due) return
-			const busy = s.presence === "listening" || s.presence === "speaking" || s.voiceMode
-			await get().runAutomation(due.id, { speak: !busy })
+			await get().runAutomation(due.id)
 		},
 
 		addAutomation: (draft: AutomationDraft) => {

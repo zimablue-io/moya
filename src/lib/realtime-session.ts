@@ -2,7 +2,7 @@ import { ensureMicrophoneAccess } from "./media-permission"
 import { applyRealtimeEvent, bargeIn, type RealtimeLoopAction, type RealtimeLoopState } from "./realtime-loop"
 import { ScheduledAudioQueue } from "./realtime-playback"
 import { mintClientSecret, RealtimeAudio } from "./realtime-session-audio"
-import type { VoiceBackendId } from "./types"
+import { PROVIDER_PRESETS, type VoiceBackendId, voiceRealtimeKind } from "./types"
 import {
 	buildSessionUpdate,
 	EMPTY_LIVE_CAPTION,
@@ -14,7 +14,7 @@ import {
 	voiceBackendNeedsKey,
 	websocketProtocols,
 } from "./voice-backend"
-import { connectFailureMessage, voiceUsesRealtime } from "./voice-contract"
+import { connectFailureMessage } from "./voice-contract"
 
 export type RealtimeHandlers = {
 	onLevel?: (level: number, bands: number[]) => void
@@ -65,7 +65,6 @@ export class RealtimeSession {
 
 	async start(opts: ConnectOpts) {
 		this.stop()
-		if (!voiceUsesRealtime(opts.id)) return
 		const gen = ++this.gen
 		const access = await ensureMicrophoneAccess()
 		if (this.gen !== gen) return
@@ -82,16 +81,23 @@ export class RealtimeSession {
 		}
 
 		let secret = opts.apiKey
-		if (voiceBackendNeedsKey(opts.id)) {
+		const kind = voiceRealtimeKind(opts.id, opts.baseUrl)
+		if (voiceBackendNeedsKey(opts)) {
 			if (!opts.apiKey) {
-				this.handlers.onError?.(`Add an API key for ${opts.id === "xai" ? "xAI" : "OpenAI"} in Settings.`)
+				const label =
+					kind === "xai"
+						? PROVIDER_PRESETS.xai.label
+						: kind === "openai"
+							? PROVIDER_PRESETS.openai.label
+							: "this endpoint"
+				this.handlers.onError?.(`Add an API key for ${label} in Settings.`)
 				return
 			}
-			secret = (await mintClientSecret(opts.id, opts.baseUrl, opts.apiKey)) ?? opts.apiKey
+			secret = (await mintClientSecret(kind, opts.baseUrl, opts.apiKey)) ?? opts.apiKey
 			if (this.gen !== gen) return
 		}
 
-		const protocols = websocketProtocols(opts.id, voiceBackendNeedsKey(opts.id) ? secret : "")
+		const protocols = websocketProtocols(kind, voiceBackendNeedsKey(opts) ? secret : "")
 		const ws = protocols?.length ? new WebSocket(url, protocols) : new WebSocket(url)
 		this.ws = ws
 
@@ -100,7 +106,7 @@ export class RealtimeSession {
 			ws.send(
 				JSON.stringify(
 					buildSessionUpdate({
-						backend: opts.id === "xai" || opts.id === "openai" || opts.id === "custom" ? opts.id : "s2s",
+						backend: kind,
 						instructions: opts.instructions,
 						voice: opts.voice,
 						tools: opts.tools,

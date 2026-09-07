@@ -9,7 +9,7 @@ export type MemoryKind = "fact" | "preference" | "decision" | "project" | "insig
 
 export type ProviderId = "xai" | "openai" | "groq" | "openrouter" | "ollama" | "llamacpp" | "ondevice" | "custom"
 
-export type VoiceBackendId = "s2s" | "xai" | "openai" | "custom" | "browser"
+export type VoiceBackendId = "s2s" | "custom"
 
 export type DialogId = "history" | "watch" | "settings" | "artifact" | "memory" | "routines" | null
 
@@ -68,10 +68,6 @@ export interface Settings {
 	agentName: string
 	userName: string
 	brief: string
-	autoSpeak: boolean
-	voiceURI: string
-	rate: number
-	pitch: number
 	showCaptions: boolean
 	provider: ProviderConfig
 	voiceBackend: VoiceConfig
@@ -241,19 +237,15 @@ export const DEFAULT_SETTINGS: Settings = {
 	agentName: APP_NAME,
 	userName: "",
 	brief: "",
-	autoSpeak: true,
-	voiceURI: "",
-	rate: 1,
-	pitch: 1,
 	showCaptions: true,
 	provider: {
-		id: "xai",
-		model: "grok-4.5",
-		baseUrl: "https://api.x.ai/v1",
+		id: "ondevice",
+		model: "",
+		baseUrl: "",
 		apiKey: "",
 	},
 	voiceBackend: {
-		id: "browser",
+		id: "custom",
 		model: "",
 		baseUrl: "",
 		apiKey: "",
@@ -288,11 +280,13 @@ export {
 	providerForHost,
 	REALTIME_VOICES,
 	settingsForHost,
+	speakerGender,
 	speakersFor,
 	VOICE_CHOICES,
 	VOICE_PRESETS,
+	type VoiceRealtimeKind,
 	voiceBackendForHost,
 	voiceChoicesForHost,
+	voiceRealtimeKind,
 	voiceUrlIsEditable,
-	voiceUsesRealtime,
 } from "./types-presets.ts"

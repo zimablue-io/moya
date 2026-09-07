@@ -1,7 +1,17 @@
 import type { HostOs } from "./host.ts"
 import { providerNeedsKey } from "./provider-models.ts"
 import { resolveVoiceApiKey } from "./realtime-protocol.ts"
-import { type HostCaps, PROVIDER_PRESETS, type ProviderConfig, providerForHost, type VoiceConfig } from "./types.ts"
+import {
+	type HostCaps,
+	PROVIDER_PRESETS,
+	type ProviderConfig,
+	type Settings,
+	settingsForHost,
+	type VoiceConfig,
+	voiceRealtimeKind,
+} from "./types.ts"
+
+export type OnboardingStepId = "provider" | "voice" | "soul"
 
 export const FIRST_RUN_LINE = "Household assistant. Stays on this device."
 
@@ -40,18 +50,20 @@ export function providerSetupNeeded(provider: ProviderConfig): string | null {
 	return null
 }
 
-export function setupProviderDraft(provider: ProviderConfig, caps: boolean | HostCaps): ProviderConfig {
-	const current = providerForHost(provider, caps)
-	const host = typeof caps === "boolean" ? { desktopOs: caps, onDeviceLlm: false } : caps
-	if (host.onDeviceLlm && providerSetupNeeded(current)) {
-		return current.id === "ondevice" ? current : { id: "ondevice", model: "", baseUrl: "", apiKey: "" }
-	}
-	return current
+export function voiceCloudSetupNeeded(voice: VoiceConfig, provider: ProviderConfig): boolean {
+	if (voice.id === "s2s") return false
+	if (!voice.baseUrl.trim()) return true
+	const kind = voiceRealtimeKind(voice.id, voice.baseUrl)
+	if (kind !== "xai" && kind !== "openai") return false
+	return !resolveVoiceApiKey(voice, provider)
 }
 
-export function voiceCloudSetupNeeded(voice: VoiceConfig, provider: ProviderConfig): boolean {
-	if (voice.id !== "xai" && voice.id !== "openai") return false
-	return !resolveVoiceApiKey(voice, provider)
+export function onboardingNeeded(settings: Settings, caps: boolean | HostCaps): OnboardingStepId | null {
+	const live = settingsForHost(settings, caps)
+	if (providerSetupNeeded(live.provider)) return "provider"
+	if (voiceCloudSetupNeeded(live.voiceBackend, live.provider)) return "voice"
+	if (!live.brief.trim()) return "soul"
+	return null
 }
 
 export function showDownloadApp(desktop: boolean): boolean {

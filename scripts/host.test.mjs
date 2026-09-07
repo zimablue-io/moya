@@ -54,8 +54,12 @@ test("web hides localhost sidecars and on-device GGUF", () => {
 	assert.equal(web.includes("llamacpp"), false)
 	assert.equal(web.includes("ondevice"), false)
 	assert.equal(web.includes("custom"), true)
+	assert.equal(web[0], "custom")
+	assert.equal(web.includes("xai"), true)
+	assert.equal(settingsForHost(DEFAULT_SETTINGS, false).provider.id, "custom")
 	assert.equal(voiceChoicesForHost(false).includes("s2s"), false)
-	assert.equal(settingsForHost(DEFAULT_SETTINGS, false).voiceBackend.id, "browser")
+	assert.deepEqual(voiceChoicesForHost(false), ["custom"])
+	assert.equal(settingsForHost(DEFAULT_SETTINGS, false).voiceBackend.id, "custom")
 })
 
 test("Mac desktop keeps Ollama and llama.cpp URL; packaged Mac also offers in-process GGUF", () => {
@@ -66,11 +70,13 @@ test("Mac desktop keeps Ollama and llama.cpp URL; packaged Mac also offers in-pr
 	assert.equal(voiceChoicesForHost(true).includes("s2s"), true)
 	const macApp = { desktopOs: true, onDeviceLlm: true }
 	assert.equal(providerChoicesForHost(macApp).includes("ondevice"), true)
+	assert.equal(providerChoicesForHost(macApp)[0], "ondevice")
+	assert.equal(settingsForHost(DEFAULT_SETTINGS, macApp).provider.id, "ondevice")
 	assert.equal(providerChoicesForHost(macApp).includes("ollama"), true)
 	assert.equal(providerChoicesForHost(macApp).includes("llamacpp"), true)
 	assert.equal(hostCapsFrom(macApp).pickGgufFromDisk, true)
-	assert.equal(voiceChoicesForHost(macApp).includes("s2s"), false)
-	assert.equal(voiceChoicesForHost(macApp)[0], "browser")
+	assert.equal(voiceChoicesForHost(macApp).includes("s2s"), true)
+	assert.deepEqual(voiceChoicesForHost(macApp), ["s2s", "custom"])
 	assert.equal(
 		settingsForHost(
 			normalizeSettings({
@@ -84,7 +90,7 @@ test("Mac desktop keeps Ollama and llama.cpp URL; packaged Mac also offers in-pr
 			}),
 			macApp,
 		).voiceBackend.id,
-		"browser",
+		"s2s",
 	)
 	assert.equal(hostCapsFrom({ desktopOs: true, onDeviceLlm: false }).pickGgufFromDisk, false)
 	assert.equal(hostCapsFrom(true).pickGgufFromDisk, false)
@@ -98,12 +104,28 @@ test("Android and iOS apps offer on-device GGUF and hide localhost sidecars", ()
 	assert.equal(ids.includes("llamacpp"), false)
 	assert.equal(ids.includes("xai"), true)
 	assert.equal(voiceChoicesForHost(mobile).includes("s2s"), false)
+	assert.deepEqual(voiceChoicesForHost(mobile), ["custom"])
+	assert.equal(
+		settingsForHost(
+			normalizeSettings({
+				voiceBackend: {
+					id: "s2s",
+					model: "local",
+					baseUrl: "http://127.0.0.1:8765/v1",
+					apiKey: "",
+					voice: "af_heart",
+				},
+			}),
+			mobile,
+		).voiceBackend.id,
+		"custom",
+	)
 	assert.equal(hostCapsFrom(mobile).pickGgufFromDisk, false)
 	assert.equal(
 		providerForHost({ id: "ollama", model: "qwen3:8b", baseUrl: "http://127.0.0.1:11434/v1", apiKey: "" }, mobile).id,
-		"xai",
+		"custom",
 	)
-	assert.equal(providerForHost({ id: "ondevice", model: "tiny.gguf", baseUrl: "", apiKey: "" }, false).id, "xai")
+	assert.equal(providerForHost({ id: "ondevice", model: "tiny.gguf", baseUrl: "", apiKey: "" }, false).id, "custom")
 	assert.equal(providerForHost({ id: "ondevice", model: "tiny.gguf", baseUrl: "", apiKey: "" }, mobile).id, "ondevice")
 })
 

@@ -6,34 +6,30 @@ import {
 	speakersFor,
 	VOICE_PRESETS,
 	type VoiceBackendId,
+	voiceRealtimeKind,
 } from "./types.ts"
 
-/** Settings copy. One provider, one speaker. */
+/** Settings copy. One provider, one voice. */
 export const VOICE_SETTINGS_COPY = {
-	conversationSpeaker: "Speaker",
+	conversationSpeaker: "Voice",
 	conversationTipLocal: "Kokoro ids such as af_heart. The sidecar has no /v1/voices list.",
+	conversationTipLive: "Listed from this endpoint when it answers.",
 } as const
 
-export { voiceUrlIsEditable, voiceUsesRealtime } from "./types.ts"
+export { voiceUrlIsEditable } from "./types.ts"
 
 export function conversationVoice(settings: Pick<Settings, "voiceBackend">): string {
-	if (settings.voiceBackend.id === "browser") return ""
 	const stored = settings.voiceBackend.voice.trim()
 	if (settings.voiceBackend.id === "s2s") return localConversationVoice(stored)
 	if (stored) return stored
-	return VOICE_PRESETS[settings.voiceBackend.id]?.voice || "af_heart"
-}
-
-export function typedReplyVoice(settings: Pick<Settings, "voiceURI">): string {
-	return settings.voiceURI
+	return VOICE_PRESETS[settings.voiceBackend.id]?.voice ?? ""
 }
 
 export function sessionUpdateFromSettings(
 	settings: Settings,
 	opts?: { instructions?: string; tools?: RealtimeTool[] },
 ): Record<string, unknown> {
-	const id = settings.voiceBackend.id
-	const backend = id === "xai" || id === "openai" || id === "custom" ? id : "s2s"
+	const backend = voiceRealtimeKind(settings.voiceBackend.id, settings.voiceBackend.baseUrl)
 	return buildSessionUpdate({
 		backend,
 		instructions: opts?.instructions ?? "",
@@ -75,7 +71,6 @@ export function browserSpeechFinalSink(opts: {
 	backend?: VoiceBackendId
 }): "note" | "ignore" | "hold" | "send" {
 	if (opts.noteListen) return "note"
-	if (opts.voiceMode && opts.backend === "browser") return "send"
 	if (opts.voiceMode) return "ignore"
 	return "hold"
 }
@@ -86,15 +81,6 @@ export function shouldStartHoldListen(opts: {
 	noteListen: boolean
 }): boolean {
 	return !opts.voiceMode && opts.presence !== "thinking" && !opts.noteListen
-}
-
-export function shouldSpeakTypedReply(opts: {
-	autoSpeak: boolean
-	voiceMode: boolean
-	backend?: VoiceBackendId
-}): boolean {
-	if (opts.backend === "browser" && opts.voiceMode) return true
-	return opts.autoSpeak && !opts.voiceMode
 }
 
 export function shouldExitVoiceForComposer(voiceMode: boolean): boolean {

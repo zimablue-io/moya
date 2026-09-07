@@ -71,13 +71,6 @@ export function AssistantShell() {
 	}, [])
 
 	useEffect(() => {
-		const loadVoices = () => speech.listVoices()
-		loadVoices()
-		window.speechSynthesis?.addEventListener("voiceschanged", loadVoices)
-		return () => window.speechSynthesis?.removeEventListener("voiceschanged", loadVoices)
-	}, [])
-
-	useEffect(() => {
 		speech.configure({
 			onInterim: (text) => {
 				if (noteListenRef.current || holding.current) {
@@ -111,7 +104,6 @@ export function AssistantShell() {
 				const s = useApp.getState()
 				if (s.voiceMode) {
 					s.setPresence({ presence: "listening" })
-					if (liveSettings(s.settings).voiceBackend.id === "browser") void speech.startListen({ continuous: true })
 				} else s.setPresence({ presence: "idle" })
 			},
 			onListenEnd: () => {
@@ -266,7 +258,6 @@ export function AssistantShell() {
 				onMicFix={setMicFix}
 				firstRun={empty}
 				onVerb={firstRun.onVerb}
-				onUseSystemVoice={() => void firstRun.switchToSystemVoice()}
 			/>
 
 			<AssistantDock
@@ -297,7 +288,7 @@ export function AssistantShell() {
 				}}
 			/>
 
-			<AssistantMenu pending={pending} />
+			<AssistantMenu pending={pending} onSettings={firstRun.requestSettings} />
 			<SetupSheet
 				open={firstRun.setupOpen}
 				pending={firstRun.setupPending}

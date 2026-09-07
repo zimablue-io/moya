@@ -1,7 +1,7 @@
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import type { SetupPending } from "@/components/setup-sheet"
-import { type FirstRunVerb, providerSetupNeeded, voiceCloudSetupNeeded } from "@/lib/first-run"
-import { liveSettings } from "@/lib/host"
+import { type FirstRunVerb, onboardingNeeded } from "@/lib/first-run"
+import { hostCaps, liveSettings } from "@/lib/host"
 import { useApp } from "@/lib/store"
 import { enterVoiceMode, exitVoiceMode } from "@/lib/voice-mode"
 
@@ -9,18 +9,26 @@ export function useFirstRunGate() {
 	const send = useApp((s) => s.send)
 	const voiceMode = useApp((s) => s.voiceMode)
 	const error = useApp((s) => s.error)
+	const ready = useApp((s) => s.ready)
+	const settings = useApp((s) => s.settings)
+	const openDialog = useApp((s) => s.openDialog)
 	const setComposerOpen = useApp((s) => s.setComposerOpen)
 	const [setupOpen, setSetupOpen] = useState(false)
 	const [setupPending, setSetupPending] = useState<SetupPending | null>(null)
 	const [draftSeed, setDraftSeed] = useState<string | null>(null)
+	const needed = onboardingNeeded(liveSettings(settings), hostCaps())
+
+	useEffect(() => {
+		if (!ready) return
+		if (needed) setSetupOpen(true)
+	}, [needed, ready])
 
 	const exitVoice = useCallback(() => {
 		exitVoiceMode()
 	}, [])
 
 	const enterVoice = useCallback(() => {
-		const next = liveSettings(useApp.getState().settings)
-		if (providerSetupNeeded(next.provider) || voiceCloudSetupNeeded(next.voiceBackend, next.provider)) {
+		if (onboardingNeeded(liveSettings(useApp.getState().settings), hostCaps())) {
 			setSetupPending({ kind: "voice" })
 			setSetupOpen(true)
 			return
@@ -28,16 +36,11 @@ export function useFirstRunGate() {
 		void enterVoiceMode()
 	}, [])
 
-	const switchToSystemVoice = useCallback(async () => {
-		await useApp.getState().dispatch("settings.voice", { id: "browser" })
-		await enterVoiceMode()
-	}, [])
-
 	const requestSend = useCallback(
 		(text: string) => {
 			const trimmed = text.trim()
 			if (!trimmed) return
-			if (providerSetupNeeded(liveSettings(useApp.getState().settings).provider)) {
+			if (onboardingNeeded(liveSettings(useApp.getState().settings), hostCaps())) {
 				setDraftSeed(trimmed)
 				setSetupPending({ kind: "send", text: trimmed })
 				setSetupOpen(true)
@@ -47,6 +50,14 @@ export function useFirstRunGate() {
 		},
 		[send],
 	)
+
+	const requestSettings = useCallback(() => {
+		if (onboardingNeeded(liveSettings(useApp.getState().settings), hostCaps())) {
+			setSetupOpen(true)
+			return
+		}
+		openDialog("settings")
+	}, [openDialog])
 
 	const onSetupReady = useCallback(
 		(pending: SetupPending) => {
@@ -80,6 +91,7 @@ export function useFirstRunGate() {
 	)
 
 	const closeSetup = useCallback((open: boolean) => {
+		if (!open && onboardingNeeded(liveSettings(useApp.getState().settings), hostCaps())) return
 		setSetupOpen(open)
 		if (!open) setSetupPending(null)
 	}, [])
@@ -91,8 +103,8 @@ export function useFirstRunGate() {
 		clearDraftSeed: () => setDraftSeed(null),
 		enterVoice,
 		exitVoice,
-		switchToSystemVoice,
 		requestSend,
+		requestSettings,
 		onSetupReady,
 		onVerb,
 		closeSetup,

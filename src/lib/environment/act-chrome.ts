@@ -1,3 +1,5 @@
+import { onboardingNeeded } from "../first-run.ts"
+import { hostCaps } from "../host.ts"
 import {
 	type Artifact,
 	type DialogId,
@@ -98,7 +100,7 @@ function fieldView(field: string): { view: string; tab?: SettingsTab } {
 	if (field === "apiKey" || field === "provider" || field === "model" || field === "baseUrl") {
 		return { view: "settings", tab: "model" }
 	}
-	if (field === "voice" || field === "voiceURI" || field === "rate" || field === "pitch") {
+	if (field === "voice") {
 		return { view: "settings", tab: "voice" }
 	}
 	if (field === "agentName" || field === "userName" || field === "brief") {
@@ -113,6 +115,9 @@ export function actChrome(ctx: ActCtx): ActResult | null {
 
 	if (command === "ui.open") {
 		if (!str(args, "view")) return fail(command, "View required.", env)
+		if (str(args, "view") === "settings" && onboardingNeeded(snap.settings, hostCaps())) {
+			return fail(command, "Finish setup first.", env)
+		}
 		return ok(command, `Opened ${str(args, "view")}.`, openView(env, args))
 	}
 
@@ -124,6 +129,9 @@ export function actChrome(ctx: ActCtx): ActResult | null {
 	if (command === "ui.focus") {
 		const field = str(args, "field")
 		if (!field) return fail(command, "Field required.", env)
+		if (onboardingNeeded(snap.settings, hostCaps())) {
+			return fail(command, "Finish setup first.", env)
+		}
 		const hint = fieldView(field)
 		const opened = openView(env, {
 			view: str(args, "view") || hint.view,
@@ -144,14 +152,10 @@ export function actChrome(ctx: ActCtx): ActResult | null {
 
 	if (command === "settings.patch") {
 		const patch: Partial<Settings> = {}
-		for (const key of ["agentName", "userName", "brief", "voiceURI"] as const) {
+		for (const key of ["agentName", "userName", "brief"] as const) {
 			if (args[key] != null) patch[key] = str(args, key)
 		}
-		for (const key of ["autoSpeak", "showCaptions"] as const) {
-			if (typeof args[key] === "boolean") patch[key] = args[key] as boolean
-		}
-		if (typeof args.rate === "number") patch.rate = args.rate
-		if (typeof args.pitch === "number") patch.pitch = args.pitch
+		if (typeof args.showCaptions === "boolean") patch.showCaptions = args.showCaptions
 		snap.settings = { ...snap.settings, ...patch }
 		return ok(command, "Updated settings.", next)
 	}

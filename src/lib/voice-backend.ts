@@ -1,6 +1,6 @@
 import type { ChatTool } from "./llm"
 import type { RealtimeTool } from "./realtime-protocol"
-import type { VoiceBackendId } from "./types"
+import { type VoiceBackendId, voiceRealtimeKind } from "./types"
 
 export {
 	applyLiveCaption,
@@ -32,8 +32,9 @@ export {
 	websocketProtocols,
 } from "./realtime-protocol"
 
-export function voiceBackendNeedsKey(id: VoiceBackendId): boolean {
-	return id === "xai" || id === "openai"
+export function voiceBackendNeedsKey(voice: { id: VoiceBackendId; baseUrl: string }): boolean {
+	const kind = voiceRealtimeKind(voice.id, voice.baseUrl)
+	return kind === "xai" || kind === "openai"
 }
 
 export function toRealtimeTools(tools: ChatTool[]): RealtimeTool[] {

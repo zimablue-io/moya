@@ -1,26 +1,20 @@
-import { Play, Square } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { Mars, Play, Square, Venus } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
 import { Field } from "@/components/settings-field"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-	Select,
-	SelectContent,
-	SelectGroup,
-	SelectItem,
-	SelectLabel,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select"
-import { speech } from "@/lib/speech"
-import { speakersFor, type VoiceBackendId } from "@/lib/types"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { VOICE_PREVIEW_TEXT } from "@/lib/brand"
+import { speakerGender, speakersFor, type VoiceBackendId } from "@/lib/types"
 import { listRealtimeSpeakers, type SpeakerOption } from "@/lib/voice-catalog"
-import { VOICE_SETTINGS_COPY } from "@/lib/voice-contract"
+import { conversationVoice, VOICE_SETTINGS_COPY } from "@/lib/voice-contract"
+import { audioBufferFromPreviewResponse, voicePreviewRequest } from "@/lib/voice-preview"
 
 export function SpokenVoice({
 	id,
 	baseUrl,
 	apiKey,
+	model,
 	value,
 	onChange,
 	onCommit,
@@ -28,15 +22,16 @@ export function SpokenVoice({
 	id: VoiceBackendId
 	baseUrl: string
 	apiKey: string
+	model: string
 	value: string
 	onChange: (v: string) => void | Promise<void>
 	onCommit?: () => void | Promise<void>
 }) {
-	const [speakers, setSpeakers] = useState<SpeakerOption[]>(() => speakersFor(id))
+	const [speakers, setSpeakers] = useState<SpeakerOption[]>(() => speakersFor(id, baseUrl))
 	useEffect(() => {
 		let cancelled = false
-		setSpeakers(speakersFor(id))
-		void listRealtimeSpeakers({ id, baseUrl, apiKey }, { fallback: speakersFor(id) }).then((list) => {
+		setSpeakers(speakersFor(id, baseUrl))
+		void listRealtimeSpeakers({ id, baseUrl, apiKey }, { fallback: speakersFor(id, baseUrl) }).then((list) => {
 			if (!cancelled && list.length) setSpeakers(list)
 		})
 		return () => {
@@ -44,146 +39,163 @@ export function SpokenVoice({
 		}
 	}, [id, baseUrl, apiKey])
 
+	const preview = <VoicePreviewButton id={id} baseUrl={baseUrl} apiKey={apiKey} model={model} value={value} />
+
 	if (!speakers.length) {
 		return (
 			<Field label={VOICE_SETTINGS_COPY.conversationSpeaker}>
-				<Input
-					value={value}
-					onChange={(e) => onChange(e.target.value)}
-					onBlur={() => onCommit?.()}
-					placeholder="af_heart"
-				/>
+				<div className="flex gap-2">
+					<Input
+						className="min-w-0 flex-1"
+						value={value}
+						onChange={(e) => onChange(e.target.value)}
+						onBlur={() => onCommit?.()}
+						placeholder="af_heart"
+					/>
+					{preview}
+				</div>
 			</Field>
 		)
 	}
 	const known = speakers.some((v) => v.id === value)
 	const selected = known ? value : value ? "__other__" : (speakers[0]?.id ?? "")
-	const groups = speakerGroups(speakers)
 	const items = [
-		...groups.flatMap((group) => group.items.map((v) => ({ value: v.id, label: v.label }))),
+		...speakers.map((v) => ({ value: v.id, label: v.label })),
 		...(!known && value ? [{ value: "__other__", label: value }] : []),
 	]
 
 	return (
 		<Field
 			label={VOICE_SETTINGS_COPY.conversationSpeaker}
-			tip={id === "s2s" ? VOICE_SETTINGS_COPY.conversationTipLocal : id === "xai" ? "Live list from xAI." : undefined}
+			tip={id === "s2s" ? VOICE_SETTINGS_COPY.conversationTipLocal : VOICE_SETTINGS_COPY.conversationTipLive}
 		>
-			<Select
-				items={items}
-				value={selected}
-				onValueChange={(v) => {
-					if (!v || v === "__other__") return
-					void (async () => {
-						await onChange(v)
-						await onCommit?.()
-					})()
-				}}
-			>
-				<SelectTrigger>
-					<SelectValue />
-				</SelectTrigger>
-				<SelectContent>
-					{groups.map((group) =>
-						group.name ? (
-							<SelectGroup key={group.name}>
-								<SelectLabel>{group.name}</SelectLabel>
-								{group.items.map((v) => (
-									<SelectItem key={v.id} value={v.id}>
-										{v.label}
-									</SelectItem>
-								))}
-							</SelectGroup>
-						) : (
-							group.items.map((v) => (
-								<SelectItem key={v.id} value={v.id}>
+			<div className="flex gap-2">
+				<Select
+					items={items}
+					value={selected}
+					onValueChange={(v) => {
+						if (!v || v === "__other__") return
+						void (async () => {
+							await onChange(v)
+							await onCommit?.()
+						})()
+					}}
+				>
+					<SelectTrigger className="min-w-0 w-auto flex-1">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						{speakers.map((v) => {
+							const gender = speakerGender(v.id)
+							return (
+								<SelectItem key={v.id} value={v.id} aria-label={voiceOptionLabel(v.label, gender)}>
+									{gender === "woman" ? <Venus className="size-3.5 text-muted-foreground" aria-hidden /> : null}
+									{gender === "man" ? <Mars className="size-3.5 text-muted-foreground" aria-hidden /> : null}
 									{v.label}
 								</SelectItem>
-							))
-						),
-					)}
-					{!known && value ? <SelectItem value="__other__">{value}</SelectItem> : null}
-				</SelectContent>
-			</Select>
+							)
+						})}
+						{!known && value ? <SelectItem value="__other__">{value}</SelectItem> : null}
+					</SelectContent>
+				</Select>
+				{preview}
+			</div>
 		</Field>
 	)
 }
 
-function speakerGroups(speakers: SpeakerOption[]): { name: string; items: SpeakerOption[] }[] {
-	const groups: { name: string; items: SpeakerOption[] }[] = []
-	const index = new Map<string, SpeakerOption[]>()
-	for (const speaker of speakers) {
-		const name = speaker.group ?? ""
-		let items = index.get(name)
-		if (!items) {
-			items = []
-			index.set(name, items)
-			groups.push({ name, items })
-		}
-		items.push(speaker)
-	}
-	return groups
-}
-
-export function SystemVoicePicker({
-	voices,
+function VoicePreviewButton({
+	id,
+	baseUrl,
+	apiKey,
+	model,
 	value,
-	previewing,
-	onVoice,
-	onPreview,
-	onStop,
 }: {
-	voices: SpeechSynthesisVoice[]
+	id: VoiceBackendId
+	baseUrl: string
+	apiKey: string
+	model: string
 	value: string
-	previewing: boolean
-	onVoice: (voiceURI: string) => void
-	onPreview: () => void
-	onStop: () => void
 }) {
-	const items = useMemo(() => {
-		const next = [{ value: "", label: "System default" }]
-		if (value && !voices.some((v) => v.voiceURI === value)) next.push({ value, label: "Saved voice" })
-		for (const v of voices) next.push({ value: v.voiceURI, label: `${v.name} (${v.lang})` })
-		return next
-	}, [value, voices])
+	const [playing, setPlaying] = useState(false)
+	const [error, setError] = useState<string | null>(null)
+	const audioRef = useRef<HTMLAudioElement | null>(null)
+	const objectUrlRef = useRef<string | null>(null)
+
+	const stop = () => {
+		audioRef.current?.pause()
+		audioRef.current = null
+		if (objectUrlRef.current) {
+			URL.revokeObjectURL(objectUrlRef.current)
+			objectUrlRef.current = null
+		}
+		setPlaying(false)
+	}
+
+	useEffect(() => {
+		return () => {
+			audioRef.current?.pause()
+			audioRef.current = null
+			if (objectUrlRef.current) {
+				URL.revokeObjectURL(objectUrlRef.current)
+				objectUrlRef.current = null
+			}
+		}
+	}, [])
 
 	return (
-		<div className="flex gap-2">
-			<Select
-				id="voice-select"
-				items={items}
-				value={value}
-				onValueChange={(v) => {
-					if (v != null) onVoice(v)
-				}}
-			>
-				<SelectTrigger className="min-w-0 w-auto flex-1">
-					<SelectValue />
-				</SelectTrigger>
-				<SelectContent>
-					<SelectItem value="">System default</SelectItem>
-					{value && !voices.some((v) => v.voiceURI === value) ? (
-						<SelectItem value={value}>Saved voice</SelectItem>
-					) : null}
-					{voices.map((v) => (
-						<SelectItem key={v.voiceURI} value={v.voiceURI}>
-							{v.name} ({v.lang})
-						</SelectItem>
-					))}
-				</SelectContent>
-			</Select>
-			<Button
-				type="button"
-				variant="outline"
-				size="icon"
-				className="shrink-0"
-				disabled={!speech.ttsSupported}
-				aria-pressed={previewing}
-				aria-label={previewing ? "Stop preview" : "Hear this voice"}
-				onClick={() => (previewing ? onStop() : onPreview())}
-			>
-				{previewing ? <Square className="size-4" /> : <Play className="size-4" />}
-			</Button>
-		</div>
+		<Button
+			type="button"
+			variant="outline"
+			size="icon"
+			className="shrink-0"
+			disabled={!baseUrl.trim()}
+			title={error ?? (playing ? "Stop preview" : "Hear this voice")}
+			aria-pressed={playing}
+			aria-label={playing ? "Stop preview" : "Hear this voice"}
+			onClick={() => {
+				if (playing) {
+					stop()
+					return
+				}
+				void (async () => {
+					setError(null)
+					const voice = conversationVoice({
+						voiceBackend: { id, baseUrl, apiKey, model, voice: value },
+					})
+					if (!voice) {
+						setError("Pick a voice first.")
+						return
+					}
+					try {
+						const req = voicePreviewRequest({ id, baseUrl, apiKey, model, voice }, VOICE_PREVIEW_TEXT)
+						const res = await fetch(req.url, req.init)
+						const buf = await audioBufferFromPreviewResponse(res)
+						const url = URL.createObjectURL(new Blob([buf]))
+						objectUrlRef.current = url
+						const audio = new Audio(url)
+						audioRef.current = audio
+						audio.onended = () => stop()
+						audio.onerror = () => {
+							setError("Could not play this preview.")
+							stop()
+						}
+						setPlaying(true)
+						await audio.play()
+					} catch {
+						setError("Could not preview this voice. Check the URL and key.")
+						stop()
+					}
+				})()
+			}}
+		>
+			{playing ? <Square className="size-4" /> : <Play className="size-4" />}
+		</Button>
 	)
+}
+
+function voiceOptionLabel(label: string, gender: "woman" | "man" | null): string {
+	if (gender === "woman") return `${label}, woman`
+	if (gender === "man") return `${label}, man`
+	return label
 }

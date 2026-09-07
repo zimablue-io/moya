@@ -2,6 +2,7 @@ import assert from "node:assert/strict"
 import { test } from "node:test"
 import {
 	act,
+	buildCapabilityPrompt,
 	catalogNames,
 	catalogTools,
 	compileSpeech,
@@ -86,6 +87,49 @@ test("speech cannot claim an act that has no receipt", () => {
 		"I resolved the inbox.",
 	)
 	assert.equal(spoken, "I resolved the inbox.")
+})
+
+test("capability prompt lets greetings skip tools and forbids the canned quiet line", () => {
+	const prompt = buildCapabilityPrompt(emptyEnv())
+	assert.match(prompt, /do not need tools/i)
+	assert.match(prompt, /Never say you have nothing to add/)
+	assert.equal(/If you did nothing, say so/i.test(prompt), false)
+	assert.equal(/1–3 short sentences/.test(prompt), false)
+})
+
+test("a greeting that only queries is not spoken as I have nothing to add", async () => {
+	const result = await runTurn({
+		env: emptyEnv(),
+		text: "hey, how are you?",
+		kind: "text",
+		complete: async (req) => {
+			if (req.tools.length) {
+				return {
+					ok: true,
+					content: "",
+					toolCalls: [{ id: "c1", name: "query", arguments: JSON.stringify({ domain: "all", q: "how are you" }) }],
+				}
+			}
+			return { ok: true, content: "I'm here. What do you need?", toolCalls: [] }
+		},
+	})
+	assert.notEqual(result.spoken, "I have nothing to add.")
+	assert.match(result.spoken, /here|need/i)
+})
+
+test("a greeting does not send the tool catalog", async () => {
+	let toolCount = -1
+	const result = await runTurn({
+		env: emptyEnv(),
+		text: "hey",
+		kind: "text",
+		complete: async (req) => {
+			toolCount = req.tools.length
+			return { ok: true, content: "Hey. I'm with you.", toolCalls: [] }
+		},
+	})
+	assert.equal(toolCount, 0)
+	assert.match(result.spoken, /hey|with you/i)
 })
 
 test("a turn that narrates without acting does not ship Done or a fake close", async () => {
@@ -188,11 +232,33 @@ test("settings.provider can switch to on-device and keep the GGUF path", async (
 	assert.equal(reset.env.snapshot.settings.provider.model, "")
 })
 
+test("settings stay closed until onboarding is complete", async () => {
+	const opened = await act(emptyEnv(), "ui.open", { view: "settings" })
+	assert.equal(opened.receipt.ok, false)
+	assert.equal(opened.env.ui.dialog, null)
+	const focused = await act(emptyEnv(), "ui.focus", { field: "apiKey" })
+	assert.equal(focused.receipt.ok, false)
+	assert.equal(focused.env.ui.dialog, null)
+})
+
 test("ui.focus opens settings on the API key", async () => {
-	const { env } = await act(emptyEnv(), "ui.focus", { field: "apiKey" })
-	assert.equal(env.ui.dialog, "settings")
-	assert.equal(env.ui.settingsTab, "model")
-	assert.equal(env.ui.focusField, "apiKey")
+	const env = emptyEnv()
+	env.snapshot.settings = {
+		...env.snapshot.settings,
+		provider: { id: "xai", model: "grok-4.5", baseUrl: "https://api.x.ai/v1", apiKey: "xai-test" },
+		voiceBackend: {
+			id: "custom",
+			model: "grok-voice-latest",
+			baseUrl: "https://api.x.ai/v1",
+			apiKey: "xai-test",
+			voice: "eve",
+		},
+		brief: "Direct. Keep household context.",
+	}
+	const focused = await act(env, "ui.focus", { field: "apiKey" })
+	assert.equal(focused.env.ui.dialog, "settings")
+	assert.equal(focused.env.ui.settingsTab, "model")
+	assert.equal(focused.env.ui.focusField, "apiKey")
 })
 
 test("routine with no receipts fails honestly", async () => {

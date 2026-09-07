@@ -1,3 +1,5 @@
+import { voiceRealtimeKind } from "./types.ts"
+
 export type SpeakerOption = { id: string; label: string; group?: string }
 
 export const POCKET_VOICE_TREE_URL =
@@ -41,20 +43,16 @@ export async function listRealtimeSpeakers(
 ): Promise<SpeakerOption[]> {
 	const fallback = deps?.fallback ?? []
 	const get = deps?.fetch ?? fetch
-	if (voice.id === "xai") {
-		const listed = parseTtsVoices(
-			await fetchJson(get, `${httpBase(voice.baseUrl)}/tts/voices`, {
-				headers: voice.apiKey ? { Authorization: `Bearer ${voice.apiKey}` } : {},
-			}),
-		)
-		return listed.length ? listed : fallback
-	}
-	if (voice.id === "s2s" || voice.id === "custom") {
-		const sidecar = parseVoiceList(await fetchJson(get, `${httpBase(voice.baseUrl)}/voices`))
-		if (sidecar.length) return sidecar
-		return fallback
-	}
-	return fallback
+	const base = httpBase(voice.baseUrl)
+	if (!base) return fallback
+	const path =
+		voiceRealtimeKind(voice.id === "s2s" ? "s2s" : "custom", voice.baseUrl) === "xai" ? "/tts/voices" : "/voices"
+	const listed = parseTtsVoices(
+		await fetchJson(get, `${base}${path}`, {
+			headers: voice.apiKey ? { Authorization: `Bearer ${voice.apiKey}` } : {},
+		}),
+	)
+	return listed.length ? listed : fallback
 }
 
 function httpBase(baseUrl: string): string {

@@ -13,8 +13,8 @@ export function buildCapabilityPrompt(env: EnvState, extra = ""): string {
 
 	return [
 		`You are ${name}, a single personal assistant inside a local Environment. You are not the source of truth.`,
-		`The store is the world. Call query to read it. Call commands to change it. Speak only from this turn's receipts.`,
-		`You speak to ${user}. Keep spoken replies to 1–3 short sentences.`,
+		`You speak to ${user}. Answer in a natural spoken voice. A short paragraph is fine. Greetings and chat you can answer from this message do not need tools.`,
+		`The store is the world. Call query when you need facts from memory, calendar, inbox, or boards. Call commands to change it.`,
 		`Data is local. Counts: memories ${snap.memories.length}, boards ${snap.boards.length}, inbox open ${snap.inbox.filter((i) => !i.resolvedAt).length}, time logs ${snap.timeLogs.length}, routines ${snap.automations.filter((a) => a.enabled).length}, calendar sources ${calendar}, work sources ${work}, attached ${brought}.`,
 		`If a count is 0, say it is empty and how to add a Source (Settings → Sources). Do not invent names, events, or projects.`,
 		`Live views are app-owned. Overview of projects is ui.open view=projects. What's on today is ui.open view=calendar. The app renders empty when empty.`,
@@ -25,7 +25,7 @@ export function buildCapabilityPrompt(env: EnvState, extra = ""): string {
 		`Start the first spoken sentence as if continuing a working relationship, not introducing a product.`,
 		brief ? `Standing brief from ${user}: ${brief}` : null,
 		extra || null,
-		`After tools, give a spoken wrap-up that only mentions acts in the receipts. If you did nothing, say so. Never say Done.`,
+		`After tools, wrap up in speech from this turn's receipts only. Never say Done. Never say you have nothing to add — if you did not change the store, just answer the human.`,
 	]
 		.filter(Boolean)
 		.join("\n\n")

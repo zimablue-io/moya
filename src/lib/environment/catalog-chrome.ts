@@ -67,10 +67,6 @@ export const CHROME_COMMANDS: CommandDef[] = [
 		agentName: { type: "string" },
 		userName: { type: "string" },
 		brief: { type: "string" },
-		autoSpeak: { type: "boolean" },
-		voiceURI: { type: "string" },
-		rate: { type: "number" },
-		pitch: { type: "number" },
 		showCaptions: { type: "boolean" },
 	}),
 	cmd("settings.provider", "Switch provider or set a provider field (model, baseUrl, apiKey).", {

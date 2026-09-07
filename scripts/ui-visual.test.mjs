@@ -3,6 +3,7 @@ import { after, before, describe, test } from "node:test"
 import { FONT } from "../src/lib/brand.ts"
 import {
 	auditFocusable,
+	completeOnboarding,
 	computedDisplayFont,
 	launchPage,
 	openSettings,
@@ -38,9 +39,20 @@ describe("visual UI audit", { concurrency: 1 }, () => {
 		assert.doesNotMatch(family, /(?:^|,\s*)serif(?:\s*,|$)/)
 	})
 
+	test("first open is the onboarding dialog, not Settings", async () => {
+		assert.ok(session)
+		const { page } = session
+		const onboard = page.getByRole("heading", { name: /Where should I think\?|How should I sound\?|How should I be\?/ })
+		await onboard.first().waitFor({ state: "visible" })
+		assert.equal(await visibleCopy(onboard.first()), true)
+		assert.equal(await page.getByRole("heading", { name: "Settings" }).count(), 0)
+		assert.equal(await page.getByRole("option", { name: /Bahh/ }).count(), 0)
+	})
+
 	test("home chrome controls paint a complete focus state", async () => {
 		assert.ok(session)
 		const { page } = session
+		await completeOnboarding(page)
 		const { audited, failures } = await auditFocusable(page, page.locator("body"), "home")
 		assert.ok(audited.length >= 3, `home audit saw too few controls: ${audited.join(", ")}`)
 		assert.deepEqual(failures, [])
@@ -64,5 +76,24 @@ describe("visual UI audit", { concurrency: 1 }, () => {
 		}
 		assert.ok(audited.length >= 8, `settings audit saw too few controls: ${audited.join(", ")}`)
 		assert.deepEqual(failures, [])
+	})
+
+	test("Hear this voice sits on the same row as the Voice picker", async () => {
+		assert.ok(session)
+		const { page } = session
+		const settingsHeading = page.getByRole("heading", { name: "Settings" })
+		if (!(await settingsHeading.isVisible())) await openSettings(page)
+		await page.getByRole("tab", { name: "Voice" }).click()
+		const hear = page.getByRole("button", { name: "Hear this voice" })
+		assert.equal(await hear.isVisible(), true)
+		const picker = hear.locator("xpath=..").locator("[data-slot=select-trigger], input").first()
+		assert.equal(await picker.isVisible(), true)
+		const hearBox = await hear.boundingBox()
+		const pickerBox = await picker.boundingBox()
+		assert.ok(hearBox && pickerBox, "voice row did not paint")
+		const overlapY =
+			Math.min(hearBox.y + hearBox.height, pickerBox.y + pickerBox.height) - Math.max(hearBox.y, pickerBox.y)
+		assert.ok(overlapY > hearBox.height * 0.5, `preview sat on another row (overlap ${overlapY})`)
+		assert.ok(hearBox.x > pickerBox.x + pickerBox.width - 8, "preview is not to the right of the voice")
 	})
 })

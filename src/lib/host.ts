@@ -52,7 +52,7 @@ export function hostCaps(): HostCaps {
 	}
 }
 
-/** Settings as this host should use them. Does not write. On-device LLM hosts remap leftover Local to System. Desktop without an engine keeps Local / Ollama / llama.cpp. */
+/** Settings as this host should use them. Does not write. Web and phone remap leftover Local to Custom. Desktop keeps Local. */
 export function liveSettings(settings: Settings): Settings {
 	return settingsForHost(settings, hostCaps())
 }

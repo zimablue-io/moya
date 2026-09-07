@@ -69,6 +69,33 @@ export async function launchPage(url) {
 		args: ["--no-sandbox", "--disable-dev-shm-usage"],
 	})
 	const page = await browser.newPage({ viewport: { width: 1280, height: 800 } })
+	await page.addInitScript(() => {
+		const voices = [
+			{
+				voiceURI: "com.apple.voice.compact.en-US.Samantha",
+				name: "Samantha",
+				lang: "en-US",
+				default: true,
+				localService: true,
+			},
+			{
+				voiceURI: "com.apple.speech.synthesis.voice.Bahh",
+				name: "Bahh",
+				lang: "en-US",
+				default: false,
+				localService: true,
+			},
+		]
+		Object.defineProperty(window, "speechSynthesis", {
+			value: {
+				getVoices: () => voices,
+				addEventListener: () => {},
+				removeEventListener: () => {},
+				speak: () => {},
+				cancel: () => {},
+			},
+		})
+	})
 	await page.goto(url, { waitUntil: "networkidle", timeout: 45_000 })
 	await page.evaluate(() => document.fonts.ready)
 	await page.waitForTimeout(200)
@@ -81,7 +108,31 @@ export async function launchPage(url) {
 	}
 }
 
+export async function completeOnboarding(page) {
+	const think = page.getByRole("heading", { name: "Where should I think?" })
+	const sound = page.getByRole("heading", { name: "How should I sound?" })
+	const be = page.getByRole("heading", { name: "How should I be?" })
+	if ((await think.count()) + (await sound.count()) + (await be.count()) === 0) return
+
+	if ((await think.count()) > 0) {
+		const key = page.getByPlaceholder(/stored only on this device/i)
+		if ((await key.count()) > 0) await key.fill("xai-test")
+		await page.getByRole("button", { name: "Continue" }).click()
+	}
+	if ((await sound.count()) > 0) {
+		await sound.waitFor({ state: "visible" })
+		const voiceUrl = page.getByPlaceholder("http://127.0.0.1:8765/v1")
+		if ((await voiceUrl.count()) > 0) await voiceUrl.fill("http://127.0.0.1:8765/v1")
+		await page.getByRole("button", { name: "Continue" }).click()
+	}
+	await be.waitFor({ state: "visible" })
+	await page.getByPlaceholder(/Direct/).fill("Direct. Keep household context.")
+	await page.getByRole("button", { name: "Start" }).click()
+	await be.waitFor({ state: "hidden" })
+}
+
 export async function openSettings(page) {
+	await completeOnboarding(page)
 	await page.getByRole("button", { name: "Show tools" }).click()
 	await page.getByRole("button", { name: /Settings/ }).click({ force: true })
 	await page.getByRole("heading", { name: "Settings" }).waitFor({ state: "visible" })
@@ -234,6 +285,7 @@ export async function auditFocusable(page, rootLocator, label) {
 		if (!shown) continue
 		const box = await locator.boundingBox()
 		if (!box || box.width < 8 || box.height < 8) continue
+		await locator.evaluate((node) => node.scrollIntoView({ block: "center", inline: "nearest" }))
 		const name = await locator.evaluate((node) => {
 			const slot = node.getAttribute("data-slot") ?? node.tagName.toLowerCase()
 			const text = (node.getAttribute("aria-label") || node.textContent || "").replace(/\s+/g, " ").trim().slice(0, 40)

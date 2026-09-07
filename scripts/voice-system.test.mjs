@@ -10,8 +10,10 @@ import {
 	KOKORO_TTS_VOICES,
 	normalizeSettings,
 	POCKET_TTS_VOICES,
+	PROVIDER_PRESETS,
 	providerChoicesForHost,
 	settingsForHost,
+	speakerGender,
 	speakersFor,
 	VOICE_CHOICES,
 	VOICE_PRESETS,
@@ -27,9 +29,7 @@ import {
 	sessionOutputVoice,
 	sessionUpdateFromSettings,
 	shouldExitVoiceForComposer,
-	shouldSpeakTypedReply,
 	shouldStartHoldListen,
-	typedReplyVoice,
 	VOICE_SETTINGS_COPY,
 	voiceUiAfterConnectError,
 	voiceUiAfterUnexpectedClose,
@@ -49,31 +49,50 @@ function settings(partial = {}) {
 	return normalizeSettings({ ...DEFAULT_SETTINGS, ...partial })
 }
 
-test("Voice mode sends Conversation speaker, never the system voiceURI", () => {
-	const mac = "com.apple.voice.compact.en-US.Samantha"
+test("Voice lists the provider catalog with a gender icon, not System TTS", () => {
+	const heart = KOKORO_TTS_VOICES.find((v) => v.id === "af_heart")
+	assert.equal(heart?.label, "Heart")
+	assert.equal(speakerGender("af_heart"), "woman")
+	assert.equal(speakerGender("am_adam"), "man")
+	assert.equal(speakerGender("eve"), "woman")
+	assert.equal(speakerGender("leo"), "man")
+	const picker = readFileSync(join(root, "src/components/settings-speakers.tsx"), "utf8")
+	assert.match(picker, /SpokenVoice/)
+	assert.match(picker, /Venus/)
+	assert.match(picker, /Mars/)
+	assert.match(picker, /speakerGender/)
+	assert.equal(picker.includes("SystemVoicePicker"), false)
+	assert.equal(picker.includes("curateSystemVoices"), false)
+	const voiceSrc = readFileSync(join(root, "src/components/settings-voice.tsx"), "utf8")
+	assert.match(voiceSrc, /SpokenVoice/)
+	assert.equal(voiceSrc.includes("SystemVoicePicker"), false)
+	assert.equal(voiceSrc.includes("SPEECH_RATE"), false)
+	assert.equal(voiceSrc.includes("SPEECH_PITCH"), false)
+	assert.equal(voiceSrc.includes("Speak typed replies"), false)
+	assert.match(picker, /size="icon"/)
+	assert.match(picker, /Hear this voice/)
+	assert.match(picker, /<Play /)
+	assert.match(picker, /<Square /)
+	assert.match(picker, /className="flex gap-2"/)
+	assert.match(picker, /SelectTrigger className="min-w-0 w-auto flex-1"/)
+	assert.match(picker, /voicePreviewRequest/)
+	assert.match(voiceSrc, /model=\{live\.model\}/)
+	assert.equal(voiceSrc.includes("speech.speak"), false)
+	assert.equal(picker.includes("speech.speak"), false)
+	const onboard = readFileSync(join(root, "src/components/setup-sheet.tsx"), "utf8")
+	assert.match(onboard, /<VoiceTab/)
+	assert.equal(onboard.includes("SystemVoicePicker"), false)
+})
+
+test("Voice mode sends Conversation speaker, never a system voiceURI", () => {
 	const stored = settings({
-		voiceURI: mac,
 		voiceBackend: { ...LOCAL_VOICE, voice: "af_bella" },
 	})
 	assert.equal(conversationVoice(stored), "af_bella")
-	assert.equal(typedReplyVoice(stored), mac)
 	assert.equal(realtimeConnectFromSettings(stored).voice, "af_bella")
-
 	const event = sessionUpdateFromSettings(stored)
 	assert.equal(sessionOutputVoice(event), "af_bella")
-	assert.equal(JSON.stringify(event).includes(mac), false)
 	assert.equal(JSON.stringify(event).includes("voiceURI"), false)
-})
-
-test("changing the system speaker does not change what Voice sends to the sidecar", () => {
-	const before = settings({
-		voiceURI: "",
-		voiceBackend: { ...LOCAL_VOICE, voice: "af_heart" },
-	})
-	const after = { ...before, voiceURI: "com.apple.eloquence.en-US.Eddy" }
-	assert.equal(sessionOutputVoice(sessionUpdateFromSettings(before)), "af_heart")
-	assert.equal(sessionOutputVoice(sessionUpdateFromSettings(after)), "af_heart")
-	assert.equal(conversationVoice(after), conversationVoice(before))
 })
 
 test("empty Local voice still sends Kokoro Heart so the sidecar cannot stay on bm_fable", () => {
@@ -116,15 +135,14 @@ test("Local catalog is Kokoro only — Pocket names are not pickable", () => {
 		KOKORO_TTS_VOICES.map((v) => v.id),
 	)
 	assert.equal(VOICE_PRESETS.s2s.voice, "af_heart")
-	assert.equal(DEFAULT_SETTINGS.voiceBackend.id, "browser")
+	assert.equal(DEFAULT_SETTINGS.voiceBackend.id, "custom")
 	assert.match(VOICE_SETTINGS_COPY.conversationTipLocal, /Kokoro/)
 	assert.equal(/Pocket/i.test(VOICE_SETTINGS_COPY.conversationTipLocal), false)
 })
 
 test("switching provider to Local resets Conversation speaker to Heart", () => {
 	assert.equal(VOICE_PRESETS.s2s.voice, "af_heart")
-	assert.equal(VOICE_PRESETS.xai.voice, "eve")
-	assert.equal(VOICE_PRESETS.openai.voice, "alloy")
+	assert.equal(VOICE_PRESETS.custom.voice, "")
 })
 
 test("silent sidecar /v1/voices must not wipe Kokoro or fetch the Pocket Hugging Face tree", async () => {
@@ -151,41 +169,101 @@ test("silent sidecar /v1/voices must not wipe Kokoro or fetch the Pocket Hugging
 	)
 })
 
-test("Voice tab offers Local, Grok, OpenAI, and System — same one-provider pattern as Model", () => {
-	assert.deepEqual(VOICE_CHOICES, ["s2s", "xai", "openai", "browser"])
-	assert.equal(VOICE_PRESETS.browser.label, "System")
+test("OpenAI and Custom list speakers from GET /voices on the configured URL", async () => {
+	const openaiUrls = []
+	const fromOpenAi = await listRealtimeSpeakers(
+		{ id: "custom", baseUrl: "https://api.openai.com/v1", apiKey: "sk" },
+		{
+			fallback: speakersFor("custom", "https://api.openai.com/v1"),
+			fetch: async (url) => {
+				openaiUrls.push(String(url))
+				return {
+					ok: true,
+					json: async () => ({
+						voices: [
+							{ id: "marin", name: "Marin" },
+							{ id: "coral", name: "Coral" },
+						],
+					}),
+				}
+			},
+		},
+	)
+	assert.deepEqual(openaiUrls, ["https://api.openai.com/v1/voices"])
 	assert.equal(
-		VOICE_CHOICES.some((id) => VOICE_PRESETS[id].label === "This Mac"),
+		openaiUrls.some((url) => /audio\/voices/i.test(url)),
 		false,
 	)
-	assert.equal("browser" in VOICE_PRESETS, true)
+	assert.deepEqual(
+		fromOpenAi.map((v) => v.id),
+		["marin", "coral"],
+	)
+
+	const silentOpenAi = await listRealtimeSpeakers(
+		{ id: "custom", baseUrl: "https://api.openai.com/v1", apiKey: "sk" },
+		{
+			fallback: speakersFor("custom", "https://api.openai.com/v1"),
+			fetch: async () => ({ ok: false, json: async () => ({}) }),
+		},
+	)
+	assert.ok(silentOpenAi.some((v) => v.id === "alloy"))
+
+	const fromCustom = await listRealtimeSpeakers(
+		{ id: "custom", baseUrl: "https://proxy.example/v1", apiKey: "k" },
+		{
+			fetch: async (url) => {
+				assert.equal(String(url), "https://proxy.example/v1/voices")
+				return { ok: true, json: async () => ({ voices: ["Ryan", "Vivian"] }) }
+			},
+		},
+	)
+	assert.deepEqual(
+		fromCustom.map((v) => v.id),
+		["Ryan", "Vivian"],
+	)
+})
+
+test("Voice tab offers Local and Custom — names match Model", () => {
+	assert.deepEqual(VOICE_CHOICES, ["s2s", "custom"])
+	assert.equal("xai" in VOICE_PRESETS, false)
+	assert.equal("openai" in VOICE_PRESETS, false)
+	assert.equal("browser" in VOICE_PRESETS, false)
+	assert.equal(VOICE_CHOICES.includes("browser"), false)
+	assert.equal(VOICE_PRESETS.custom.label, PROVIDER_PRESETS.custom.label)
+	assert.equal(PROVIDER_PRESETS.xai.label, "xAI Grok")
+	assert.equal(VOICE_PRESETS.s2s.label, "Local")
+	assert.equal(DEFAULT_SETTINGS.voiceBackend.id, "custom")
+	assert.equal(DEFAULT_SETTINGS.voiceBackend.baseUrl, "")
+	assert.equal(DEFAULT_SETTINGS.voiceBackend.voice, "")
 })
 
 test("web omits Local voice, Ollama, and llama.cpp; desktop keeps them", () => {
 	assert.deepEqual(voiceChoicesForHost(true), VOICE_CHOICES)
 	assert.equal(voiceChoicesForHost(false).includes("s2s"), false)
-	assert.deepEqual(voiceChoicesForHost(false), ["xai", "openai", "browser"])
+	assert.deepEqual(voiceChoicesForHost(false), ["custom"])
 	assert.equal(providerChoicesForHost(true).includes("ollama"), true)
 	assert.equal(providerChoicesForHost(true).includes("llamacpp"), true)
 	assert.equal(providerChoicesForHost(false).includes("ollama"), false)
 	assert.equal(providerChoicesForHost(false).includes("llamacpp"), false)
 	assert.equal(providerChoicesForHost(false).includes("custom"), true)
-	assert.equal(settingsForHost(DEFAULT_SETTINGS, false).voiceBackend.id, "browser")
-	assert.equal(settingsForHost(DEFAULT_SETTINGS, true).voiceBackend.id, "browser")
+	assert.equal(settingsForHost(DEFAULT_SETTINGS, false).voiceBackend.id, "custom")
+	assert.equal(settingsForHost(DEFAULT_SETTINGS, true).voiceBackend.id, "custom")
 	assert.equal(settingsForHost(normalizeSettings({ voiceBackend: LOCAL_VOICE }), true).voiceBackend.id, "s2s")
 	const onDeviceDesktop = { desktopOs: true, onDeviceLlm: true }
-	assert.equal(voiceChoicesForHost(onDeviceDesktop).includes("s2s"), false)
-	assert.equal(voiceChoicesForHost(onDeviceDesktop)[0], "browser")
+	assert.equal(voiceChoicesForHost(onDeviceDesktop).includes("s2s"), true)
+	assert.equal(voiceChoicesForHost(onDeviceDesktop).includes("browser"), false)
+	assert.deepEqual(voiceChoicesForHost(onDeviceDesktop), ["s2s", "custom"])
 	assert.equal(
 		settingsForHost(normalizeSettings({ voiceBackend: LOCAL_VOICE }), onDeviceDesktop).voiceBackend.id,
-		"browser",
+		"s2s",
 	)
+	assert.equal(normalizeSettings({ voiceBackend: { id: "browser" } }).voiceBackend.id, "custom")
 	assert.equal(
 		settingsForHost(
 			normalizeSettings({ provider: { id: "ollama", model: "qwen3:8b", baseUrl: "http://127.0.0.1:11434/v1" } }),
 			false,
 		).provider.id,
-		"xai",
+		"custom",
 	)
 	assert.equal(
 		settingsForHost(
@@ -201,17 +279,12 @@ test("Web Speech finals never become a realtime Voice-mode turn", () => {
 	assert.equal(browserSpeechFinalSink({ voiceMode: true, noteListen: true, backend: "s2s" }), "note")
 	assert.equal(browserSpeechFinalSink({ voiceMode: false, noteListen: true, backend: "s2s" }), "note")
 	assert.equal(browserSpeechFinalSink({ voiceMode: false, noteListen: false, backend: "s2s" }), "hold")
-	assert.equal(browserSpeechFinalSink({ voiceMode: true, noteListen: false, backend: "browser" }), "send")
 })
 
-test("hold-to-speak and typed Mac speech stay off while Voice is live", () => {
+test("hold-to-speak stays off while Voice is live", () => {
 	assert.equal(shouldStartHoldListen({ voiceMode: true, presence: "listening", noteListen: false }), false)
 	assert.equal(shouldStartHoldListen({ voiceMode: false, presence: "idle", noteListen: false }), true)
 	assert.equal(shouldStartHoldListen({ voiceMode: false, presence: "thinking", noteListen: false }), false)
-	assert.equal(shouldSpeakTypedReply({ autoSpeak: true, voiceMode: true, backend: "s2s" }), false)
-	assert.equal(shouldSpeakTypedReply({ autoSpeak: true, voiceMode: false, backend: "s2s" }), true)
-	assert.equal(shouldSpeakTypedReply({ autoSpeak: false, voiceMode: false, backend: "s2s" }), false)
-	assert.equal(shouldSpeakTypedReply({ autoSpeak: false, voiceMode: true, backend: "browser" }), true)
 	assert.equal(shouldExitVoiceForComposer(true), true)
 	assert.equal(shouldExitVoiceForComposer(false), false)
 })
@@ -264,10 +337,10 @@ test("Settings and Voice mode stay wired to the contract, not a second Speaker f
 	assert.match(settingsSrc, /conversationSpeaker/)
 	assert.match(settingsSrc, /voiceBackend/)
 	assert.match(settingsSrc, /voiceChoicesForHost/)
-	assert.match(settingsSrc, /settings\.voiceURI/)
 	assert.match(settingsSrc, /await setVoiceBackendField/)
 	assert.match(settingsSrc, /await applyVoiceBackend/)
-	assert.match(settingsSrc, /id === "browser"/)
+	assert.equal(settingsSrc.includes("SystemVoicePicker"), false)
+	assert.equal(settingsSrc.includes('id === "browser"'), false)
 	assert.equal(settingsSrc.includes("<details"), false)
 	assert.equal(settingsSrc.includes("typedSpeaker"), false)
 	assert.equal(settingsSrc.includes("This Mac"), false)
@@ -285,17 +358,20 @@ test("Settings and Voice mode stay wired to the contract, not a second Speaker f
 	assert.match(modeSrc, /realtimeConnectFromSettings/)
 	assert.match(modeSrc, /liveSettings/)
 	assert.match(modeSrc, /voiceUiAfterConnectError/)
-	assert.match(modeSrc, /voiceUsesRealtime/)
-	assert.match(modeSrc, /startListen/)
-	assert.match(storeSrc, /shouldSpeakTypedReply/)
+	assert.equal(modeSrc.includes("voiceUsesRealtime"), false)
+	assert.equal(storeSrc.includes("shouldSpeakTypedReply"), false)
+	assert.equal(storeSrc.includes("typedReplyVoice"), false)
+	assert.equal(storeSrc.includes("speech.speak"), false)
 	assert.match(storeSrc, /liveSettings/)
 	assert.match(storeSrc, /hostCaps\(\)\.onDeviceLlm/)
 	assert.match(storeSrc, /isLocalOnlyProvider/)
 	assert.equal(/void run\("settings\.voice"/.test(storeSrc), false)
 	assert.match(storeSrc, /run\("settings\.voice"/)
-	assert.equal(VOICE_SETTINGS_COPY.conversationSpeaker, "Speaker")
+	assert.equal(VOICE_SETTINGS_COPY.conversationSpeaker, "Voice")
 	assert.match(voiceSrc, /label="Base URL"/)
+	assert.match(voiceSrc, /label="Model"/)
 	assert.match(voiceSrc, /voiceChoicesForHost/)
+	assert.match(voiceSrc, /id === "custom"/)
 	assert.match(modelSrc, /label="Base URL"/)
 	assert.match(modelSrc, /providerChoicesForHost/)
 })

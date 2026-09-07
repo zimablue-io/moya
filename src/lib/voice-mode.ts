@@ -5,12 +5,7 @@ import { realtimeSession } from "./realtime-session"
 import { speech } from "./speech"
 import { useApp } from "./store"
 import { resolveVoiceApiKey, toRealtimeTools } from "./voice-backend"
-import {
-	realtimeConnectFromSettings,
-	voiceUiAfterConnectError,
-	voiceUiAfterUnexpectedClose,
-	voiceUsesRealtime,
-} from "./voice-contract"
+import { realtimeConnectFromSettings, voiceUiAfterConnectError, voiceUiAfterUnexpectedClose } from "./voice-contract"
 
 function applyVoiceAction(action: RealtimeLoopAction) {
 	const s = useApp.getState()
@@ -28,10 +23,6 @@ export async function enterVoiceMode() {
 	const store = useApp.getState()
 	store.setVoiceMode(true)
 	store.setPresence({ presence: "listening", caption: "", interim: "", error: null })
-	if (!voiceUsesRealtime(liveSettings(store.settings).voiceBackend.id)) {
-		await speech.startListen({ continuous: true })
-		return
-	}
 	await startRealtime()
 }
 
@@ -51,10 +42,6 @@ export async function restartVoiceIfNeeded() {
 	speech.stopListen()
 	speech.stopSpeak()
 	store.setPresence({ presence: "listening", caption: "", interim: "", error: null })
-	if (!voiceUsesRealtime(liveSettings(store.settings).voiceBackend.id)) {
-		await speech.startListen({ continuous: true })
-		return
-	}
 	await startRealtime()
 }
 
