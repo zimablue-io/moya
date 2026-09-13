@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react"
 import { FIRST_RUN_VERBS, type FirstRunVerb, firstRunHint } from "@/lib/first-run"
 import { detectHostOs, isDesktop, systemSettingsLabel } from "@/lib/host"
+import { liveSpokenLine } from "@/lib/live-spoken"
 import { allowMicrophone } from "@/lib/media-permission"
 import { displayVoiceCaption } from "@/lib/realtime-protocol"
 import { useApp } from "@/lib/store"
@@ -26,8 +28,23 @@ export function AssistantStatus({
 }) {
 	const showCaptions = useApp((s) => s.settings.showCaptions)
 	const caption = useApp((s) => s.caption)
+	const spokenAt = useApp((s) => s.spokenAt)
+	const presence = useApp((s) => s.presence)
+	const [now, setNow] = useState(() => Date.now())
+	useEffect(() => {
+		if (!caption.trim() || !spokenAt || presence !== "speaking") return
+		const id = window.setInterval(() => setNow(Date.now()), 80)
+		return () => window.clearInterval(id)
+	}, [caption, spokenAt, presence])
 	const live = displayVoiceCaption({ showCaptions, liveLine: interim })
-	const shown = live || caption.trim()
+	const follow =
+		live ||
+		(showCaptions && caption.trim()
+			? presence === "speaking" && spokenAt
+				? liveSpokenLine(caption, Math.max(0, now - spokenAt))
+				: caption
+			: "")
+	const shown = follow.trim()
 
 	return (
 		<div className="pointer-events-none absolute inset-x-0 top-[58%] z-10 flex flex-col items-center px-6 text-center sm:top-[54%]">

@@ -1,5 +1,6 @@
 import { setOnDeviceLlmAvailable } from "./host.ts"
-import type { ChatRequest, ChatResponse, ProviderModels } from "./llm.ts"
+import type { ChatOk, ChatRequest, ChatResponse, ProviderModels } from "./llm.ts"
+import { speechFromMessage } from "./llm-thinking.ts"
 
 export type LlmStatus = {
 	available: boolean
@@ -148,11 +149,14 @@ export async function completeNativeTurn(data: ChatRequest): Promise<ChatRespons
 				error: result.error?.trim() || "On-device model failed.",
 			}
 		}
-		return {
+		const split = speechFromMessage({ content: result.content ?? "" })
+		const ok: ChatOk = {
 			ok: true,
-			content: result.content ?? "",
+			content: split.content,
 			toolCalls: result.toolCalls ?? [],
 		}
+		if (split.thinking) ok.thinking = split.thinking
+		return ok
 	} catch (err) {
 		return {
 			ok: false,

@@ -11,7 +11,7 @@ import {
 	compileSpeech,
 	honestyFromWorld,
 	isDeadSpoken,
-	needsStoreTools,
+	isGreetingTurn,
 	needsWorldFacts,
 	summarizeReceipts,
 } from "./speak.ts"
@@ -75,7 +75,7 @@ function toChat(messages: Message[]): ChatMessage[] {
 		})
 }
 
-function addAssistant(env: EnvState, spoken: string): EnvState {
+function addAssistant(env: EnvState, spoken: string, thinking?: string): EnvState {
 	const next = cloneEnv(env)
 	const em = /sorry|cannot|can't|blocked|urgent/i.test(spoken)
 		? "concerned"
@@ -90,6 +90,7 @@ function addAssistant(env: EnvState, spoken: string): EnvState {
 		emotion: em,
 		artifacts: next.ui.artifact ? [next.ui.artifact] : undefined,
 	}
+	if (thinking) reply.thinking = thinking
 	next.snapshot.messages = [...next.snapshot.messages, reply]
 	return next
 }
@@ -99,7 +100,7 @@ export async function runTurn(input: TurnInput): Promise<TurnResult> {
 	const receipts: Receipt[] = []
 	const text = input.text.trim()
 	if (!text && input.kind !== "routine") {
-		return { env, spoken: "I have nothing to add.", receipts }
+		return { env, spoken: "", receipts }
 	}
 
 	if (input.appendUser !== false && text) {
@@ -143,8 +144,9 @@ export async function runTurn(input: TurnInput): Promise<TurnResult> {
 	}
 
 	let modelText = ""
+	let thinking: string | undefined
 	let error: string | undefined
-	const useTools = input.kind === "routine" || needsStoreTools(text)
+	const useTools = input.kind === "routine" || (Boolean(text) && !isGreetingTurn(text))
 	try {
 		for (let hop = 0; hop < 4; hop++) {
 			const res = await complete({
@@ -195,38 +197,17 @@ export async function runTurn(input: TurnInput): Promise<TurnResult> {
 				}
 				if (res.toolCalls.every((c) => resolveCommandName(c.name) === "query")) {
 					modelText = (res.content ?? "").trim()
+					thinking = res.thinking
 					break
 				}
 				continue
 			}
 			modelText = (res.content ?? "").trim()
+			thinking = res.thinking
 			break
 		}
 	} catch (err) {
 		error = err instanceof Error ? err.message : "Something went wrong."
-	}
-
-	if (input.kind !== "routine" && !error && text && isDeadSpoken(modelText) && !needsWorldFacts(text)) {
-		try {
-			const wrap = await complete({
-				provider: env.snapshot.settings.provider,
-				messages: [
-					...chat,
-					{
-						role: "user",
-						content:
-							"Answer the human in a natural spoken voice. Do not call tools. Do not say you have nothing to add.",
-					},
-				],
-				tools: [],
-			})
-			if (wrap.ok) {
-				const next = (wrap.content ?? "").trim()
-				if (next) modelText = next
-			}
-		} catch {
-			/* keep modelText */
-		}
 	}
 
 	if (needsWorldFacts(text) && !receipts.some((r) => r.command === "query")) {
@@ -240,7 +221,7 @@ export async function runTurn(input: TurnInput): Promise<TurnResult> {
 		receipts.push(...local.receipts)
 		if (local.spoken) {
 			const spoken = compileSpeech(receipts, local.spoken)
-			return { env: addAssistant(env, spoken), spoken, receipts, error }
+			return { env: addAssistant(env, spoken, thinking), spoken, receipts, error }
 		}
 	}
 
@@ -269,7 +250,8 @@ export async function runTurn(input: TurnInput): Promise<TurnResult> {
 		)
 	}
 
-	return { env: addAssistant(env, spoken), spoken, receipts, error }
+	if (!spoken.trim() && !thinking) return { env, spoken, receipts, error }
+	return { env: addAssistant(env, spoken, thinking), spoken, receipts, error }
 }
 
 function receiptsClaimOrLocal(receipts: Receipt[]): boolean {

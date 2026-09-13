@@ -8,6 +8,7 @@ export type Live = {
 	level: number
 	bands: number[]
 	caption: string
+	spokenAt: number | null
 	interim: string
 	voiceMode: boolean
 	composerOpen: boolean

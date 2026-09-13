@@ -38,7 +38,7 @@ type Actions = {
 	executeVoiceTool: (name: string, args: string) => Promise<{ content: string; artifact?: Artifact }>
 	realtimeTools: () => import("./llm").ChatTool[]
 	setPresence: (
-		p: Partial<Pick<Live, "presence" | "emotion" | "level" | "bands" | "caption" | "interim" | "error">>,
+		p: Partial<Pick<Live, "presence" | "emotion" | "level" | "bands" | "caption" | "spokenAt" | "interim" | "error">>,
 	) => void
 	openDialog: (d: DialogId) => void
 	closeUi: (all?: boolean) => void
@@ -115,6 +115,7 @@ export const useApp = create<AppStore>((set, get) => {
 		level: 0,
 		bands: Array.from({ length: 24 }, () => 0.12),
 		caption: "",
+		spokenAt: null,
 		interim: "",
 		error: null,
 		runningAutomation: null,

@@ -29,6 +29,7 @@ export type ChatOk = {
 	ok: true
 	content: string
 	toolCalls: { id: string; name: string; arguments: string }[]
+	thinking?: string
 }
 
 export type ChatErr = { ok: false; error: string }

@@ -1,7 +1,10 @@
-import type { ChatRequest, ChatResponse, ProviderModels } from "./llm.ts"
+import type { ChatOk, ChatRequest, ChatResponse, ProviderModels } from "./llm.ts"
+import { isMinimaxApiHost, speechFromMessage } from "./llm-thinking.ts"
 import { parseOpenAiModelIds, providerNeedsKey } from "./provider-models.ts"
 import type { ProviderConfig, ProviderId } from "./types.ts"
 import { PROVIDER_PRESETS } from "./types.ts"
+
+const COMPLETION_TOKENS = 8192
 
 export function resolveHttpEndpoint(
 	provider: ProviderConfig,
@@ -59,9 +62,11 @@ export async function completeHttpTurn(data: ChatRequest): Promise<ChatResponse>
 	const body: Record<string, unknown> = {
 		model: resolved.model,
 		messages: data.messages,
-		max_tokens: 900,
+		max_tokens: COMPLETION_TOKENS,
+		max_completion_tokens: COMPLETION_TOKENS,
 		temperature: 0.6,
 	}
+	if (isMinimaxApiHost(data.provider.baseUrl)) body.reasoning_split = true
 	if (data.tools.length) {
 		body.tools = data.tools
 		body.tool_choice = "auto"
@@ -96,6 +101,8 @@ export async function completeHttpTurn(data: ChatRequest): Promise<ChatResponse>
 		choices?: {
 			message?: {
 				content?: string | null
+				reasoning_content?: string | null
+				reasoning_details?: { text?: string | null }[] | null
 				tool_calls?: { id: string; function: { name: string; arguments: string } }[]
 			}
 		}[]
@@ -107,5 +114,8 @@ export async function completeHttpTurn(data: ChatRequest): Promise<ChatResponse>
 			name: c.function.name,
 			arguments: c.function.arguments ?? "{}",
 		})) ?? []
-	return { ok: true, content: msg?.content ?? "", toolCalls }
+	const split = speechFromMessage(msg ?? {})
+	const ok: ChatOk = { ok: true, content: split.content, toolCalls }
+	if (split.thinking) ok.thinking = split.thinking
+	return ok
 }

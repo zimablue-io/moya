@@ -1,6 +1,7 @@
 import { type AutomationDraft, isDue, makeAutomation, quietReply } from "./automations"
 import { dispatch, runTurn } from "./environment"
 import { liveSettings, notify } from "./host"
+import { spokenLines } from "./live-spoken"
 import { completeTurn } from "./llm"
 import { applyEnv, envFromStore, type Live } from "./store-env"
 import type { Artifact, Emotion, Message, Snapshot } from "./types"
@@ -32,7 +33,7 @@ export function createTurnActions(get: Get, set: Set) {
 			if (!trimmed) return
 			const last = [...get().messages].reverse().find((m) => !m.hidden)
 			if (last?.role === "assistant" && last.content === trimmed) {
-				set({ caption: trimmed })
+				set({ caption: trimmed, spokenAt: Date.now() })
 				return
 			}
 			const em = /sorry|cannot|can't|blocked|urgent/i.test(trimmed)
@@ -47,7 +48,7 @@ export function createTurnActions(get: Get, set: Set) {
 				createdAt: nowIso(),
 				emotion: em,
 			}
-			set({ messages: [...get().messages, reply], emotion: em, caption: trimmed })
+			set({ messages: [...get().messages, reply], emotion: em, caption: trimmed, spokenAt: Date.now() })
 			get().persist()
 		},
 
@@ -69,7 +70,7 @@ export function createTurnActions(get: Get, set: Set) {
 			stopSpokenReply()
 			prepareSpokenReply()
 			store.addUserMessage(trimmed)
-			set({ presence: "thinking", caption: "", interim: "", error: null, emotion: "focused" })
+			set({ presence: "thinking", caption: "", spokenAt: null, interim: "", error: null, emotion: "focused" })
 
 			const beforeInbox = get().inbox
 			const result = await runTurn({
@@ -88,27 +89,33 @@ export function createTurnActions(get: Get, set: Set) {
 					: "calm"
 			const live = liveSettings(get().settings)
 			const target = !get().voiceMode && spoken ? speakReplyTarget(live, live.provider) : null
+			const spokenAt = spoken ? Date.now() : null
 			const patch = {
 				...applyEnv(result.env),
 				emotion: em,
 				caption: spoken,
+				spokenAt,
 				error: result.error ?? null,
 			}
-			if (target) set({ ...patch, presence: "speaking" })
+			if (spoken) set({ ...patch, presence: "speaking" })
 			else set({ ...patch, presence: get().voiceMode ? "listening" : "idle" })
 			get().persist()
 			const added = result.env.snapshot.inbox.filter((i) => !i.resolvedAt && !beforeInbox.some((x) => x.id === i.id))
 			if (added[0]) void notify(added[0].title, added[0].body)
-			if (target) {
+			const finishSpeak = () => {
+				if (get().presence === "speaking") set({ presence: "idle", spokenAt: null })
+			}
+			if (target && spoken) {
 				speakReply(target, spoken, {
-					onEnd: () => {
-						if (get().presence === "speaking") set({ presence: "idle" })
-					},
+					onEnd: finishSpeak,
 					onError: (message) => {
 						if (get().presence === "thinking") return
-						set({ presence: "idle", error: get().error ?? message })
+						set({ presence: "idle", spokenAt: null, error: get().error ?? message })
 					},
 				})
+			} else if (spoken) {
+				const hold = spokenLines(spoken).reduce((sum, line) => sum + Math.max(900, line.length * 48), 0)
+				globalThis.setTimeout(finishSpeak, hold)
 			}
 		},
 
