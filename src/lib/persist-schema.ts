@@ -15,8 +15,10 @@ CREATE TABLE IF NOT EXISTS messages (
   emotion TEXT,
   artifacts TEXT,
   tool_name TEXT,
-  hidden INTEGER NOT NULL DEFAULT 0
+  hidden INTEGER NOT NULL DEFAULT 0,
+  thinking TEXT
 );
+ALTER TABLE messages ADD COLUMN IF NOT EXISTS thinking TEXT;
 CREATE TABLE IF NOT EXISTS memories (
   id TEXT PRIMARY KEY,
   kind TEXT NOT NULL,

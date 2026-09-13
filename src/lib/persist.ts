@@ -45,6 +45,8 @@ export function emptySnapshot(): Snapshot {
 			...DEFAULT_SETTINGS,
 			provider: { ...DEFAULT_SETTINGS.provider },
 			voiceBackend: { ...DEFAULT_SETTINGS.voiceBackend },
+			connections: DEFAULT_SETTINGS.connections.map((c) => ({ ...c })),
+			voiceConnections: DEFAULT_SETTINGS.voiceConnections.map((c) => ({ ...c })),
 		},
 		messages: [],
 		memories: [],
@@ -130,8 +132,8 @@ export async function saveSnapshot(snapshot: Snapshot): Promise<void> {
 			)
 			for (const m of snapshot.messages) {
 				await tx.query(
-					`INSERT INTO messages (id, role, content, created_at, emotion, artifacts, tool_name, hidden)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+					`INSERT INTO messages (id, role, content, created_at, emotion, artifacts, tool_name, hidden, thinking)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
 					[
 						m.id,
 						m.role,
@@ -141,6 +143,7 @@ export async function saveSnapshot(snapshot: Snapshot): Promise<void> {
 						m.artifacts ? JSON.stringify(m.artifacts) : null,
 						m.toolName ?? null,
 						m.hidden ? 1 : 0,
+						m.thinking ?? null,
 					],
 				)
 			}

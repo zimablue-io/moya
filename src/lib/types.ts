@@ -1,4 +1,7 @@
 import { APP_NAME } from "./brand.ts"
+import { defaultSettingsVault, type ProviderConnection, type VoiceConnection } from "./types-connections.ts"
+
+export type { ProviderConnection, VoiceConnection }
 
 export type Emotion = "calm" | "focused" | "alert" | "warm" | "concerned"
 export type PresenceState = "idle" | "listening" | "thinking" | "speaking"
@@ -6,7 +9,6 @@ export type Role = "user" | "assistant" | "system" | "tool"
 export type InboxSeverity = "info" | "need" | "urgent"
 export type BoardItemState = "watching" | "running" | "blocked" | "idle" | "done"
 export type MemoryKind = "fact" | "preference" | "decision" | "project" | "insight"
-
 export type ProviderId = "xai" | "openai" | "groq" | "openrouter" | "ollama" | "llamacpp" | "ondevice" | "custom"
 
 export type VoiceBackendId = "s2s" | "custom"
@@ -70,7 +72,11 @@ export interface Settings {
 	brief: string
 	showCaptions: boolean
 	provider: ProviderConfig
+	connections: ProviderConnection[]
+	activeConnectionId: string
 	voiceBackend: VoiceConfig
+	voiceConnections: VoiceConnection[]
+	activeVoiceConnectionId: string
 }
 
 export interface ArtifactNode {
@@ -126,6 +132,7 @@ export interface Message {
 	role: Role
 	content: string
 	createdAt: string
+	thinking?: string
 	emotion?: Emotion
 	artifacts?: Artifact[]
 	toolName?: string
@@ -251,6 +258,7 @@ export const DEFAULT_SETTINGS: Settings = {
 		apiKey: "",
 		voice: "",
 	},
+	...defaultSettingsVault(),
 }
 
 export const MEMORY_KINDS: { id: MemoryKind; label: string }[] = [

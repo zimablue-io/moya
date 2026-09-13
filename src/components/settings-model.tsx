@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react"
 import { Field } from "@/components/settings-field"
 import { OnDeviceModels } from "@/components/settings-ondevice"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { hostCaps } from "@/lib/host"
 import { listProviderModels } from "@/lib/llm"
+import { providerNeedsKey } from "@/lib/provider-models"
 import { useApp } from "@/lib/store"
 import {
 	isLocalOnlyProvider,
@@ -18,12 +20,17 @@ import {
 
 export function ModelTab({ onGgufBusy }: { onGgufBusy?: (busy: boolean) => void }) {
 	const settings = useApp((s) => s.settings)
-	const applyProvider = useApp((s) => s.applyProvider)
 	const dispatch = useApp((s) => s.dispatch)
 	const caps = hostCaps()
 	const choices = providerChoicesForHost(caps)
 	const provider = providerForHost(settings.provider, caps)
 	const preset = PROVIDER_PRESETS[provider.id]
+	const connections = settings.connections
+	const activeId = settings.activeConnectionId
+	const active = connections.find((c) => c.id === activeId) ?? connections[0]
+	const [creating, setCreating] = useState(false)
+	const [newName, setNewName] = useState("")
+	const [newKind, setNewKind] = useState<ProviderId>(choices[0] ?? "custom")
 
 	const writeField = (field: "baseUrl" | "apiKey", value: string) => {
 		void (async () => {
@@ -34,44 +41,125 @@ export function ModelTab({ onGgufBusy }: { onGgufBusy?: (busy: boolean) => void 
 		})()
 	}
 
+	if (creating) {
+		return (
+			<div className="flex flex-col gap-4">
+				<Field label="Name">
+					<Input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="MiniMax home" />
+				</Field>
+				<label className="grid gap-2">
+					<Label>Provider</Label>
+					<Select
+						items={choices.map((id) => ({ value: id, label: PROVIDER_PRESETS[id].label }))}
+						value={newKind}
+						onValueChange={(v) => {
+							if (v) setNewKind(v as ProviderId)
+						}}
+					>
+						<SelectTrigger>
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							{choices.map((id) => (
+								<SelectItem key={id} value={id}>
+									{PROVIDER_PRESETS[id].label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</label>
+				<div className="flex gap-2">
+					<Button
+						type="button"
+						disabled={!newName.trim()}
+						onClick={() => {
+							const label = newName.trim()
+							if (!label) return
+							void dispatch("settings.connection", { add: newKind, label }).then(() => {
+								setCreating(false)
+								setNewName("")
+							})
+						}}
+					>
+						Save
+					</Button>
+					<Button
+						type="button"
+						variant="ghost"
+						onClick={() => {
+							setCreating(false)
+							setNewName("")
+						}}
+					>
+						Cancel
+					</Button>
+				</div>
+			</div>
+		)
+	}
+
 	return (
 		<div className="flex flex-col gap-4">
-			<Field label="Provider" field="provider">
-				<Select
-					items={choices.map((id) => ({
-						value: id,
-						label: PROVIDER_PRESETS[id].label,
-					}))}
-					value={provider.id}
-					onValueChange={(v) => {
-						if (v) applyProvider(v as ProviderId)
-					}}
-				>
-					<SelectTrigger>
-						<SelectValue />
-					</SelectTrigger>
-					<SelectContent>
-						{choices.map((id) => (
-							<SelectItem key={id} value={id}>
-								{PROVIDER_PRESETS[id].label}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-			</Field>
+			<div className="flex items-end gap-2">
+				<div className="min-w-0 flex-1">
+					<Field label="Connection" field="provider">
+						<Select
+							items={connections.map((c) => ({ value: c.id, label: c.label }))}
+							value={active?.id ?? ""}
+							onValueChange={(v) => {
+								if (v) void dispatch("settings.connection", { id: v })
+							}}
+						>
+							<SelectTrigger>
+								<SelectValue />
+							</SelectTrigger>
+							<SelectContent>
+								{connections.map((c) => (
+									<SelectItem key={c.id} value={c.id}>
+										{c.label}
+									</SelectItem>
+								))}
+							</SelectContent>
+						</Select>
+					</Field>
+				</div>
+				<Button type="button" variant="outline" onClick={() => setCreating(true)}>
+					New
+				</Button>
+				{active && connections.length > 1 ? (
+					<Button
+						type="button"
+						variant="ghost"
+						onClick={() => void dispatch("settings.connection", { id: active.id, remove: true })}
+					>
+						Remove
+					</Button>
+				) : null}
+			</div>
+			{active ? (
+				<Field label="Name">
+					<Input
+						key={active.id}
+						defaultValue={active.label}
+						onBlur={(e) => {
+							const name = e.target.value.trim()
+							if (name && name !== active.label) {
+								void dispatch("settings.connection", { id: active.id, label: name })
+							}
+						}}
+					/>
+				</Field>
+			) : null}
 			<p className="text-xs text-muted-foreground">{preset.hint}</p>
-			{provider.id === "custom" || provider.id === "ollama" || provider.id === "llamacpp" ? (
+			<p className="text-xs text-muted-foreground">Keys stay on this device. Turns still go to this provider.</p>
+			{provider.id === "custom" || isLocalOnlyProvider(provider.id) ? (
 				<Field label="Base URL">
 					<Input value={provider.baseUrl} onChange={(e) => writeField("baseUrl", e.target.value)} />
 				</Field>
 			) : provider.id === "ondevice" ? null : (
 				<p className="text-xs text-subtle">{provider.baseUrl}</p>
 			)}
-			{provider.id === "xai" ||
-			provider.id === "openai" ||
-			provider.id === "groq" ||
-			provider.id === "openrouter" ||
-			provider.id === "custom" ? (
+			{providerNeedsKey(provider.id) || provider.id === "custom" ? (
 				<Field label="API key (stored only on this device)" field="apiKey">
 					<Input
 						type="password"
@@ -146,7 +234,7 @@ function ProviderModels({ provider }: { provider: ProviderConfig }) {
 		provider.model && models && !models.includes(provider.model) ? [provider.model, ...models] : (models ?? [])
 
 	return (
-		<div className="space-y-3">
+		<div className="flex flex-col gap-3">
 			<div className="flex items-center justify-between gap-3">
 				<p className={error ? "text-xs text-alert" : "text-xs text-muted-foreground"}>
 					{checking

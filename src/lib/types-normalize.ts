@@ -18,6 +18,7 @@ import {
 	type VoiceConfig,
 	type WorkItem,
 } from "./types.ts"
+import { switchProviderSettings, switchVoiceSettings } from "./types-connections.ts"
 import {
 	asArray,
 	asRecord,
@@ -25,7 +26,9 @@ import {
 	parseChartSeries,
 	parseEdges,
 	parseNodes,
+	parseProviderConnections,
 	parseStatusItems,
+	parseVoiceConnections,
 } from "./types-parse.ts"
 import {
 	isProviderId,
@@ -80,13 +83,33 @@ export function normalizeSettings(raw: unknown): Settings {
 		voice: voiceId === "s2s" ? localConversationVoice(storedVoice) : storedVoice,
 	}
 
+	const providerVault = switchProviderSettings(
+		{ provider, connections: parseProviderConnections(s.connections, provider) },
+		provider.id,
+		{ model: provider.model, baseUrl: provider.baseUrl, apiKey: provider.apiKey },
+	)
+	const voiceVault = switchVoiceSettings(
+		{ voiceBackend, voiceConnections: parseVoiceConnections(s.voiceConnections, voiceBackend) },
+		voiceBackend.id,
+		{
+			model: voiceBackend.model,
+			baseUrl: voiceBackend.baseUrl,
+			apiKey: voiceBackend.apiKey,
+			voice: voiceBackend.voice,
+		},
+	)
+
 	return {
 		agentName: s.agentName ?? DEFAULT_SETTINGS.agentName,
 		userName: s.userName ?? DEFAULT_SETTINGS.userName,
 		brief: s.brief ?? DEFAULT_SETTINGS.brief,
 		showCaptions: s.showCaptions ?? DEFAULT_SETTINGS.showCaptions,
-		provider,
-		voiceBackend,
+		provider: providerVault.provider,
+		connections: providerVault.connections,
+		activeConnectionId: providerVault.activeConnectionId,
+		voiceBackend: voiceVault.voiceBackend,
+		voiceConnections: voiceVault.voiceConnections,
+		activeVoiceConnectionId: voiceVault.activeVoiceConnectionId,
 	}
 }
 
@@ -200,7 +223,8 @@ function normalizeMessage(raw: unknown): Message | null {
 	if (!m) return null
 	const role = String(m.role ?? "")
 	if (!ROLES.has(role)) return null
-	return {
+	const thinking = asString(m.thinking).trim()
+	const msg: Message = {
 		id: asString(m.id, "msg"),
 		role: role as Message["role"],
 		content: asString(m.content),
@@ -210,6 +234,8 @@ function normalizeMessage(raw: unknown): Message | null {
 		toolName: m.toolName ? asString(m.toolName) : undefined,
 		hidden: Boolean(m.hidden),
 	}
+	if (thinking) msg.thinking = thinking
+	return msg
 }
 
 function normalizeBoard(raw: unknown): Board | null {

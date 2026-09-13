@@ -1,4 +1,20 @@
-import type { ArtifactChartPoint, ArtifactEdge, ArtifactNode, ArtifactStatusItem } from "./types.ts"
+import type {
+	ArtifactChartPoint,
+	ArtifactEdge,
+	ArtifactNode,
+	ArtifactStatusItem,
+	ProviderConfig,
+	VoiceConfig,
+} from "./types.ts"
+import type { ProviderConnection, VoiceConnection } from "./types-connections.ts"
+import {
+	isProviderId,
+	isVoiceBackendId,
+	localConversationVoice,
+	PROVIDER_PRESETS,
+	VOICE_PRESETS,
+} from "./types-presets.ts"
+import { uid } from "./utils.ts"
 
 export function asArray(raw: unknown): unknown[] {
 	return Array.isArray(raw) ? raw : []
@@ -78,4 +94,73 @@ export function parseEdges(raw: unknown): ArtifactEdge[] {
 		const label = o.label == null ? undefined : asString(o.label)
 		return label ? [{ from, to, label }] : [{ from, to }]
 	})
+}
+
+export function parseProviderConnections(raw: unknown, provider: ProviderConfig): ProviderConnection[] {
+	const connections = asArray(raw).flatMap((item) => {
+		const o = asRecord(item)
+		if (!o) return []
+		const providerId = asString(o.providerId)
+		if (!isProviderId(providerId)) return []
+		const id = asString(o.id)
+		if (!id) return []
+		const preset = PROVIDER_PRESETS[providerId]
+		const row: ProviderConnection = {
+			id,
+			providerId,
+			label: asString(o.label, preset.label),
+			baseUrl: providerId === "ondevice" ? "" : asString(o.baseUrl, preset.baseUrl),
+			apiKey: asString(o.apiKey),
+			lastModel: asString(o.lastModel),
+		}
+		return [row]
+	})
+	if (connections.length) return connections
+	const preset = PROVIDER_PRESETS[provider.id]
+	return [
+		{
+			id: uid("conn"),
+			providerId: provider.id,
+			label: preset.label,
+			baseUrl: provider.baseUrl,
+			apiKey: provider.apiKey,
+			lastModel: provider.model,
+		},
+	]
+}
+
+export function parseVoiceConnections(raw: unknown, voice: VoiceConfig): VoiceConnection[] {
+	const connections = asArray(raw).flatMap((item) => {
+		const o = asRecord(item)
+		if (!o) return []
+		const backendId = asString(o.backendId)
+		if (!isVoiceBackendId(backendId)) return []
+		const id = asString(o.id)
+		if (!id) return []
+		const preset = VOICE_PRESETS[backendId]
+		const lastVoice = asString(o.lastVoice, preset.voice)
+		const row: VoiceConnection = {
+			id,
+			backendId,
+			label: asString(o.label, preset.label),
+			baseUrl: asString(o.baseUrl, preset.baseUrl),
+			apiKey: asString(o.apiKey),
+			lastModel: asString(o.lastModel, preset.model),
+			lastVoice: backendId === "s2s" ? localConversationVoice(lastVoice) : lastVoice,
+		}
+		return [row]
+	})
+	if (connections.length) return connections
+	const preset = VOICE_PRESETS[voice.id]
+	return [
+		{
+			id: uid("vconn"),
+			backendId: voice.id,
+			label: preset.label,
+			baseUrl: voice.baseUrl,
+			apiKey: voice.apiKey,
+			lastModel: voice.model,
+			lastVoice: voice.voice,
+		},
+	]
 }

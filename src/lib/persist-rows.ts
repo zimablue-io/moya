@@ -20,7 +20,8 @@ export function parseJson<T>(raw: string | null | undefined, fallback: T): T {
 }
 
 export function rowMessage(r: Record<string, unknown>): Message {
-	return {
+	const thinking = typeof r.thinking === "string" ? r.thinking.trim() : ""
+	const msg: Message = {
 		id: String(r.id),
 		role: r.role as Message["role"],
 		content: String(r.content ?? ""),
@@ -30,6 +31,8 @@ export function rowMessage(r: Record<string, unknown>): Message {
 		toolName: (r.tool_name as string) || undefined,
 		hidden: Number(r.hidden) === 1,
 	}
+	if (thinking) msg.thinking = thinking
+	return msg
 }
 
 export function rowMemory(r: Record<string, unknown>): Memory {
