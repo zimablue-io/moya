@@ -100,8 +100,7 @@ export function WatchDialog() {
 						<TabsContent value="boards" className="mt-0">
 							{boards.length === 0 && workItems.length === 0 ? (
 								<p className="py-10 text-center text-sm text-muted-foreground">
-									No projects yet. Connect Linear readonly or GitHub read in Settings → Sources, or ask {APP_NAME} to
-									start a board.
+									Nothing on the watch list yet. Ask {APP_NAME} to watch something.
 								</p>
 							) : (
 								<div className="flex flex-col gap-3">

@@ -122,14 +122,15 @@ test("Voice setup needs a Custom URL, and a key when that URL is a cloud realtim
 test("Mac app is a web menu item that points at build-from-source, not a DMG", () => {
 	assert.equal(showDownloadApp(false), true)
 	assert.equal(showDownloadApp(true), false)
-	assert.deepEqual(menuToolsForHost(true), ["history", "memory", "routines", "watch", "settings"])
-	assert.deepEqual(menuToolsForHost(false), ["history", "memory", "routines", "watch", "settings"])
+	assert.deepEqual(menuToolsForHost(true), ["memory", "routines", "watch", "settings"])
+	assert.deepEqual(menuToolsForHost(false), ["memory", "routines", "watch", "settings"])
 	assert.equal(DOWNLOAD_APP_URL, EXPECTED_DOWNLOAD_URL)
 })
 
-test("first-run copy names the product and the local-first tax", () => {
+test("first-run copy names household and voice without claiming inference stays here", () => {
 	assert.match(FIRST_RUN_LINE, /Household assistant/)
 	assert.match(FIRST_RUN_LINE, /Voice first/)
+	assert.equal(/stays on this device/i.test(FIRST_RUN_LINE), false)
 	assert.match(firstRunLimit(true, "mac"), /this Mac/)
 	assert.match(firstRunLimit(false, "mac"), /Build the Mac app/)
 	assert.match(firstRunHint(false), /spoken/)

@@ -3,7 +3,7 @@ import { type CommandDef, cmd } from "./catalog-def.ts"
 export const CHROME_COMMANDS: CommandDef[] = [
 	cmd(
 		"ui.open",
-		"Open an app-owned view. Live data is rendered by the app. Views: history, watch, settings, memory, routines, projects, inbox, boards, time, calendar, menu.",
+		"Open an app-owned view. Live data is rendered by the app. Views: history (conversation), watch, settings, memory, routines, projects, inbox, boards, time, calendar, menu.",
 		{
 			view: {
 				type: "string",
@@ -22,8 +22,6 @@ export const CHROME_COMMANDS: CommandDef[] = [
 				],
 			},
 			tab: { type: "string" },
-			day: { type: "string" },
-			mode: { type: "string", enum: ["list", "calendar"] },
 			query: { type: "string" },
 			kind: { type: "string" },
 		},
@@ -69,7 +67,7 @@ export const CHROME_COMMANDS: CommandDef[] = [
 		brief: { type: "string" },
 		showCaptions: { type: "boolean" },
 	}),
-	cmd("settings.provider", "Switch provider or set a provider field (model, baseUrl, apiKey).", {
+	cmd("settings.provider", "Switch the active provider connection or set a field on it (model, baseUrl, apiKey).", {
 		id: { type: "string" },
 		model: { type: "string" },
 		baseUrl: { type: "string" },
@@ -77,7 +75,17 @@ export const CHROME_COMMANDS: CommandDef[] = [
 		field: { type: "string", enum: ["model", "baseUrl", "apiKey"] },
 		value: { type: "string" },
 	}),
-	cmd("settings.voice", "Switch voice backend or set a voice field.", {
+	cmd(
+		"settings.connection",
+		"Add, activate, rename, or remove a named provider connection (key and URL, not a model).",
+		{
+			add: { type: "string" },
+			label: { type: "string" },
+			id: { type: "string" },
+			remove: { type: "boolean" },
+		},
+	),
+	cmd("settings.voice", "Switch the active voice connection or set a field on it.", {
 		id: { type: "string" },
 		field: { type: "string", enum: ["model", "baseUrl", "apiKey", "voice"] },
 		value: { type: "string" },

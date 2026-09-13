@@ -33,7 +33,7 @@ export function VoiceTab() {
 	const realtimeKind = voiceRealtimeKind(id, live.baseUrl)
 
 	return (
-		<div className="space-y-4 pt-2 pb-4">
+		<div className="flex flex-col gap-4 pt-2 pb-4">
 			<MicAccess />
 			<label className="flex min-h-8 items-center gap-2 py-1 text-sm">
 				<Switch checked={settings.showCaptions} onCheckedChange={(v) => patch({ showCaptions: v })} />

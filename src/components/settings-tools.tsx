@@ -17,10 +17,10 @@ export function ToolsTab() {
 	const [mcpAuth, setMcpAuth] = useState("")
 
 	return (
-		<div className="space-y-4">
+		<div className="flex flex-col gap-4">
 			<p className="text-xs text-muted-foreground">
-				One assistant. Tools come from MCP servers your projects already expose. If a capability is missing, that is a
-				gap in that project.
+				Optional extra tools. Built-ins already cover memory, inbox, and time. Add an MCP server when you need an
+				outside action.
 			</p>
 			<div className="grid gap-2 sm:grid-cols-2">
 				<Input placeholder="Name" value={mcpName} onChange={(e) => setMcpName(e.target.value)} />
@@ -53,7 +53,7 @@ export function ToolsTab() {
 			<ul className="flex flex-col gap-2">
 				{mcpServers.length === 0 ? (
 					<li className="text-sm text-muted-foreground">
-						No servers yet. Built-in tools still work: memory, boards, time, inbox, visuals.
+						No extra servers. Built-in tools still work: memory, inbox, time.
 					</li>
 				) : (
 					mcpServers.map((s) => (
@@ -91,10 +91,10 @@ export function DataTab() {
 	const importJson = useApp((s) => s.importJson)
 
 	return (
-		<div className="space-y-4">
+		<div className="flex flex-col gap-4">
 			<p className="text-sm text-muted-foreground">
-				Transcripts, memory, boards, and keys live in a SQL database on this device. Nothing is stored on a {APP_NAME}{" "}
-				server.
+				Transcripts, memory, inbox, and keys live in a SQL database on this device. {APP_NAME} does not host them. The
+				mind you pick still receives the turn.
 			</p>
 			<p className="text-xs text-muted-foreground">
 				Export is a private backup of this device, including API keys and MCP headers. Keep the file to yourself.

@@ -30,7 +30,7 @@ while (Date.now() < deadline) {
 }
 
 await page.screenshot({ path: "/workspace/screenshots/moya-reply.png" })
-await page.getByLabel("Transcript").click()
+await page.getByRole("button", { name: /conversation/i }).click()
 await page.waitForTimeout(500)
 await page.screenshot({ path: "/workspace/screenshots/moya-history-after.png" })
 

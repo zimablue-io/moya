@@ -4,7 +4,7 @@ import { AssistantDock } from "@/components/assistant-dock"
 import { AssistantHeader } from "@/components/assistant-header"
 import { AssistantMenu } from "@/components/assistant-menu"
 import { AssistantStatus } from "@/components/assistant-status"
-import { HistoryDialog } from "@/components/history-dialog"
+import { ConversationSidebar } from "@/components/conversation-sidebar"
 import { MemoryDialog } from "@/components/memory-dialog"
 import { PresenceCanvas } from "@/components/presence-canvas"
 import { RoutinesDialog } from "@/components/routines-dialog"
@@ -36,6 +36,7 @@ export function AssistantShell() {
 	const closeUi = useApp((s) => s.closeUi)
 	const dialog = useApp((s) => s.dialog)
 	const menuOpen = useApp((s) => s.menuOpen)
+	const conversationOpen = useApp((s) => s.conversationOpen)
 	const messages = useApp((s) => s.messages)
 	const firstRun = useFirstRunGate()
 
@@ -239,7 +240,7 @@ export function AssistantShell() {
 				emotion={emotion}
 				level={level}
 				bands={bands}
-				gazeX={menuOpen ? 0.55 : dialog === "settings" || dialog === "history" || dialog === "watch" ? 0.45 : 0}
+				gazeX={menuOpen || conversationOpen ? 0.55 : dialog === "settings" || dialog === "watch" ? 0.45 : 0}
 				gazeY={composerOpen ? 0.4 : menuOpen ? 0 : dialog ? -0.35 : 0}
 				onHoldStart={startHold}
 				onHoldEnd={endHold}
@@ -295,12 +296,12 @@ export function AssistantShell() {
 				onOpenChange={firstRun.closeSetup}
 				onReady={firstRun.onSetupReady}
 			/>
-			<HistoryDialog />
 			<MemoryDialog />
 			<RoutinesDialog />
 			<WatchDialog />
 			<SettingsDialog />
 			<ArtifactDialog />
+			<ConversationSidebar />
 		</main>
 	)
 }

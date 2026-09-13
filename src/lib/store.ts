@@ -46,11 +46,9 @@ type Actions = {
 	setComposerOpen: (open: boolean) => void
 	setVoiceMode: (on: boolean) => void
 	setMenuOpen: (open: boolean) => void
+	setConversationOpen: (open: boolean) => void
 	setSettingsTab: (tab: UiState["settingsTab"]) => void
 	setWatchTab: (tab: UiState["watchTab"]) => void
-	setHistoryMode: (mode: UiState["historyMode"]) => void
-	setHistoryQuery: (q: string) => void
-	setHistoryDay: (day: string | null) => void
 	setMemoryQuery: (q: string) => void
 	setMemoryKind: (kind: UiState["memoryKind"]) => void
 	setRoutinesFormOpen: (open: boolean) => void
@@ -194,11 +192,9 @@ export const useApp = create<AppStore>((set, get) => {
 			if (open) void run("ui.open", { view: "menu" })
 			else if (get().menuOpen) void run("ui.close", {})
 		},
+		setConversationOpen: (open) => set({ conversationOpen: open }),
 		setSettingsTab: (tab) => set({ settingsTab: tab }),
 		setWatchTab: (tab) => set({ watchTab: tab }),
-		setHistoryMode: (mode) => set({ historyMode: mode }),
-		setHistoryQuery: (q) => set({ historyQuery: q }),
-		setHistoryDay: (day) => set({ historyDay: day }),
 		setMemoryQuery: (q) => set({ memoryQuery: q }),
 		setMemoryKind: (kind) => set({ memoryKind: kind }),
 		setRoutinesFormOpen: (open) => set({ routinesFormOpen: open }),

@@ -75,7 +75,7 @@ export const REMOTE_COMMANDS: CommandDef[] = [
 	),
 	cmd(
 		"source.connect",
-		"Connect a read-only calendar (ICS URL) or work tracker (Linear readonly / GitHub read). Never write the remote.",
+		"Connect a read-only calendar (ICS URL) or a read-only work tracker. Never write the remote.",
 		{
 			kind: { type: "string", enum: ["calendar", "work"] },
 			name: { type: "string" },

@@ -127,9 +127,7 @@ export function runQuery(env: EnvState, args: QueryArgs = {}): { data: unknown; 
 		menuOpen: env.ui.menuOpen,
 		settingsTab: env.ui.settingsTab,
 		watchTab: env.ui.watchTab,
-		historyMode: env.ui.historyMode,
-		historyQuery: env.ui.historyQuery,
-		historyDay: env.ui.historyDay,
+		conversationOpen: env.ui.conversationOpen,
 		memoryQuery: env.ui.memoryQuery,
 		memoryKind: env.ui.memoryKind,
 		routinesFormOpen: env.ui.routinesFormOpen,
@@ -142,7 +140,7 @@ export function runQuery(env: EnvState, args: QueryArgs = {}): { data: unknown; 
 		empty: snap.sources.length === 0,
 		hint:
 			snap.sources.length === 0
-				? "Pick a source in Settings → Sources. Calendar, Linear, GitHub, or attached files."
+				? "No extra sources. Add a calendar in Settings → Sources if you want today on this device."
 				: null,
 	}
 
@@ -191,10 +189,7 @@ export function runQuery(env: EnvState, args: QueryArgs = {}): { data: unknown; 
 		items,
 		boards: lived.boards,
 		empty: workSources.length === 0 && snap.boards.length === 0,
-		hint:
-			workSources.length === 0 && snap.boards.length === 0
-				? "No work source and no boards. Pick Linear or GitHub in Settings → Sources, or start a board."
-				: null,
+		hint: workSources.length === 0 && snap.boards.length === 0 ? "Nothing on the watch list yet." : null,
 	}
 
 	const payload: Record<string, unknown> = {}

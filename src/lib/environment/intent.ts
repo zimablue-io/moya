@@ -103,7 +103,7 @@ function emptyProjectsSpeech(env: EnvState): string {
 	const boards = env.snapshot.boards.length
 	const work = env.snapshot.sources.filter((s) => s.kind === "work").length
 	if (boards === 0 && work === 0) {
-		return "No projects yet. Pick Linear or GitHub in Settings → Sources, or start a board."
+		return "Nothing on the watch list yet."
 	}
 	return "Opened Watch → Boards."
 }

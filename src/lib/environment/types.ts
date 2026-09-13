@@ -1,6 +1,5 @@
 import type { Artifact, DialogId, MemoryKind, Snapshot, Source } from "../types.ts"
 
-export type HistoryMode = "list" | "calendar"
 export type SettingsTab = "general" | "voice" | "model" | "tools" | "sources" | "data"
 export type WatchTab = "inbox" | "boards" | "time"
 
@@ -12,11 +11,9 @@ export type UiState = {
 	composerOpen: boolean
 	voiceMode: boolean
 	menuOpen: boolean
+	conversationOpen: boolean
 	settingsTab: SettingsTab
 	watchTab: WatchTab
-	historyMode: HistoryMode
-	historyQuery: string
-	historyDay: string | null
 	memoryQuery: string
 	memoryKind: MemoryKind | "all"
 	routinesFormOpen: boolean

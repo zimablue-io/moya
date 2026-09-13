@@ -3,7 +3,6 @@ import { hostCaps } from "../host.ts"
 import {
 	type Artifact,
 	type DialogId,
-	localConversationVoice,
 	type MemoryKind,
 	normalizeArtifact,
 	PROVIDER_PRESETS,
@@ -12,14 +11,25 @@ import {
 	VOICE_PRESETS,
 	type VoiceBackendId,
 } from "../types.ts"
+import {
+	activateProviderConnection,
+	addProviderConnection,
+	removeProviderConnection,
+	renameProviderConnection,
+} from "../types-connection-edit.ts"
+import {
+	patchProviderField,
+	patchVoiceField,
+	switchProviderSettings,
+	switchVoiceSettings,
+} from "../types-connections.ts"
 import { type ActCtx, type ActResult, bool, fail, ok, str } from "./act-result.ts"
 import { cloneEnv } from "./state.ts"
-import type { EnvState, HistoryMode, SettingsTab, WatchTab } from "./types.ts"
+import type { EnvState, SettingsTab, WatchTab } from "./types.ts"
 
 const SETTINGS_TABS = new Set<SettingsTab>(["general", "voice", "model", "tools", "sources", "data"])
 const WATCH_TABS = new Set<WatchTab>(["inbox", "boards", "time"])
-const HISTORY_MODES = new Set<HistoryMode>(["list", "calendar"])
-const DIALOGS = new Set<Exclude<DialogId, null>>(["history", "watch", "settings", "artifact", "memory", "routines"])
+const DIALOGS = new Set<Exclude<DialogId, null>>(["watch", "settings", "artifact", "memory", "routines"])
 
 function openView(env: EnvState, args: Record<string, unknown>): EnvState {
 	const view = str(args, "view")
@@ -46,6 +56,12 @@ function openView(env: EnvState, args: Record<string, unknown>): EnvState {
 		next.ui.artifact = null
 		return next
 	}
+	if (view === "history") {
+		next.ui.conversationOpen = true
+		next.ui.menuOpen = false
+		next.ui.artifact = null
+		return next
+	}
 	if (DIALOGS.has(view as Exclude<DialogId, null>)) {
 		next.ui.dialog = view as DialogId
 		next.ui.artifact = view === "artifact" ? next.ui.artifact : null
@@ -53,12 +69,7 @@ function openView(env: EnvState, args: Record<string, unknown>): EnvState {
 	const tab = str(args, "tab")
 	if (SETTINGS_TABS.has(tab as SettingsTab)) next.ui.settingsTab = tab as SettingsTab
 	if (WATCH_TABS.has(tab as WatchTab)) next.ui.watchTab = tab as WatchTab
-	if (HISTORY_MODES.has(str(args, "mode") as HistoryMode)) next.ui.historyMode = str(args, "mode") as HistoryMode
-	if (args.day != null) next.ui.historyDay = str(args, "day") || null
-	if (args.query != null) {
-		if (next.ui.dialog === "memory") next.ui.memoryQuery = str(args, "query")
-		else next.ui.historyQuery = str(args, "query")
-	}
+	if (args.query != null && next.ui.dialog === "memory") next.ui.memoryQuery = str(args, "query")
 	if (args.kind != null && next.ui.dialog === "memory") {
 		next.ui.memoryKind = str(args, "kind") === "all" ? "all" : (str(args, "kind") as MemoryKind)
 	}
@@ -71,6 +82,7 @@ function closeUi(env: EnvState, all: boolean): EnvState {
 		next.ui.dialog = null
 		next.ui.artifact = null
 		next.ui.menuOpen = false
+		next.ui.conversationOpen = false
 		next.ui.composerOpen = false
 		next.ui.focusField = null
 		next.ui.routinesFormOpen = false
@@ -85,6 +97,10 @@ function closeUi(env: EnvState, all: boolean): EnvState {
 	if (next.ui.dialog) {
 		next.ui.dialog = null
 		next.ui.focusField = null
+		return next
+	}
+	if (next.ui.conversationOpen) {
+		next.ui.conversationOpen = false
 		return next
 	}
 	if (next.ui.menuOpen) {
@@ -163,12 +179,9 @@ export function actChrome(ctx: ActCtx): ActResult | null {
 	if (command === "settings.provider") {
 		const id = str(args, "id") as ProviderId
 		if (id && PROVIDER_PRESETS[id]) {
-			const preset = PROVIDER_PRESETS[id]
-			const model = str(args, "model") || preset.model
-			const baseUrl = id === "ondevice" ? "" : str(args, "baseUrl") || preset.baseUrl
 			snap.settings = {
 				...snap.settings,
-				provider: { id, model, baseUrl, apiKey: str(args, "apiKey") },
+				...switchProviderSettings(snap.settings, id, args),
 			}
 			return ok(command, `Provider set to ${id}.`, next)
 		}
@@ -176,29 +189,60 @@ export function actChrome(ctx: ActCtx): ActResult | null {
 		if (field === "model" || field === "baseUrl" || field === "apiKey") {
 			snap.settings = {
 				...snap.settings,
-				provider: { ...snap.settings.provider, [field]: str(args, "value") },
+				...patchProviderField(snap.settings, field, str(args, "value")),
 			}
 			return ok(command, `Provider ${field} updated.`, next)
 		}
 		return fail(command, "Provider id or field required.", env)
 	}
 
+	if (command === "settings.connection") {
+		const add = str(args, "add") as ProviderId
+		if (add && PROVIDER_PRESETS[add]) {
+			const label = str(args, "label").trim()
+			if (!label) return fail(command, "Name this connection.", env)
+			if (snap.settings.connections.some((c) => c.label === label)) {
+				return fail(command, "That name is already used.", env)
+			}
+			snap.settings = { ...snap.settings, ...addProviderConnection(snap.settings, add, label) }
+			return ok(command, `Saved ${label}.`, next)
+		}
+		const id = str(args, "id")
+		if (id && bool(args, "remove")) {
+			if (snap.settings.connections.length <= 1) return fail(command, "Keep at least one connection.", env)
+			snap.settings = { ...snap.settings, ...removeProviderConnection(snap.settings, id) }
+			return ok(command, "Removed connection.", next)
+		}
+		const rename = str(args, "label").trim()
+		if (id && rename) {
+			if (snap.settings.connections.some((c) => c.id !== id && c.label === rename)) {
+				return fail(command, "That name is already used.", env)
+			}
+			snap.settings = { ...snap.settings, ...renameProviderConnection(snap.settings, id, rename) }
+			return ok(command, "Renamed connection.", next)
+		}
+		if (id) {
+			snap.settings = { ...snap.settings, ...activateProviderConnection(snap.settings, id) }
+			return ok(command, "Connection active.", next)
+		}
+		return fail(command, "Connection add, id, or remove required.", env)
+	}
+
 	if (command === "settings.voice") {
 		const id = str(args, "id") as VoiceBackendId
 		if (id && VOICE_PRESETS[id]) {
-			const preset = VOICE_PRESETS[id]
 			snap.settings = {
 				...snap.settings,
-				voiceBackend: { id, model: preset.model, baseUrl: preset.baseUrl, apiKey: "", voice: preset.voice },
+				...switchVoiceSettings(snap.settings, id, args),
 			}
 			return ok(command, `Voice backend set to ${id}.`, next)
 		}
 		const field = str(args, "field") as "model" | "baseUrl" | "apiKey" | "voice"
 		if (field === "model" || field === "baseUrl" || field === "apiKey" || field === "voice") {
-			const value = str(args, "value")
-			const nextVoice = { ...snap.settings.voiceBackend, [field]: value }
-			if (field === "voice" && nextVoice.id === "s2s") nextVoice.voice = localConversationVoice(value)
-			snap.settings = { ...snap.settings, voiceBackend: nextVoice }
+			snap.settings = {
+				...snap.settings,
+				...patchVoiceField(snap.settings, field, str(args, "value")),
+			}
 			return ok(command, `Voice ${field} updated.`, next)
 		}
 		return fail(command, "Voice id or field required.", env)

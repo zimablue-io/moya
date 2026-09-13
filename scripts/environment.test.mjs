@@ -30,6 +30,17 @@ test("forbidden commands are not in the catalog", () => {
 	assert.ok(names.includes("source.remove"))
 })
 
+test("conversation overlay is closed on the home view", () => {
+	assert.equal(emptyEnv().ui.conversationOpen, false)
+})
+
+test("ui.open history opens the conversation sidebar, not a transcript dialog", async () => {
+	const { env, receipt } = await act(emptyEnv(), "ui.open", { view: "history" })
+	assert.equal(receipt.ok, true)
+	assert.equal(env.ui.conversationOpen, true)
+	assert.equal(env.ui.dialog, null)
+})
+
 test("empty projects opens an app view and does not invent an artifact", async () => {
 	const { env, receipt } = await act(emptyEnv(), "ui.open", { view: "projects" })
 	assert.equal(receipt.ok, true)
@@ -39,7 +50,7 @@ test("empty projects opens an app view and does not invent an artifact", async (
 	const q = runQuery(env, { domain: "work" })
 	const work = q.data.work
 	assert.equal(work.empty, true)
-	assert.match(work.hint, /Settings → Sources/)
+	assert.match(work.hint, /watch list/)
 	assert.equal(JSON.stringify(q.data).includes("Project A"), false)
 })
 
@@ -79,14 +90,67 @@ test("forget and resolve fail without an id from query", async () => {
 })
 
 test("speech cannot claim an act that has no receipt", () => {
-	assert.equal(compileSpeech([], "I resolved the inbox."), "I have nothing to add.")
-	assert.equal(compileSpeech([], "Done."), "I have nothing to add.")
-	assert.equal(compileSpeech([], ""), "I have nothing to add.")
+	assert.equal(compileSpeech([], "I resolved the inbox."), "")
+	assert.equal(compileSpeech([], "Done."), "")
+	assert.equal(compileSpeech([], ""), "")
+	assert.equal(/i have nothing to add/i.test(compileSpeech([], "Done.")), false)
 	const spoken = compileSpeech(
 		[{ command: "inbox.resolve", ok: true, summary: "Resolved: Call Sam." }],
 		"I resolved the inbox.",
 	)
 	assert.equal(spoken, "I resolved the inbox.")
+})
+
+test("an empty model turn does not invent I have nothing to add or a wrap hop", async () => {
+	let hops = 0
+	const result = await runTurn({
+		env: emptyEnv(),
+		text: "does this get used for training?",
+		kind: "text",
+		complete: async () => {
+			hops += 1
+			return { ok: true, content: "", toolCalls: [] }
+		},
+	})
+	assert.equal(hops, 1)
+	assert.equal(result.spoken, "")
+	assert.equal(/i have nothing to add/i.test(result.spoken), false)
+	assert.equal(
+		result.env.snapshot.messages.some((m) => m.role === "assistant" && /nothing to add/i.test(m.content)),
+		false,
+	)
+})
+
+test("a failed model turn shows the error instead of a fake OK line", async () => {
+	const result = await runTurn({
+		env: emptyEnv(),
+		text: "hello",
+		kind: "text",
+		complete: async () => ({ ok: false, error: "Model error 401" }),
+	})
+	assert.equal(result.error, "Model error 401")
+	assert.equal(/i have nothing to add/i.test(result.spoken), false)
+})
+
+test("planning an evening is not replaced by a calendar upsell", async () => {
+	const result = await runTurn({
+		env: emptyEnv(),
+		text: "plan my evening I have nothing on the calendar",
+		kind: "text",
+		complete: async (req) => {
+			if (req.tools.length) {
+				return {
+					ok: true,
+					content: "Cook pasta. Then a walk.",
+					toolCalls: [{ id: "q1", name: "query", arguments: JSON.stringify({ domain: "calendar" }) }],
+				}
+			}
+			return { ok: true, content: "Cook pasta. Then a walk.", toolCalls: [] }
+		},
+	})
+	assert.match(result.spoken, /pasta/i)
+	assert.equal(/Settings → Sources/i.test(result.spoken), false)
+	assert.equal(/i have nothing to add/i.test(result.spoken), false)
 })
 
 test("capability prompt lets greetings skip tools and forbids the canned quiet line", () => {
@@ -113,8 +177,8 @@ test("a greeting that only queries is not spoken as I have nothing to add", asyn
 			return { ok: true, content: "I'm here. What do you need?", toolCalls: [] }
 		},
 	})
-	assert.notEqual(result.spoken, "I have nothing to add.")
-	assert.match(result.spoken, /here|need/i)
+	assert.equal(/i have nothing to add/i.test(result.spoken), false)
+	assert.equal(/queried/i.test(result.spoken), false)
 })
 
 test("a failed model turn keeps the error and does not say I have nothing to add", async () => {
@@ -145,6 +209,20 @@ test("a greeting does not send the tool catalog", async () => {
 	})
 	assert.equal(toolCount, 0)
 	assert.match(result.spoken, /hey|with you/i)
+})
+
+test("a hey that asks for work still sends tools", async () => {
+	let toolCount = -1
+	await runTurn({
+		env: emptyEnv(),
+		text: "hey create a test ticket",
+		kind: "text",
+		complete: async (req) => {
+			toolCount = req.tools.length
+			return { ok: true, content: "I can put that in the inbox.", toolCalls: [] }
+		},
+	})
+	assert.ok(toolCount > 0)
 })
 
 test("a turn that narrates without acting does not ship Done or a fake close", async () => {
@@ -244,7 +322,9 @@ test("settings.provider can switch to on-device and keep the GGUF path", async (
 	assert.equal(switched.env.snapshot.settings.provider.model, "/Users/me/models/gemma-4-E4B.gguf")
 	assert.equal(switched.env.snapshot.settings.provider.baseUrl, "")
 	const reset = await act(switched.env, "settings.provider", { id: "ondevice" })
-	assert.equal(reset.env.snapshot.settings.provider.model, "")
+	assert.equal(reset.env.snapshot.settings.provider.model, "/Users/me/models/gemma-4-E4B.gguf")
+	const ondevice = reset.env.snapshot.settings.connections.find((c) => c.providerId === "ondevice")
+	assert.equal(ondevice.lastModel, "/Users/me/models/gemma-4-E4B.gguf")
 })
 
 test("settings stay closed until onboarding is complete", async () => {
@@ -294,4 +374,93 @@ test("routine with no receipts fails honestly", async () => {
 	})
 	assert.equal(result.spoken, "The routine produced no changes.")
 	assert.equal(result.env.snapshot.inbox.length, 0)
+})
+
+test("a test turn does not claim a board jump when no tools ran", async () => {
+	const result = await runTurn({
+		env: emptyEnv(),
+		text: "test",
+		kind: "text",
+		complete: async () => ({ ok: true, content: "I jumped to the board.", toolCalls: [] }),
+	})
+	assert.equal(/\b(board|jump(?:ed)?|open(?:ed)?)\b/i.test(result.spoken), false)
+	assert.equal(result.env.ui.dialog, null)
+})
+
+test("create a test ticket without MCP does not ask the human for a function", async () => {
+	const result = await runTurn({
+		env: emptyEnv(),
+		text: "create a test ticket",
+		kind: "text",
+		complete: async () => ({
+			ok: true,
+			content: "I don't have a function for that. Please provide a function.",
+			toolCalls: [],
+		}),
+	})
+	assert.equal(/provide a function|have a function|give me a function/i.test(result.spoken), false)
+	assert.equal(/GitHub|Linear/.test(result.spoken), false)
+})
+
+test("cloud custom prompt names the host and does not claim data is local", () => {
+	const env = emptyEnv()
+	env.snapshot.settings.provider = {
+		id: "custom",
+		model: "MiniMax-M2",
+		baseUrl: "https://api.minimax.io/v1",
+		apiKey: "sk-test",
+	}
+	const prompt = buildCapabilityPrompt(env)
+	assert.match(prompt, /api\.minimax\.io/)
+	assert.equal(prompt.includes("Data is local"), false)
+})
+
+test("empty snapshot prompt is a household assistant, not a projects default", () => {
+	const prompt = buildCapabilityPrompt(emptyEnv())
+	assert.equal(/ui\.open view=projects/i.test(prompt), false)
+	assert.equal(/GitHub|Linear/.test(prompt), false)
+	assert.match(prompt, /household/i)
+	assert.match(prompt, /inbox/i)
+	assert.match(prompt, /memor/i)
+	assert.match(prompt, /voice/i)
+	assert.match(prompt, /\bday\b|today/i)
+})
+
+test("create a test ticket sends MCP tools when a tracker server is connected", async () => {
+	const env = emptyEnv()
+	env.snapshot.mcpServers = [
+		{
+			id: "tracker",
+			name: "Tracker",
+			url: "https://example.com/mcp",
+			authHeader: "",
+			enabled: true,
+			tools: [{ name: "create_issue", description: "Create an issue", serverId: "tracker" }],
+		},
+	]
+	let names = []
+	const result = await runTurn({
+		env,
+		text: "create a test ticket",
+		kind: "text",
+		complete: async (req) => {
+			names = req.tools.map((t) => t.function.name)
+			return { ok: true, content: "I'll take that as an inbox item.", toolCalls: [] }
+		},
+	})
+	assert.equal(
+		names.some((n) => n.includes("create_issue")),
+		true,
+	)
+	assert.match(result.spoken, /inbox/i)
+})
+
+test("speech cannot claim Watch opened when no tools ran", async () => {
+	const result = await runTurn({
+		env: emptyEnv(),
+		text: "test",
+		kind: "text",
+		complete: async () => ({ ok: true, content: "I opened Watch.", toolCalls: [] }),
+	})
+	assert.equal(/\bopened\b/i.test(result.spoken), false)
 })

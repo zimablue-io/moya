@@ -1,4 +1,4 @@
-import { Brain, Download, History, MessageSquare, Repeat, Settings } from "lucide-react"
+import { Brain, Download, MessageSquare, Repeat, Settings } from "lucide-react"
 import { menuToolsForHost, showDownloadApp } from "@/lib/first-run"
 import { isDesktop } from "@/lib/host"
 import { macAppInstallUrl } from "@/lib/mac-download"
@@ -12,7 +12,6 @@ const DIALOG_TOOLS: {
 	hint: string
 	icon: typeof Brain
 }[] = [
-	{ id: "history", label: "Transcript", hint: "Every word", icon: History },
 	{ id: "memory", label: "Memory", hint: "What stays", icon: Brain },
 	{ id: "routines", label: "Routines", hint: "What runs", icon: Repeat },
 	{ id: "watch", label: "Watch", hint: "Needs you", icon: MessageSquare },
