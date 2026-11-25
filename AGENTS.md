@@ -77,3 +77,5 @@ Better Auth at `/api/auth/*` federates to the Grok broker (Google, X only). Do *
 ## Skills in this repo
 
 `.agents/skills/` is Moya’s own agent guidance (shadcn, Radix → Base UI). This file wins on product, desktop, and auth. Do not add xAI App Builder skills back into git.
+
+NO BACKWARDS COMPATIBILITY, EVER: never keep legacy code, old versions, compatibility shims, fallbacks for old clients or migration paths for old installs. Delete legacy code instead of preserving it.
