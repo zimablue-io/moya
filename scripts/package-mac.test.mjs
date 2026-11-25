@@ -145,7 +145,7 @@ test("packageMac retries bundle_dmg.sh with visible output after Tauri hides the
 			calls.push({ cmd, args, cwd: opts?.cwd, stdio: opts?.stdio })
 			if (String(cmd).endsWith("tauri")) return { status: 1 }
 			if (cmd === "bash") {
-				writeFileSync(join(macos, "Moya_0.1.6_aarch64.dmg"), "ok")
+				writeFileSync(join(macos, dmgFileName("0.1.6")), "ok")
 				return { status: 0 }
 			}
 			return { status: 1 }
